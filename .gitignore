@@ -29,3 +29,5 @@ static/owner_photos/*
 # Deployment & Serverless Caches
 .netlify/
 .vercel/
+
+.vercel
