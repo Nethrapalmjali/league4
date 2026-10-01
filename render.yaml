@@ -18,3 +18,11 @@ services:
         value: "15"
       - key: KEEP_ALIVE_ENABLED
         value: "true"
+      - key: DATABASE_URL
+        value: postgresql://postgres.bqoszyelbcxrqojvutva:vlwBjAOpbOFUXT7G@aws-0-ap-southeast-2.pooler.supabase.com:6543/postgres?sslmode=require
+      - key: SUPABASE_URL
+        value: https://bqoszyelbcxrqojvutva.supabase.co
+      - key: SUPABASE_KEY
+        value: sb_publishable_zujftvHxzH1EuxAXwc9RRA_62_6kRUC
+      - key: SUPABASE_BUCKET
+        value: gml-media

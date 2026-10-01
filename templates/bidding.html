@@ -1120,7 +1120,7 @@
               <!-- Left Visual -->
               <div class="player-image-col">
                 {% if player.photo %}
-                  <img src="{{ url_for('static', filename=player.photo) }}" alt="{{ player.name }}">
+                  <img src="{{ media_url(player.photo) }}" alt="{{ player.name }}">
                 {% else %}
                   <div class="player-avatar-monogram">{{ player.name[:2]|upper }}</div>
                 {% endif %}

@@ -44,7 +44,7 @@
               <td><input type="checkbox" class="rowcheck" data-scope="{{ sport|lower }}" value="{{ player.id }}" aria-label="Select {{ player.name }}"></td>
               <td>
                 {% if player.photo %}
-                  <img src="{{ url_for('static', filename=player.photo) }}" class="thumb" alt="{{ player.name }}" loading="lazy">
+                  <img src="{{ media_url(player.photo) }}" class="thumb" alt="{{ player.name }}" loading="lazy">
                 {% else %}
                   <div class="thumb thumb--empty">N/A</div>
                 {% endif %}
@@ -342,14 +342,14 @@
                   <td><input type="checkbox" class="rowcheck" data-scope="owners" value="{{ owner.id }}" aria-label="Select {{ owner.team_name }}"></td>
                   <td>
                     {% if owner.team_logo %}
-                      <img src="{{ url_for('static', filename=owner.team_logo) }}" class="thumb" alt="{{ owner.team_name }} logo" loading="lazy">
+                      <img src="{{ media_url(owner.team_logo) }}" class="thumb" alt="{{ owner.team_name }} logo" loading="lazy">
                     {% else %}
                       <div class="thumb thumb--empty">N/A</div>
                     {% endif %}
                   </td>
                   <td>
                     {% if owner.team_owner_photo %}
-                      <img src="{{ url_for('static', filename=owner.team_owner_photo) }}" class="thumb" alt="{{ owner.name }}" loading="lazy">
+                      <img src="{{ media_url(owner.team_owner_photo) }}" class="thumb" alt="{{ owner.name }}" loading="lazy">
                     {% else %}
                       <div class="thumb thumb--empty">N/A</div>
                     {% endif %}

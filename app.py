@@ -107,6 +107,7 @@ def normalise_database_url(url):
                 "postgres.%s at aws-<n>-<region>.pooler.supabase.com:6543.",
                 match.group(1), match.group(1),
             )
+        url = "postgresql+psycopg2://" + url[len("postgresql://"):]
     return url
 
 
@@ -275,7 +276,7 @@ class Player(db.Model):
     college_name = db.Column(db.String(100))
     position = db.Column(db.String(50))
     contact = db.Column(db.String(20))
-    photo = db.Column(db.String(200))
+    photo = db.Column(db.String(500))
     achievements = db.Column(db.Text)
     experience = db.Column(db.String(50))
     gender = db.Column(db.String(10))
@@ -297,13 +298,13 @@ class TeamOwner(db.Model):
     sports = db.Column(db.String(200), nullable=False)
     budget = db.Column(db.Integer, default=DEFAULT_BUDGET)
     contact = db.Column(db.String(20))
-    team_logo = db.Column(db.String(200))
+    team_logo = db.Column(db.String(500))
     designation = db.Column(db.String(100))
     email = db.Column(db.String(120))
     usn = db.Column(db.String(20))
     manager_name = db.Column(db.String(100))
     manager_contact_number = db.Column(db.String(20))
-    team_owner_photo = db.Column(db.String(200))
+    team_owner_photo = db.Column(db.String(500))
     registered_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     @property
@@ -421,6 +422,17 @@ def set_security_headers(response):
     return response
 
 
+def media_url(path):
+    if not path:
+        return ""
+    if path.startswith("http://") or path.startswith("https://"):
+        return path
+    return url_for("static", filename=path)
+
+
+app.jinja_env.filters["media_url"] = media_url
+
+
 @app.context_processor
 def inject_globals():
     return {
@@ -428,12 +440,17 @@ def inject_globals():
         "brand": BRAND,
         "sports": SPORTS,
         "now_year": datetime.now().year,
+        "media_url": media_url,
     }
 
 
 # --------------------------------------------------------------------------- #
-# Validation + upload helpers
+# Validation + upload helpers (Supabase Storage Cloud + Local Fallback)
 # --------------------------------------------------------------------------- #
+SUPABASE_URL = env_str("SUPABASE_URL", "https://bqoszyelbcxrqojvutva.supabase.co")
+SUPABASE_KEY = env_str("SUPABASE_KEY", "sb_publishable_zujftvHxzH1EuxAXwc9RRA_62_6kRUC")
+SUPABASE_BUCKET = env_str("SUPABASE_BUCKET", "gml-media")
+
 EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[a-zA-Z]{2,}$")
 PHONE_RE = re.compile(r"^[6-9]\d{9}$")
 
@@ -466,9 +483,10 @@ def allowed_file(filename):
 def save_upload(storage, folder_key, subdir, label):
     """Validate and store an uploaded image.
 
-    Returns ``(relative_path, error)``. ``relative_path`` is what goes in the
-    database (e.g. ``player_photos/abc.jpg``); it is ``None`` when no file was
-    supplied, which is not an error.
+    Uploads directly to Supabase Storage bucket so photos and logos remain
+    100% intact across server restarts and deployments. Falls back to local
+    disk storage if cloud upload is unreachable.
+    Returns ``(public_url_or_relative_path, error)``.
     """
     if not storage or not storage.filename:
         return None, None
@@ -480,15 +498,56 @@ def save_upload(storage, folder_key, subdir, label):
     extension = storage.filename.rsplit(".", 1)[1].lower()
     stem = secure_filename(label.replace(" ", "_")) or "upload"
     filename = f"{stem}_{datetime.now():%Y%m%d%H%M%S}_{uuid.uuid4().hex[:8]}.{extension}"
+
+    file_bytes = storage.read()
+    storage.seek(0)
+
+    # 1. Upload to Supabase Storage for permanent persistence
+    if SUPABASE_URL and SUPABASE_KEY:
+        try:
+            mime_map = {
+                "png": "image/png",
+                "jpg": "image/jpeg",
+                "jpeg": "image/jpeg",
+                "gif": "image/gif",
+                "webp": "image/webp",
+            }
+            content_type = mime_map.get(extension, "application/octet-stream")
+            storage_path = f"{subdir}/{filename}"
+            upload_url = f"{SUPABASE_URL.rstrip('/')}/storage/v1/object/{SUPABASE_BUCKET}/{storage_path}"
+            req = urllib.request.Request(
+                upload_url,
+                data=file_bytes,
+                headers={
+                    "apikey": SUPABASE_KEY,
+                    "Authorization": f"Bearer {SUPABASE_KEY}",
+                    "Content-Type": content_type,
+                    "x-upsert": "true",
+                },
+                method="POST",
+            )
+            with urllib.request.urlopen(req, timeout=12) as resp:
+                if resp.status in (200, 201):
+                    public_url = f"{SUPABASE_URL.rstrip('/')}/storage/v1/object/public/{SUPABASE_BUCKET}/{storage_path}"
+                    # Keep local cache if filesystem allows
+                    try:
+                        destination = os.path.join(app.config[folder_key], filename)
+                        os.makedirs(os.path.dirname(destination), exist_ok=True)
+                        with open(destination, "wb") as f:
+                            f.write(file_bytes)
+                    except Exception:
+                        pass
+                    return public_url, None
+        except Exception as exc:
+            app.logger.warning("Supabase Storage upload failed for %s, falling back to local: %s", label, exc)
+
+    # 2. Local disk fallback
     destination = os.path.join(app.config[folder_key], filename)
     try:
         os.makedirs(os.path.dirname(destination), exist_ok=True)
-        storage.save(destination)
+        with open(destination, "wb") as f:
+            f.write(file_bytes)
     except OSError as exc:
-        # The Vercel bundle is read-only, so there is nowhere durable to put the
-        # image. Losing a photo must never cost a student their registration —
-        # record it as "no photo" and move on. Wire up Vercel Blob or S3 to keep
-        # uploads (see README).
         app.logger.warning("Could not store %s upload: %s", label, exc)
         return None, None
     return f"{subdir}/{filename}", None
@@ -497,11 +556,29 @@ def save_upload(storage, folder_key, subdir, label):
 def delete_upload(relative_path, folder_key):
     if not relative_path:
         return
+    if relative_path.startswith("http://") or relative_path.startswith("https://"):
+        if SUPABASE_BUCKET in relative_path and SUPABASE_URL and SUPABASE_KEY:
+            try:
+                obj_path = relative_path.split(f"/{SUPABASE_BUCKET}/")[-1]
+                del_url = f"{SUPABASE_URL.rstrip('/')}/storage/v1/object/{SUPABASE_BUCKET}/{obj_path}"
+                req = urllib.request.Request(
+                    del_url,
+                    headers={
+                        "apikey": SUPABASE_KEY,
+                        "Authorization": f"Bearer {SUPABASE_KEY}",
+                    },
+                    method="DELETE",
+                )
+                urllib.request.urlopen(req, timeout=5)
+            except Exception as exc:
+                app.logger.warning("Could not remove Supabase object %s: %s", relative_path, exc)
+        return
+
     path = os.path.join(app.config[folder_key], os.path.basename(relative_path))
     try:
         if os.path.isfile(path):
             os.remove(path)
-    except OSError as exc:  # a stale file must never block a delete
+    except OSError as exc:
         app.logger.warning("Could not remove %s: %s", path, exc)
 
 
