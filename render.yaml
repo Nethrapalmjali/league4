@@ -10,9 +10,9 @@ services:
       - key: SECRET_KEY
         generateValue: true
       - key: ADMIN_USERNAME
-        value: admin
+        value: nandu
       - key: ADMIN_PASSWORD
-        generateValue: true
+        value: Mkan@6767
       - key: PING_INTERVAL
         value: "15"
       - key: KEEP_ALIVE_ENABLED

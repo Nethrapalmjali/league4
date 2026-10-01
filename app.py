@@ -222,8 +222,8 @@ BRAND["whatsapp_url"] = (
     else ""
 )
 
-ADMIN_USERNAME = env_str("ADMIN_USERNAME", "admin")
-ADMIN_PASSWORD = env_str("ADMIN_PASSWORD", "password")
+ADMIN_USERNAME = env_str("ADMIN_USERNAME", "nandu")
+ADMIN_PASSWORD = env_str("ADMIN_PASSWORD", "Mkan@6767")
 ADMIN_PASSWORD_HASH = env_str("ADMIN_PASSWORD_HASH")
 
 ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg", "gif", "webp"}
