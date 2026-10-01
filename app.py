@@ -88,6 +88,8 @@ def normalise_database_url(url):
     """Make a database URL usable from SQLAlchemy 2 on a serverless host."""
     if not url:
         return url
+    if SERVERLESS and url.startswith("sqlite:///") and not url.startswith("sqlite:////tmp/"):
+        return "sqlite:////tmp/league.db"
     # SQLAlchemy 2 dropped the legacy "postgres://" scheme that several
     # dashboards still hand out.
     if url.startswith("postgres://"):
@@ -111,7 +113,10 @@ def normalise_database_url(url):
 # --------------------------------------------------------------------------- #
 # App + configuration
 # --------------------------------------------------------------------------- #
-app = Flask(__name__)
+if SERVERLESS:
+    app = Flask(__name__, instance_path="/tmp")
+else:
+    app = Flask(__name__)
 
 # A per-process random key would be regenerated on every cold start, silently
 # invalidating every session and CSRF token across serverless instances — so
@@ -126,9 +131,11 @@ if not _secret_key:
         )
     _secret_key = secrets.token_urlsafe(48)
 
+_default_db_uri = "sqlite:////tmp/league.db" if SERVERLESS else "sqlite:///league.db"
+
 app.config.update(
     SECRET_KEY=_secret_key,
-    SQLALCHEMY_DATABASE_URI=normalise_database_url(env_str("DATABASE_URL", "sqlite:///league.db")),
+    SQLALCHEMY_DATABASE_URI=normalise_database_url(env_str("DATABASE_URL", _default_db_uri)),
     SQLALCHEMY_TRACK_MODIFICATIONS=False,
     UPLOAD_FOLDER=os.path.join(app.root_path, "static", "player_photos"),
     TEAM_LOGO_FOLDER=os.path.join(app.root_path, "static", "team_logos"),
