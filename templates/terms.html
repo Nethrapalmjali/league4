@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+
+{% block title %}Terms & Conditions · {{ brand.short }}{% endblock %}
+
+{% block container_class %}container container--narrow{% endblock %}
+
+{% block content %}
+<section class="panel">
+  <div class="section-title">
+    <span class="eyebrow">Rules of Play</span>
+    <h2>Terms and Conditions</h2>
+    <p>Please read the guidelines and terms of participation in {{ brand.name }} carefully.</p>
+  </div>
+
+  <div style="line-height: 1.8; color: var(--ink); margin-top: 2rem;">
+    <h3>1. General Participation</h3>
+    <p style="margin-bottom: 1.5rem;">All participants must be active students of {{ brand.university }} with a valid USN. Providing incorrect information will result in immediate disqualification.</p>
+
+    <h3>2. Auction Pool and Draft</h3>
+    <p style="margin-bottom: 1.5rem;">Once registered, players are added to the general draft pool. Team owners will bid using virtual credits. Bidding is final and cannot be modified by players.</p>
+
+    <h3>3. Team Commitments</h3>
+    <p style="margin-bottom: 1.5rem;">Players drafted to franchises must represent their respective teams for the entire duration of the tournament. Transfers or trades are not permitted unless sanctioned by the committee.</p>
+
+    <h3>4. Conduct and Sportsmanship</h3>
+    <p style="margin-bottom: 1.5rem;">Players and owners must maintain high standards of sportsmanship. Code of conduct violations will lead to suspension or permanent ban from the league.</p>
+  </div>
+
+  <div class="form-actions" style="margin-top: 3rem;">
+    <a href="{{ url_for('index') }}" class="btn btn--primary">Return to Homepage</a>
+  </div>
+</section>
+{% endblock %}

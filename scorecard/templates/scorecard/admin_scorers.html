@@ -1,0 +1,51 @@
+{% extends "scorecard/_page.html" %}
+{% block title %}Scorers{% endblock %}
+
+{% block content %}
+  <div class="sc-page">
+    <header class="sc-page__head">
+      <span class="sc-eyebrow">Scorecard admin</span>
+      <h1>Scorers</h1>
+      <p>
+        <a href="{{ url_for('scorecard.admin_teams') }}">Teams</a> ·
+        <a href="{{ url_for('scorecard.admin_matches') }}">Fixtures</a> ·
+        <a href="{{ url_for('scorecard.admin_link') }}">Link to auction</a>
+      </p>
+    </header>
+
+    <section class="sc-card">
+      <h2>Issue a passcode</h2>
+      <form method="post" class="sc-form sc-form--row">
+        <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+        <label><span>Name</span><input type="text" name="name" required placeholder="Volunteer's name"></label>
+        <label><span>Passcode</span><input type="text" name="passcode" required minlength="4"></label>
+        <button class="btn btn--primary" type="submit">Create</button>
+      </form>
+      <p class="sc-hint">
+        Write the passcode down now — it is stored hashed and cannot be read back.
+        A scorer can only reach the scoring screen, never the auction or player data.
+      </p>
+    </section>
+
+    <div class="sc-list">
+      {% for scorer in scorers %}
+        <div class="sc-row sc-row--static">
+          <span class="sc-row__teams">
+            <span class="sc-row__team">{{ scorer.name }}</span>
+            {% if not scorer.active %}<span class="sc-when">Disabled</span>{% endif %}
+          </span>
+          <span class="sc-row__tail">
+            <form method="post" action="{{ url_for('scorecard.admin_toggle_scorer', scorer_id=scorer.id) }}">
+              <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+              <button class="btn btn--ghost btn--sm" type="submit">
+                {{ 'Enable' if not scorer.active else 'Disable' }}
+              </button>
+            </form>
+          </span>
+        </div>
+      {% else %}
+        <p class="sc-empty">No scorers yet. Committee members can score with the admin login.</p>
+      {% endfor %}
+    </div>
+  </div>
+{% endblock %}

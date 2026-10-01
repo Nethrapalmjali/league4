@@ -1,0 +1,247 @@
+{% extends "base.html" %}
+
+{% block title %}{{ brand.name }} · {{ brand.university }}{% endblock %}
+
+{% block hero %}
+<section class="hero">
+  <div class="hero__inner">
+    <div class="hero__content">
+      <span class="hero__badge">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"
+          stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px; vertical-align: middle;">
+          <circle cx="12" cy="8" r="7"></circle>
+          <polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"></polyline>
+        </svg>
+        {{ brand.season }}
+      </span>
+      <h1>{{ brand.name }} <br><em>Where Legends Are Born</em></h1>
+      <p class="hero__lead">{{ brand.tagline }}. Join the ultimate inter-collegiate league. Register now to showcase
+        your talent in the player auction.</p>
+      <div class="hero__actions">
+        <a href="#register" class="btn btn--primary">Register as Player</a>
+        <a href="{{ url_for('team_owner_registration') }}" class="btn btn--ghost">Own a Franchise</a>
+      </div>
+    </div>
+    <div class="hero__stats">
+      <div class="stat-grid">
+        <div class="stat">
+          <span class="stat__num">{{ stats.players }}</span>
+          <span class="stat__label">Players Registered</span>
+        </div>
+        <div class="stat">
+          <span class="stat__num">{{ stats.teams }}</span>
+          <span class="stat__label">Franchises</span>
+        </div>
+        <div class="stat">
+          <span class="stat__num">{{ stats.sold }}</span>
+          <span class="stat__label">Players Drafted</span>
+        </div>
+        <div class="stat">
+          <span class="stat__num">{{ stats.sports }}</span>
+          <span class="stat__label">Sports Categories</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}
+
+{% block content %}
+<section id="register" class="content-section" style="padding-top: 1rem;">
+  <div class="section-title">
+    <span class="eyebrow">Choose Your Arena</span>
+    <h2>Player Registration</h2>
+    <p>Select a sport to register. Once registered, your profile will be added to the live draft pool for team owners to
+      bid on.</p>
+  </div>
+
+  <div class="card-grid">
+    {% for sport in ['Football', 'Kabaddi', 'Basketball', 'Badminton'] %}
+    <div class="sport-card">
+      <div class="sport-card__media">
+        <span style="font-size: 3rem;">
+          {% if sport == 'Football' %}⚽
+          {% elif sport == 'Kabaddi' %}🤼
+          {% elif sport == 'Basketball' %}🏀
+          {% elif sport == 'Badminton' %}🏸
+          {% endif %}
+        </span>
+      </div>
+      <div class="sport-card__body">
+        <h3 class="sport-card__title">{{ sport }}</h3>
+        <p class="sport-card__desc">
+          {% if sport == 'Football' %}
+          Men's tournament. The beautiful game on the big field.
+          {% elif sport == 'Kabaddi' %}
+          Men's and Women's categories. Strength, strategy, and breath.
+          {% elif sport == 'Basketball' %}
+          Men's and Women's categories. Fast-paced court action.
+          {% elif sport == 'Badminton' %}
+          Men's and Women's categories. Precision and speed.
+          {% endif %}
+        </p>
+        <a href="{{ url_for('register_player', sport=sport.lower()) }}" class="btn btn--dark btn--block">Register
+          now</a>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</section>
+
+<section id="committee" class="content-section"
+  style="border-top: 1px solid var(--line); margin-top: 4rem; padding-top: 3.5rem;">
+  <div class="section-title">
+    <span class="eyebrow">Leadership & Operations</span>
+    <h2>Executive Committee</h2>
+    <p>The steering force behind league operations, scheduling, rules, and student athletics at GM University.</p>
+  </div>
+
+  <!-- Executive Committee: 4 members only -->
+  <div class="committee-block">
+    <div class="people-grid people-grid--4col">
+      <!-- 1: Director Kiran Sir -->
+      <div class="person">
+        <div class="person__photo">
+          <img src="{{ url_for('static', filename='committee/dr_kiran_kumar.png') }}" alt="Dr. Kiran Kumar H S">
+        </div>
+        <h3 class="person__name">Dr. Kiran Kumar H S</h3>
+        <p class="person__role">Director, Students Affairs</p>
+      </div>
+
+      <!-- 2: Ajjaiah Sir -->
+      <div class="person">
+        <div class="person__photo">
+          <img src="{{ url_for('static', filename='committee/mr_ajjaiah_g.png') }}" alt="Mr. Ajjaiah G">
+        </div>
+        <h3 class="person__name">Mr. Ajjaiah G</h3>
+        <p class="person__role">Director of Physical Education</p>
+      </div>
+
+      <!-- 3: Rahul R Gadgimata -->
+      <div class="person">
+        <div class="person__photo">
+          <img src="{{ url_for('static', filename='committee/rahul_rg.png') }}" alt="Rahul R Gadgimata">
+        </div>
+        <h3 class="person__name">Rahul R Gadgimata</h3>
+        <p class="person__role">Executive Member</p>
+      </div>
+
+      <!-- 4: Abhiram Girish Naik -->
+      <div class="person">
+        <div class="person__photo">
+          <img src="{{ url_for('static', filename='committee/abhiram_girish_naik.png') }}" alt="Abhiram Girish Naik">
+        </div>
+        <h3 class="person__name">Abhiram Girish Naik</h3>
+        <p class="person__role">Executive Member</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Committee Leads: 4 member boxes -->
+  <div class="committee-block" style="margin-top: 3.5rem;">
+    <div class="committee-subhead">
+      <span class="committee-subhead__pill">Organizing Committee - Student Affairs</span>
+    </div>
+    <div class="people-grid people-grid--4col">
+      <!-- 1: Nethrapal M Jali -->
+      <div class="person">
+        <div class="person__photo">
+          <img src="{{ url_for('static', filename='committee/nethrapal_podium_aligned.png') }}" alt="Nethrapal M Jali">
+        </div>
+        <h3 class="person__name">Nethrapal M Jali</h3>
+        <p class="person__role">President</p>
+      </div>
+
+      <!-- 2: Chidanand V -->
+      <div class="person">
+        <div class="person__photo">
+          <img src="{{ url_for('static', filename='committee/chidanand_v.png') }}" alt="Chidanand V">
+        </div>
+        <h3 class="person__name">Chidanand V</h3>
+        <p class="person__role">General Secretary</p>
+      </div>
+
+      <!-- 3: Abhishek B S -->
+      <div class="person">
+        <div class="person__photo">
+          <img src="{{ url_for('static', filename='committee/abhishek_bs.png') }}" alt="Abhishek B S">
+        </div>
+        <h3 class="person__name">Abhishek B S</h3>
+        <p class="person__role">Treasurer</p>
+      </div>
+
+      <!-- 4: Arjun Kerodi -->
+      <div class="person">
+        <div class="person__photo">
+          <img src="{{ url_for('static', filename='committee/arjun_kerodi.png') }}" alt="Arjun Kerodi">
+        </div>
+        <h3 class="person__name">Arjun Kerodi</h3>
+        <p class="person__role">Technical Lead</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Sports Coordinators: 2 member boxes -->
+  <div class="committee-block" style="margin-top: 3.5rem;">
+    <div class="committee-subhead">
+      <span class="committee-subhead__pill">Sports Coordinators</span>
+    </div>
+    <div class="people-grid people-grid--2col">
+      <div class="person person--placeholder">
+        <div class="person__photo person__photo--placeholder">
+          <span>+</span>
+        </div>
+        <h3 class="person__name">Sports Coordinator</h3>
+        <p class="person__role">Slot Available</p>
+      </div>
+
+      <div class="person person--placeholder">
+        <div class="person__photo person__photo--placeholder">
+          <span>+</span>
+        </div>
+        <h3 class="person__name">Sports Co-coordinator</h3>
+        <p class="person__role">Slot Available</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Developers Section -->
+  <div class="committee-block" style="margin-top: 3.5rem;">
+    <div class="section-title" style="margin-bottom: 1.5rem;">
+      <span class="eyebrow" style="background: rgba(91, 31, 31, 0.08); border-color: var(--line);">Platform
+        Engineering</span>
+      <h3 style="font-family: var(--font-display); font-size: 1.6rem; color: var(--maroon);">Developers</h3>
+      <p style="color: var(--muted); font-size: 0.92rem; margin-top: 0.25rem;">Architected and engineered by the
+        technical leadership of GM University Student Affairs.</p>
+    </div>
+    <div class="people-grid people-grid--devs">
+      <!-- 1: Rahul R Gadgimata -->
+      <div class="person person--dev">
+        <div class="person__photo">
+          <img src="{{ url_for('static', filename='committee/rahul_rg.png') }}" alt="Rahul R Gadgimata">
+        </div>
+        <h3 class="person__name">Rahul R Gadgimata</h3>
+        <p class="person__role">Developer</p>
+      </div>
+
+      <!-- 2: Abhiram Girish Naik -->
+      <div class="person person--dev">
+        <div class="person__photo">
+          <img src="{{ url_for('static', filename='committee/abhiram_girish_naik.png') }}" alt="Abhiram Girish Naik">
+        </div>
+        <h3 class="person__name">Abhiram Girish Naik</h3>
+        <p class="person__role">Developer</p>
+      </div>
+
+      <!-- 3: Nethrapal M Jali -->
+      <div class="person person--dev">
+        <div class="person__photo">
+          <img src="{{ url_for('static', filename='committee/nethrapal_podium_aligned.png') }}" alt="Nethrapal M Jali">
+        </div>
+        <h3 class="person__name">Nethrapal M Jali</h3>
+        <p class="person__role">Developer</p>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}

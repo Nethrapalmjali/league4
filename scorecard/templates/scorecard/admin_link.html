@@ -1,0 +1,55 @@
+{% extends "scorecard/_page.html" %}
+{% block title %}Link to auction{% endblock %}
+
+{% block content %}
+  <div class="sc-page">
+    <header class="sc-page__head">
+      <span class="sc-eyebrow">Scorecard admin</span>
+      <h1>Link to auction</h1>
+      <p>
+        Optional. Pointing a scorecard team at a registered franchise fills in one
+        column and changes nothing else — the scorecard works exactly the same
+        whether you do this or not.
+      </p>
+      <p><a href="{{ url_for('scorecard.admin_teams') }}">← Teams</a></p>
+    </header>
+
+    {% if not owners %}
+      <p class="sc-empty">No registered franchises yet, so there is nothing to link to.</p>
+    {% else %}
+      <form method="post">
+        <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+        <div class="sc-list">
+          {% for team in teams %}
+            <div class="sc-row sc-row--static">
+              <span class="sc-row__meta">
+                <span class="sc-row__sport">{{ team.sport }}</span>
+              </span>
+              <span class="sc-row__teams">
+                <span class="sc-row__team">{{ team.name }}</span>
+              </span>
+              <span class="sc-row__tail">
+                <select name="owner_{{ team.id }}">
+                  <option value="">Not linked</option>
+                  {% for owner in owners %}
+                    <option value="{{ owner.id }}"
+                      {% if team.ems_owner_id == owner.id %}selected
+                      {% elif team.ems_owner_id is none and suggestions[team.id] == owner.id %}selected{% endif %}>
+                      {{ owner.team_name }}
+                      {%- if suggestions[team.id] == owner.id %} — name matches{% endif %}
+                    </option>
+                  {% endfor %}
+                </select>
+              </span>
+            </div>
+          {% else %}
+            <p class="sc-empty">No scorecard teams to link.</p>
+          {% endfor %}
+        </div>
+        {% if teams %}
+          <p class="sc-form__buttons"><button class="btn btn--primary" type="submit">Save links</button></p>
+        {% endif %}
+      </form>
+    {% endif %}
+  </div>
+{% endblock %}

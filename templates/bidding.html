@@ -1,0 +1,1789 @@
+{% extends "admin_base.html" %}
+{% import "_icons.html" as ico %}
+{% block title %}{{ sport }} Live Auction · {{ brand.short }}{% endblock %}
+
+{% block head %}
+<!-- Stitch MCP Design System Fonts & Material Symbols -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..144,400;8..144,600;8..144,700;8..144,800&family=Source+Sans+3:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
+
+<style>
+  :root {
+    --primary: #48070e;
+    --deep-maroon: #651e21;
+    --primary-container: #7a2529;
+    --heritage-gold: #e3b559;
+    --soft-gold: #ecc35c;
+    --gold-glow: rgba(227, 181, 89, 0.35);
+    --academic-blue: #2e47b0;
+    --surface: #fbf9f4;
+    --warm-white: #ffffff;
+    --surface-container: #f0eee9;
+    --surface-container-low: #f5f3ee;
+    --surface-dim: #e4e2dd;
+    --on-surface: #1b1c19;
+    --on-surface-variant: #544242;
+    --outline: #877271;
+    --outline-variant: #dac1bf;
+    --success: #1b8751;
+    --error: #ba1a1a;
+  }
+
+  body {
+    background: #fbf9f4 !important;
+    color: var(--on-surface) !important;
+    font-family: 'Source Sans 3', system-ui, -apple-system, sans-serif !important;
+    margin: 0;
+    padding: 0;
+    min-height: 100vh;
+  }
+
+  /* Stitch Top App Bar */
+  .stitch-topbar {
+    background: #ffffff;
+    border-bottom: 4px solid var(--deep-maroon);
+    box-shadow: 0 2px 10px rgba(72, 7, 14, 0.06);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .stitch-topbar-inner {
+    max-width: 1440px;
+    margin: 0 auto;
+    padding: 0.85rem 1.5rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+  }
+  .stitch-brand {
+    display: flex;
+    align-items: center;
+    gap: 0.85rem;
+    text-decoration: none;
+  }
+  .stitch-logo-ring {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    border: 2px solid var(--heritage-gold);
+    overflow: hidden;
+    background: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  .stitch-logo-ring img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  .stitch-brand-title {
+    font-family: 'Source Serif 4', Georgia, serif;
+    font-size: 1.35rem;
+    font-weight: 800;
+    color: var(--deep-maroon);
+    letter-spacing: -0.01em;
+    line-height: 1.1;
+  }
+  .stitch-brand-sub {
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: var(--heritage-gold);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+  .stitch-nav {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+  }
+  .stitch-nav-link {
+    font-size: 0.88rem;
+    font-weight: 600;
+    color: var(--on-surface-variant);
+    text-decoration: none;
+    padding: 0.5rem 0.85rem;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+  .stitch-nav-link:hover {
+    background: var(--surface-container-low);
+    color: var(--deep-maroon);
+  }
+  .stitch-nav-link.is-active {
+    background: var(--deep-maroon);
+    color: #ffffff;
+    box-shadow: 0 2px 6px rgba(101, 30, 33, 0.25);
+  }
+  .stitch-topbar-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+  }
+  .sound-pill {
+    background: var(--surface-container);
+    border: 1px solid var(--outline-variant);
+    color: var(--on-surface);
+    padding: 0.4rem 0.8rem;
+    border-radius: 9999px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    transition: all 0.2s;
+  }
+  .sound-pill:hover {
+    border-color: var(--heritage-gold);
+  }
+
+  /* Main Canvas Container */
+  .stitch-container {
+    max-width: 1440px;
+    margin: 0 auto;
+    padding: 2rem 1.5rem 4rem;
+  }
+
+  /* Live Auction Header Strip */
+  .auction-header-strip {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 1.25rem;
+    padding-bottom: 1.25rem;
+    margin-bottom: 2rem;
+    border-bottom: 2px solid var(--heritage-gold);
+  }
+  .auction-title-group h2 {
+    font-family: 'Source Serif 4', Georgia, serif;
+    font-size: 2.2rem;
+    font-weight: 800;
+    color: var(--deep-maroon);
+    margin: 0.25rem 0 0;
+    letter-spacing: -0.02em;
+    line-height: 1.15;
+  }
+  .live-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    background: var(--error);
+    color: #ffffff;
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    padding: 0.28rem 0.65rem;
+    border-radius: 4px;
+    box-shadow: 0 0 12px rgba(186, 26, 26, 0.4);
+  }
+  .live-dot-pulse {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #ffffff;
+    animation: pulse 1.4s infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.4; transform: scale(0.8); }
+  }
+
+  /* Metrics Ribbon */
+  .metrics-ribbon {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+  }
+  .metric-card-pill {
+    background: #ffffff;
+    border: 1px solid var(--outline-variant);
+    border-radius: 8px;
+    padding: 0.45rem 0.9rem;
+    display: flex;
+    flex-direction: column;
+    min-width: 80px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+  }
+  .metric-card-pill span.lbl {
+    font-size: 0.68rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--on-surface-variant);
+  }
+  .metric-card-pill span.val {
+    font-family: 'Source Serif 4', Georgia, serif;
+    font-size: 1.15rem;
+    font-weight: 800;
+    color: var(--deep-maroon);
+    line-height: 1.1;
+  }
+
+  /* Sport and Gender Filters */
+  .filter-pills {
+    display: inline-flex;
+    background: var(--surface-container);
+    padding: 3px;
+    border-radius: 8px;
+    border: 1px solid var(--outline-variant);
+    gap: 2px;
+  }
+  .filter-pill {
+    padding: 0.35rem 0.85rem;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--on-surface-variant);
+    text-decoration: none;
+    border-radius: 6px;
+    transition: all 0.15s ease;
+  }
+  .filter-pill:hover {
+    color: var(--deep-maroon);
+  }
+  .filter-pill.is-active {
+    background: var(--deep-maroon);
+    color: #ffffff;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+  }
+
+  /* Bento Grid Layout */
+  .bento-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
+  @media (min-width: 1024px) {
+    .bento-grid {
+      grid-template-columns: 8fr 4fr;
+    }
+  }
+
+  /* Left Column: Player Spotlight + Bidding Console */
+  .arena-left {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+  }
+
+  /* Stitch Player Card */
+  .player-spotlight-card {
+    background: #ffffff;
+    border: 1px solid var(--soft-gold);
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(72, 7, 14, 0.06);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    transition: transform 0.2s ease;
+  }
+  @media (min-width: 768px) {
+    .player-spotlight-card {
+      flex-direction: row;
+    }
+  }
+
+  /* Left Player Visual (Image / Photo) */
+  .player-image-col {
+    position: relative;
+    background: linear-gradient(135deg, #380d10 0%, #1a0406 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 280px;
+    overflow: hidden;
+  }
+  @media (min-width: 768px) {
+    .player-image-col {
+      width: 38%;
+      min-height: auto;
+    }
+  }
+  .player-image-col img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    position: absolute;
+    inset: 0;
+  }
+  .player-img-overlay {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(to top, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0.1) 60%, transparent 100%);
+    pointer-events: none;
+  }
+  .player-avatar-monogram {
+    width: 110px;
+    height: 110px;
+    border-radius: 50%;
+    border: 3px solid var(--heritage-gold);
+    background: rgba(227, 181, 89, 0.15);
+    color: var(--heritage-gold);
+    font-family: 'Source Serif 4', Georgia, serif;
+    font-size: 2.8rem;
+    font-weight: 800;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 0 25px rgba(227, 181, 89, 0.35);
+  }
+  .base-price-pill {
+    position: absolute;
+    bottom: 1rem;
+    left: 1rem;
+    background: var(--heritage-gold);
+    color: var(--primary);
+    font-size: 0.76rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    padding: 0.3rem 0.65rem;
+    border-radius: 4px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+  }
+
+  /* Right Player Details */
+  .player-info-col {
+    padding: 1.75rem 2rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    flex: 1;
+  }
+  .lot-header-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.75rem;
+  }
+  .lot-label-tag {
+    font-size: 0.75rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--secondary);
+    background: var(--surface-container-low);
+    padding: 0.25rem 0.6rem;
+    border-radius: 4px;
+    border: 1px solid var(--outline-variant);
+  }
+  .lot-controls {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+  }
+  .lot-btn {
+    background: var(--surface-container);
+    border: 1px solid var(--outline-variant);
+    color: var(--deep-maroon);
+    width: 28px;
+    height: 28px;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-weight: 700;
+    font-size: 0.95rem;
+    transition: all 0.15s;
+  }
+  .lot-btn:hover {
+    background: var(--deep-maroon);
+    color: #ffffff;
+    border-color: var(--deep-maroon);
+  }
+  .player-main-name {
+    font-family: 'Source Serif 4', Georgia, serif;
+    font-size: 1.85rem;
+    font-weight: 800;
+    color: var(--deep-maroon);
+    margin: 0 0 0.3rem;
+    line-height: 1.2;
+  }
+  .player-branch-line {
+    font-size: 0.92rem;
+    color: var(--on-surface-variant);
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    margin-bottom: 1.25rem;
+  }
+
+  /* 3-Column Stats Grid from Stitch */
+  .stats-trio {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.85rem;
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--surface-container);
+  }
+  .stat-trio-box {
+    border-left: 3px solid var(--heritage-gold);
+    padding-left: 0.65rem;
+  }
+  .stat-trio-box .stat-sub {
+    font-size: 0.68rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--on-surface-variant);
+    margin-bottom: 0.2rem;
+  }
+  .stat-trio-box .stat-val {
+    font-size: 0.92rem;
+    font-weight: 700;
+    color: var(--on-surface);
+    line-height: 1.2;
+  }
+
+  /* Stitch Bidding Console (Deep Maroon Card) */
+  .bidding-console-card {
+    background: var(--deep-maroon);
+    color: #ffffff;
+    border: 2px solid var(--heritage-gold);
+    border-radius: 12px;
+    box-shadow: 0 8px 30px rgba(72, 7, 14, 0.22);
+    padding: 1.75rem 2rem;
+    position: relative;
+    overflow: hidden;
+  }
+  .bidding-console-card::before {
+    content: '';
+    position: absolute;
+    top: -50px;
+    right: -50px;
+    width: 150px;
+    height: 150px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(227, 181, 89, 0.2) 0%, transparent 70%);
+    pointer-events: none;
+  }
+  .console-top-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1.5rem;
+    margin-bottom: 1.5rem;
+  }
+  .hammer-price-block .hammer-lbl {
+    font-size: 0.78rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--heritage-gold);
+    margin-bottom: 0.35rem;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+  .hammer-price-block .hammer-val {
+    font-family: 'Source Serif 4', Georgia, serif;
+    font-size: 3rem;
+    font-weight: 800;
+    color: #ffffff;
+    line-height: 1;
+    letter-spacing: -0.02em;
+    text-shadow: 0 2px 10px rgba(0,0,0,0.3);
+  }
+  .hammer-price-block .hammer-lead-franchise {
+    font-size: 0.88rem;
+    color: rgba(255, 255, 255, 0.85);
+    margin-top: 0.5rem;
+  }
+  .hammer-price-block .hammer-lead-franchise strong {
+    color: var(--heritage-gold);
+    font-weight: 700;
+  }
+
+  /* Circular Countdown Timer */
+  .countdown-timer-box {
+    display: flex;
+    align-items: center;
+    gap: 0.85rem;
+    background: rgba(0, 0, 0, 0.25);
+    border: 1px solid rgba(227, 181, 89, 0.3);
+    padding: 0.6rem 1rem;
+    border-radius: 10px;
+  }
+  .timer-dial-svg {
+    width: 52px;
+    height: 52px;
+    transform: rotate(-90deg);
+  }
+  .timer-bg-circle {
+    fill: none;
+    stroke: rgba(255, 255, 255, 0.15);
+    stroke-width: 4;
+  }
+  .timer-progress-circle {
+    fill: none;
+    stroke: var(--heritage-gold);
+    stroke-width: 4;
+    stroke-dasharray: 138;
+    stroke-dashoffset: 0;
+    stroke-linecap: round;
+    transition: stroke-dashoffset 1s linear, stroke 0.3s;
+  }
+  .timer-text-content {
+    display: flex;
+    flex-direction: column;
+  }
+  .timer-number {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: #ffffff;
+    line-height: 1;
+  }
+  .timer-label {
+    font-size: 0.68rem;
+    text-transform: uppercase;
+    color: var(--heritage-gold);
+    letter-spacing: 0.05em;
+  }
+  .timer-actions {
+    display: flex;
+    gap: 0.3rem;
+    margin-top: 0.25rem;
+  }
+  .timer-mini-btn {
+    background: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    color: #ffffff;
+    font-size: 0.65rem;
+    font-weight: 700;
+    padding: 2px 6px;
+    border-radius: 3px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .timer-mini-btn:hover {
+    background: var(--heritage-gold);
+    color: var(--deep-maroon);
+    border-color: var(--heritage-gold);
+  }
+
+  /* Quick Increments Strip */
+  .quick-increments {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 1.5rem;
+    padding: 0.75rem 1rem;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+  }
+  .quick-inc-label {
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--heritage-gold);
+    margin-right: 0.5rem;
+  }
+  .quick-btn {
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(227, 181, 89, 0.4);
+    color: #ffffff;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.8rem;
+    font-weight: 700;
+    padding: 0.4rem 0.75rem;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+  .quick-btn:hover {
+    background: var(--heritage-gold);
+    color: var(--deep-maroon);
+    border-color: var(--heritage-gold);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(227, 181, 89, 0.3);
+  }
+
+  /* Bid Execution Form */
+  .bid-form-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+  }
+  @media (min-width: 640px) {
+    .bid-form-grid {
+      grid-template-columns: 3fr 2fr;
+    }
+  }
+  .form-field-wrap label {
+    display: block;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--heritage-gold);
+    margin-bottom: 0.4rem;
+  }
+  .form-select-stitch, .form-input-stitch {
+    width: 100%;
+    box-sizing: border-box;
+    background: #ffffff;
+    color: var(--on-surface);
+    border: 2px solid rgba(227, 181, 89, 0.6);
+    border-radius: 6px;
+    padding: 0.75rem 1rem;
+    font-size: 0.95rem;
+    font-weight: 600;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+  .form-select-stitch:focus, .form-input-stitch:focus {
+    border-color: var(--heritage-gold);
+    box-shadow: 0 0 0 3px rgba(227, 181, 89, 0.35);
+  }
+  .purse-hint {
+    font-size: 0.75rem;
+    color: rgba(255, 255, 255, 0.75);
+    margin-top: 0.3rem;
+    display: block;
+  }
+
+  /* Action Buttons */
+  .console-actions-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+  }
+  .btn-hammer-stitch {
+    flex: 1;
+    min-width: 200px;
+    background: var(--heritage-gold);
+    color: var(--deep-maroon);
+    border: 2px solid var(--heritage-gold);
+    border-radius: 6px;
+    padding: 0.9rem 1.5rem;
+    font-size: 1rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    cursor: pointer;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.25);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    transition: all 0.2s ease;
+  }
+  .btn-hammer-stitch:hover {
+    background: #ffd875;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(227, 181, 89, 0.45);
+  }
+  .btn-unsold-stitch {
+    background: transparent;
+    color: #ffffff;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-radius: 6px;
+    padding: 0.9rem 1.4rem;
+    font-size: 0.92rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    transition: all 0.2s ease;
+  }
+  .btn-unsold-stitch:hover {
+    background: rgba(255, 255, 255, 0.12);
+    border-color: #ffffff;
+    color: #ffffff;
+  }
+
+  /* Right Column: Bid History & Remaining Purses */
+  .arena-right {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+  }
+
+  /* History Card */
+  .stitch-card {
+    background: #ffffff;
+    border: 1px solid var(--soft-gold);
+    border-radius: 12px;
+    box-shadow: 0 4px 18px rgba(72, 7, 14, 0.05);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+  .stitch-card-head {
+    padding: 1rem 1.25rem;
+    background: var(--surface-container-low);
+    border-bottom: 1px solid var(--outline-variant);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .stitch-card-head h4 {
+    font-family: 'Source Serif 4', Georgia, serif;
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: var(--deep-maroon);
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+  }
+  .history-stream {
+    max-height: 280px;
+    overflow-y: auto;
+    padding: 0.75rem 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.65rem;
+  }
+  .history-item {
+    background: var(--surface);
+    border-left: 4px solid var(--academic-blue);
+    border-radius: 6px;
+    padding: 0.65rem 0.85rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+  }
+  .history-item-info strong {
+    display: block;
+    font-size: 0.88rem;
+    color: var(--on-surface);
+  }
+  .history-item-info span {
+    font-size: 0.75rem;
+    color: var(--on-surface-variant);
+  }
+  .history-price {
+    font-family: 'Source Serif 4', Georgia, serif;
+    font-size: 1.1rem;
+    font-weight: 800;
+    color: var(--deep-maroon);
+  }
+  .reopen-btn {
+    background: transparent;
+    border: 1px solid var(--outline-variant);
+    color: var(--on-surface-variant);
+    padding: 0.2rem 0.5rem;
+    font-size: 0.7rem;
+    font-weight: 600;
+    border-radius: 4px;
+    cursor: pointer;
+    margin-left: 0.5rem;
+    transition: all 0.15s;
+  }
+  .reopen-btn:hover {
+    background: var(--error);
+    border-color: var(--error);
+    color: #ffffff;
+  }
+
+  /* Franchise Purses List */
+  .franchise-purses-list {
+    padding: 1rem 1.25rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.85rem;
+    max-height: 380px;
+    overflow-y: auto;
+  }
+  .franchise-row {
+    border-bottom: 1px solid var(--surface-container);
+    padding-bottom: 0.75rem;
+  }
+  .franchise-row:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+  }
+  .franchise-row-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.35rem;
+  }
+  .franchise-name-txt {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--deep-maroon);
+  }
+  .franchise-purse-txt {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.92rem;
+    font-weight: 700;
+    color: var(--primary);
+  }
+  .progress-track {
+    width: 100%;
+    height: 6px;
+    background: var(--surface-container);
+    border-radius: 9999px;
+    overflow: hidden;
+    margin-bottom: 0.3rem;
+  }
+  .progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--heritage-gold), var(--deep-maroon));
+    border-radius: 9999px;
+    transition: width 0.4s ease;
+  }
+  .franchise-squad-meta {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.72rem;
+    color: var(--on-surface-variant);
+  }
+
+  /* Unsold Section / Drawer */
+  .unsold-section {
+    margin-top: 2rem;
+    background: #ffffff;
+    border: 1px solid var(--outline-variant);
+    border-radius: 12px;
+    padding: 1.5rem 1.75rem;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.03);
+  }
+  .unsold-section-head {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1rem;
+  }
+  .unsold-title {
+    font-family: 'Source Serif 4', Georgia, serif;
+    font-size: 1.35rem;
+    font-weight: 700;
+    color: var(--deep-maroon);
+    margin: 0;
+  }
+  .unsold-chips-wrap {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+  .unsold-chip {
+    background: var(--surface-container-low);
+    border: 1px solid var(--outline-variant);
+    border-radius: 20px;
+    padding: 0.35rem 0.85rem;
+    font-size: 0.8rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+
+  /* Empty Pool State */
+  .empty-pool-box {
+    background: #ffffff;
+    border: 2px dashed var(--soft-gold);
+    border-radius: 12px;
+    padding: 4rem 2rem;
+    text-align: center;
+  }
+  .empty-pool-icon {
+    font-size: 3.5rem;
+    margin-bottom: 0.75rem;
+  }
+  .empty-pool-title {
+    font-family: 'Source Serif 4', Georgia, serif;
+    font-size: 1.85rem;
+    font-weight: 800;
+    color: var(--deep-maroon);
+    margin: 0 0 0.5rem;
+  }
+
+  /* Sold Celebration Overlay */
+  .sold-modal {
+    position: fixed;
+    inset: 0;
+    background: rgba(40, 7, 10, 0.85);
+    backdrop-filter: blur(8px);
+    z-index: 9999;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 1.5rem;
+    animation: fadeIn 0.25s ease;
+  }
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  .sold-card-pop {
+    background: #ffffff;
+    border: 3px solid var(--heritage-gold);
+    border-radius: 16px;
+    box-shadow: 0 15px 50px rgba(0,0,0,0.5);
+    padding: 2.5rem 3rem;
+    text-align: center;
+    max-width: 480px;
+    width: 100%;
+    animation: scaleUp 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  }
+  @keyframes scaleUp {
+    from { transform: scale(0.8); }
+    to { transform: scale(1); }
+  }
+  .sold-card-pop h2 {
+    font-family: 'Source Serif 4', Georgia, serif;
+    font-size: 2.5rem;
+    font-weight: 800;
+    color: var(--deep-maroon);
+    margin: 0.5rem 0 0.25rem;
+  }
+  .sold-card-pop .gavel-pop-icon {
+    font-size: 3.5rem;
+  }
+  .sold-card-pop .sold-team-banner {
+    font-size: 1.25rem;
+    font-weight: 800;
+    color: var(--heritage-gold);
+    background: var(--deep-maroon);
+    padding: 0.6rem 1.25rem;
+    border-radius: 8px;
+    margin: 1rem 0;
+  }
+  .sold-card-pop .sold-price-banner {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 2.2rem;
+    font-weight: 800;
+    color: var(--deep-maroon);
+  }
+  .sold-card-pop .btn-close-pop {
+    margin-top: 1.5rem;
+    background: var(--deep-maroon);
+    color: #ffffff;
+    border: none;
+    padding: 0.75rem 2rem;
+    border-radius: 6px;
+    font-size: 0.95rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .sold-card-pop .btn-close-pop:hover {
+    background: var(--primary);
+  }
+</style>
+{% endblock %}
+
+{% block body %}
+<!-- ---------------- Stitch Top App Bar ---------------- -->
+<header class="stitch-topbar">
+  <div class="stitch-topbar-inner">
+    <a href="{{ url_for('admin_dashboard') }}" class="stitch-brand">
+      <div class="stitch-logo-ring">
+        <img src="{{ url_for('static', filename='logos/gmulogo1.png') }}" alt="{{ brand.university }}">
+      </div>
+      <div>
+        <div class="stitch-brand-title">{{ brand.name }}</div>
+        <div class="stitch-brand-sub">{{ sport }} Premier Auction · Official Desk</div>
+      </div>
+    </a>
+
+    <nav class="stitch-nav">
+      <a href="{{ url_for('admin_dashboard') }}" class="stitch-nav-link">
+        <span class="material-symbols-outlined" style="font-size: 18px;">dashboard</span>
+        Dashboard
+      </a>
+      <a href="{{ url_for('bidding', sport=sport|lower, gender=gender|lower) }}" class="stitch-nav-link is-active">
+        <span class="material-symbols-outlined" style="font-size: 18px;">gavel</span>
+        Live Auction
+      </a>
+      <a href="{{ url_for('scorecard.index') }}" class="stitch-nav-link">
+        <span class="material-symbols-outlined" style="font-size: 18px;">scoreboard</span>
+        Scorecard
+      </a>
+      <a href="{{ url_for('index') }}" class="stitch-nav-link" target="_blank">
+        <span class="material-symbols-outlined" style="font-size: 18px;">public</span>
+        Public Site
+      </a>
+    </nav>
+
+    <div class="stitch-topbar-actions">
+      <button type="button" class="sound-pill" id="soundToggle" title="Toggle Auction Sounds">
+        <span id="soundIcon">🔊</span>
+        <span id="soundText">Sound ON</span>
+      </button>
+      <a href="{{ url_for('admin_logout') }}" class="stitch-nav-link" style="color: var(--error);">
+        <span class="material-symbols-outlined" style="font-size: 18px;">logout</span>
+        Logout
+      </a>
+    </div>
+  </div>
+</header>
+
+<!-- ---------------- Main Auction Canvas ---------------- -->
+<div class="stitch-container">
+
+  <!-- Flash Messages -->
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      <div style="margin-bottom: 1.5rem;">
+        {% for category, message in messages %}
+          <div style="padding: 0.9rem 1.25rem; border-radius: 8px; margin-bottom: 0.5rem; font-weight: 600; font-size: 0.92rem;
+                      background: {% if category == 'success' %}#eaf7f0; color: #17563a; border-left: 4px solid var(--success);
+                                  {% elif category == 'error' %}#fdecea; color: #8e2119; border-left: 4px solid var(--error);
+                                  {% else %}#fff8e8; color: #6d5210; border-left: 4px solid var(--heritage-gold);{% endif %}">
+            {{ message }}
+          </div>
+        {% endfor %}
+      </div>
+    {% endif %}
+  {% endwith %}
+
+  <!-- Live Auction Header Strip -->
+  <div class="auction-header-strip">
+    <div class="auction-title-group">
+      <div style="display:flex; align-items:center; gap: 0.65rem;">
+        <span class="live-badge">
+          <span class="live-dot-pulse"></span>
+          Live Desk
+        </span>
+        <div class="filter-pills">
+          {% for s in sports %}
+            <a href="{{ url_for('bidding', sport=s|lower, gender='male') }}" class="filter-pill {{ 'is-active' if s.lower() == sport.lower() else '' }}">
+              {{ s }}
+            </a>
+          {% endfor %}
+        </div>
+      </div>
+      <h2>{{ sport }} <span>{{ 'Men' if gender == 'Male' else 'Women' }}'s Auction</span></h2>
+    </div>
+
+    <div style="display:flex; flex-direction:column; align-items:flex-end; gap:0.6rem;">
+      <!-- Category Switcher (Men / Women) -->
+      {% if not mens_only %}
+        <div class="filter-pills">
+          <a href="{{ url_for('bidding', sport=sport|lower, gender='male') }}" class="filter-pill {{ 'is-active' if gender == 'Male' else '' }}">Men's League</a>
+          <a href="{{ url_for('bidding', sport=sport|lower, gender='female') }}" class="filter-pill {{ 'is-active' if gender == 'Female' else '' }}">Women's League</a>
+        </div>
+      {% endif %}
+
+      <!-- Real-time Metrics Ribbon -->
+      <div class="metrics-ribbon">
+        <div class="metric-card-pill">
+          <span class="lbl">In Pool</span>
+          <span class="val" id="metricPoolCount">{{ players|length }}</span>
+        </div>
+        <div class="metric-card-pill">
+          <span class="lbl">Sold</span>
+          <span class="val" style="color: var(--success);" id="metricSoldCount">{{ sold_players|length }}</span>
+        </div>
+        <div class="metric-card-pill">
+          <span class="lbl">Unsold</span>
+          <span class="val" style="color: var(--error);" id="metricUnsoldCount">{{ unsold_players|length }}</span>
+        </div>
+        <div class="metric-card-pill">
+          <span class="lbl">Total Spent</span>
+          <span class="val">₹{{ '{:,}'.format(total_spent) }}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bento Grid Arena -->
+  <div class="bento-grid">
+
+    <!-- ---------------- Left Column: Player Spotlight & Bidding Console ---------------- -->
+    <div class="arena-left">
+      {% if players %}
+        {% for player in players %}
+          <div class="lot-block {{ 'is-active' if loop.first else '' }}" data-lot-index="{{ loop.index0 }}" style="{{ 'display:flex; flex-direction:column; gap:1.5rem;' if loop.first else 'display:none; flex-direction:column; gap:1.5rem;' }}">
+            
+            <!-- 1. Spotlight Player Card (Stitch Design) -->
+            <section class="player-spotlight-card">
+              <!-- Left Visual -->
+              <div class="player-image-col">
+                {% if player.photo %}
+                  <img src="{{ url_for('static', filename=player.photo) }}" alt="{{ player.name }}">
+                {% else %}
+                  <div class="player-avatar-monogram">{{ player.name[:2]|upper }}</div>
+                {% endif %}
+                <div class="player-img-overlay"></div>
+                <div class="base-price-pill">Base Price: ₹20,000</div>
+              </div>
+
+              <!-- Right Info -->
+              <div class="player-info-col">
+                <div>
+                  <div class="lot-header-row">
+                    <span class="lot-label-tag">
+                      LOT #{{ loop.index }} OF {{ players|length }} · {{ player.position or sport ~ ' Player' }}
+                    </span>
+                    <div class="lot-controls">
+                      <button type="button" class="lot-btn" data-action="prev" title="Previous Lot">‹</button>
+                      <span style="font-size:0.8rem; font-weight:700; color:var(--on-surface-variant); padding: 0 4px;">
+                        {{ loop.index }} / {{ players|length }}
+                      </span>
+                      <button type="button" class="lot-btn" data-action="next" title="Next Lot">›</button>
+                    </div>
+                  </div>
+
+                  <h3 class="player-main-name">{{ player.name }}</h3>
+
+                  <div class="player-branch-line">
+                    <span class="material-symbols-outlined" style="font-size:18px; color:var(--deep-maroon);">school</span>
+                    <span>{{ player.branch or 'Branch N/A' }} · USN: <strong>{{ player.usn or 'N/A' }}</strong></span>
+                  </div>
+
+                  <div style="font-size: 0.85rem; color: var(--on-surface-variant); margin-bottom: 0.75rem;">
+                    <span>🏫 {{ player.college_name or brand.university }}</span>
+                    {% if player.contact %}
+                      <span style="margin-left: 0.85rem;">📞 {{ player.contact }}</span>
+                    {% endif %}
+                  </div>
+                </div>
+
+                <!-- 3-Column Attributes Grid from Stitch -->
+                <div class="stats-trio">
+                  <div class="stat-trio-box">
+                    <div class="stat-sub">Role / Position</div>
+                    <div class="stat-val">{{ player.position or 'Player' }}</div>
+                  </div>
+                  <div class="stat-trio-box">
+                    <div class="stat-sub">Experience</div>
+                    <div class="stat-val">{{ player.experience or 'College League' }}</div>
+                  </div>
+                  <div class="stat-trio-box">
+                    <div class="stat-sub">Highlights</div>
+                    <div class="stat-val" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="{{ player.achievements or 'Verified Registrant' }}">
+                      {{ player.achievements or 'Verified Registrant' }}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <!-- 2. Digital Bidding Console Card (Stitch Deep Maroon Theme) -->
+            <section class="bidding-console-card">
+              <div class="console-top-row">
+                <!-- Hammer Price Header -->
+                <div class="hammer-price-block">
+                  <div class="hammer-lbl">
+                    <span class="material-symbols-outlined" style="font-size:16px;">gavel</span>
+                    Current Highest Bid / Hammer Price
+                  </div>
+                  <div class="hammer-val">
+                    ₹<span data-price-display>{{ '{:,}'.format(20000) }}</span>
+                  </div>
+                  <div class="hammer-lead-franchise">
+                    Held by <strong data-leader-display>{{ owners[0].team_name if owners else 'Awaiting First Bid' }}</strong>
+                  </div>
+                </div>
+
+                <!-- 15-Second Interactive Countdown Timer -->
+                <div class="countdown-timer-box">
+                  <svg class="timer-dial-svg" viewBox="0 0 48 48">
+                    <circle class="timer-bg-circle" cx="24" cy="24" r="22"></circle>
+                    <circle class="timer-progress-circle" cx="24" cy="24" r="22" data-timer-circle></circle>
+                  </svg>
+                  <div class="timer-text-content">
+                    <span class="timer-number" data-timer-num>15</span>
+                    <span class="timer-label">Seconds</span>
+                    <div class="timer-actions">
+                      <button type="button" class="timer-mini-btn" data-timer-act="start">▶ Start</button>
+                      <button type="button" class="timer-mini-btn" data-timer-act="pause">⏸ Pause</button>
+                      <button type="button" class="timer-mini-btn" data-timer-act="reset">↺ 15s</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Quick Increments Strip -->
+              <div class="quick-increments">
+                <span class="quick-inc-label">Quick Increment:</span>
+                <button type="button" class="quick-btn" data-inc="5000">+ ₹5,000</button>
+                <button type="button" class="quick-btn" data-inc="10000">+ ₹10,000</button>
+                <button type="button" class="quick-btn" data-inc="25000">+ ₹25,000</button>
+                <button type="button" class="quick-btn" data-inc="50000">+ ₹50,000</button>
+                <button type="button" class="quick-btn" data-inc="100000">+ ₹1,00,000</button>
+              </div>
+
+              <!-- Bidding Submission Form -->
+              <form method="POST" action="{{ url_for('bidding', sport=sport|lower, gender=gender|lower) }}" class="live-bid-form" data-player-id="{{ player.id }}">
+                <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="player_id" value="{{ player.id }}">
+                <input type="hidden" name="action" value="sell">
+
+                <div class="bid-form-grid">
+                  <div class="form-field-wrap">
+                    <label for="owner_{{ player.id }}">Winning Franchise</label>
+                    <select id="owner_{{ player.id }}" name="owner_id" required class="form-select-stitch" data-owner-select>
+                      {% for owner in owners %}
+                        <option value="{{ owner.id }}" data-budget="{{ owner.budget or 0 }}" data-name="{{ owner.team_name }}">
+                          {{ owner.team_name }} — ₹{{ '{:,}'.format(owner.budget or 0) }} purse remaining
+                        </option>
+                      {% endfor %}
+                    </select>
+                    <span class="purse-hint" data-purse-hint></span>
+                  </div>
+
+                  <div class="form-field-wrap">
+                    <label for="bid_{{ player.id }}">Hammer Price (₹)</label>
+                    <input type="number" id="bid_{{ player.id }}" name="bid_amount" min="1000" step="1000" value="20000" required class="form-input-stitch" data-bid-input>
+                  </div>
+                </div>
+
+                <!-- Action Triggers -->
+                <div class="console-actions-row">
+                  <button type="submit" class="btn-hammer-stitch" data-action="sell">
+                    <span class="material-symbols-outlined">gavel</span>
+                    Hammer Down (SOLD)
+                  </button>
+
+                  <button type="button" class="btn-unsold-stitch" data-action="unsold" data-player-id="{{ player.id }}">
+                    <span class="material-symbols-outlined">close</span>
+                    Pass / Unsold
+                  </button>
+                </div>
+              </form>
+            </section>
+          </div>
+        {% endfor %}
+      {% else %}
+        <!-- Empty Pool State -->
+        <div class="empty-pool-box">
+          <div class="empty-pool-icon">🏆</div>
+          <h3 class="empty-pool-title">Live Auction Pool Complete</h3>
+          <p style="color:var(--on-surface-variant); max-width:480px; margin:0 auto 1.5rem; line-height:1.5;">
+            All registered players for {{ sport }} ({{ gender }}) have been auctioned.
+            {% if unsold_players %}
+              There are {{ unsold_players|length }} unsold players available for Round 2.
+            {% endif %}
+          </p>
+
+          <div style="display:flex; justify-content:center; gap:0.75rem; flex-wrap:wrap;">
+            {% if unsold_players %}
+              <form method="POST" action="{{ url_for('bidding', sport=sport|lower, gender=gender|lower) }}">
+                <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="action" value="recall_unsold">
+                <button type="submit" class="btn-hammer-stitch" style="font-size:0.88rem; padding:0.75rem 1.4rem;">
+                  <span class="material-symbols-outlined">restart_alt</span>
+                  Bring Back {{ unsold_players|length }} Unsold Players (Round 2)
+                </button>
+              </form>
+            {% else %}
+              <form method="POST" action="{{ url_for('bidding', sport=sport|lower, gender=gender|lower) }}">
+                <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="action" value="seed_demo">
+                <button type="submit" class="btn-hammer-stitch" style="font-size:0.88rem; padding:0.75rem 1.4rem;">
+                  <span class="material-symbols-outlined">bolt</span>
+                  Generate Demo Players & Teams
+                </button>
+              </form>
+            {% endif %}
+
+            <a href="{{ url_for('admin_dashboard') }}" class="btn-unsold-stitch" style="color:var(--deep-maroon); border-color:var(--deep-maroon); text-decoration:none; padding:0.75rem 1.4rem;">
+              Back to Dashboard
+            </a>
+          </div>
+        </div>
+      {% endif %}
+    </div>
+
+    <!-- ---------------- Right Column: Bid History & Remaining Purses ---------------- -->
+    <div class="arena-right">
+
+      <!-- 1. Bid History (Stitch Design) -->
+      <div class="stitch-card">
+        <div class="stitch-card-head">
+          <h4>
+            <span class="material-symbols-outlined" style="font-size:20px; color:var(--deep-maroon);">history</span>
+            Bid History
+          </h4>
+          <span style="font-size:0.72rem; font-weight:700; color:var(--on-surface-variant); text-transform:uppercase;">Live Feed</span>
+        </div>
+        <div class="history-stream" id="historyStream">
+          {% if sold_players %}
+            {% for sp in sold_players %}
+              <div class="history-item" id="soldRow_{{ sp.id }}">
+                <div class="history-item-info">
+                  <strong>{{ sp.sold_to }}</strong>
+                  <span>{{ sp.name }} ({{ sp.position or sport }})</span>
+                </div>
+                <div style="display:flex; align-items:center;">
+                  <span class="history-price">₹{{ '{:,}'.format(sp.bid_amount or 0) }}</span>
+                  <button type="button" class="reopen-btn" data-reopen-id="{{ sp.id }}" title="Refund team & re-open player into pool">
+                    ↩ Re-bid
+                  </button>
+                </div>
+              </div>
+            {% endfor %}
+          {% else %}
+            <div id="noSalesNotice" style="text-align:center; padding:1.5rem 0.5rem; color:var(--on-surface-variant); font-size:0.85rem;">
+              No sales completed yet this session.
+            </div>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- 2. Remaining Franchise Purses (Stitch Design) -->
+      <div class="stitch-card">
+        <div class="stitch-card-head">
+          <h4>
+            <span class="material-symbols-outlined" style="font-size:20px; color:var(--deep-maroon);">account_balance_wallet</span>
+            Remaining Purse
+          </h4>
+          <span style="font-size:0.75rem; font-weight:700; color:var(--deep-maroon);">{{ owners|length }} Teams</span>
+        </div>
+        <div class="franchise-purses-list" id="franchisePursesList">
+          {% for owner in owners %}
+            {% set stats = owner_stats.get(owner.id, {'squad_count': 0, 'spent': 0, 'budget': owner.budget, 'budget_pct': 100}) %}
+            <div class="franchise-row" data-owner-card-id="{{ owner.id }}" data-team-name="{{ owner.team_name }}" data-purse="{{ owner.budget or 0 }}">
+              <div class="franchise-row-head">
+                <span class="franchise-name-txt">{{ owner.team_name }}</span>
+                <span class="franchise-purse-txt">₹{{ '{:,}'.format(owner.budget or 0) }}</span>
+              </div>
+              <div class="progress-track">
+                <div class="progress-fill" style="width: {{ stats.budget_pct }}%;"></div>
+              </div>
+              <div class="franchise-squad-meta">
+                <span>{{ stats.squad_count }} Players Signed</span>
+                <span>Spent: ₹{{ '{:,}'.format(stats.spent) }}</span>
+              </div>
+            </div>
+          {% endfor %}
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ---------------- Unsold Pool Section (Round 1) ---------------- -->
+  {% if unsold_players %}
+    <section class="unsold-section">
+      <div class="unsold-section-head">
+        <div>
+          <h3 class="unsold-title">Unsold Pool · Round 1 ({{ unsold_players|length }})</h3>
+          <p style="margin:0.25rem 0 0; font-size:0.85rem; color:var(--on-surface-variant);">
+            Players passed during Round 1. Click below to recall them back into the live auction pool for Round 2.
+          </p>
+        </div>
+        <form method="POST" action="{{ url_for('bidding', sport=sport|lower, gender=gender|lower) }}">
+          <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+          <input type="hidden" name="action" value="recall_unsold">
+          <button type="submit" class="btn-hammer-stitch" style="font-size:0.85rem; padding:0.65rem 1.25rem;">
+            <span class="material-symbols-outlined">restart_alt</span>
+            Bring Back All to Round 2
+          </button>
+        </form>
+      </div>
+
+      <div class="unsold-chips-wrap">
+        {% for up in unsold_players %}
+          <div class="unsold-chip">
+            <span style="font-weight:700; color:var(--deep-maroon);">{{ up.name }}</span>
+            <span style="color:var(--on-surface-variant);">({{ up.position or sport }} · {{ up.branch or 'N/A' }})</span>
+          </div>
+        {% endfor %}
+      </div>
+    </section>
+  {% endif %}
+
+</div>
+
+<!-- ---------------- Celebration Modal ---------------- -->
+<div class="sold-modal" id="celebrationModal">
+  <div class="sold-card-pop">
+    <div class="gavel-pop-icon">🔨</div>
+    <div style="font-size:0.85rem; font-weight:800; letter-spacing:0.1em; color:var(--deep-maroon); text-transform:uppercase;">
+      Sold at Auction
+    </div>
+    <h2 id="soldPlayerTitle">Player Name</h2>
+    <div class="sold-team-banner" id="soldTeamBanner">Team Name</div>
+    <div class="sold-price-banner" id="soldPriceBanner">₹0</div>
+    <div>
+      <button type="button" class="btn-close-pop" id="closeCelebrationBtn">
+        Next Lot ➔
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ---------------- Web Audio Synthesizer & Client Logic ---------------- -->
+<script>
+(function() {
+  let audioCtx = null;
+  let soundEnabled = true;
+
+  function initAudio() {
+    if (!audioCtx) {
+      const AudioContext = window.AudioContext || window.webkitAudioContext;
+      if (AudioContext) audioCtx = new AudioContext();
+    }
+    if (audioCtx && audioCtx.state === 'suspended') {
+      audioCtx.resume();
+    }
+  }
+
+  // Realistic Double Wooden Gavel Strike via Web Audio API
+  function playGavel() {
+    if (!soundEnabled) return;
+    initAudio();
+    if (!audioCtx) return;
+
+    function strike(delay) {
+      const t = audioCtx.currentTime + delay;
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(140, t);
+      osc.frequency.exponentialRampToValueAtTime(35, t + 0.12);
+
+      gain.gain.setValueAtTime(1.0, t);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.15);
+
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+
+      osc.start(t);
+      osc.stop(t + 0.16);
+
+      // Noise impact layer
+      const bufferSize = audioCtx.sampleRate * 0.05;
+      const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+      const data = buffer.getChannelData(0);
+      for (let i = 0; i < bufferSize; i++) {
+        data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (bufferSize * 0.25));
+      }
+      const noise = audioCtx.createBufferSource();
+      noise.buffer = buffer;
+      const noiseGain = audioCtx.createGain();
+      noiseGain.gain.setValueAtTime(0.6, t);
+      noiseGain.gain.exponentialRampToValueAtTime(0.001, t + 0.06);
+
+      noise.connect(noiseGain);
+      noiseGain.connect(audioCtx.destination);
+      noise.start(t);
+    }
+
+    strike(0.0);
+    strike(0.18);
+  }
+
+  // Victory fanfare on successful bid
+  function playFanfare() {
+    if (!soundEnabled) return;
+    initAudio();
+    if (!audioCtx) return;
+
+    const notes = [261.63, 329.63, 392.00, 523.25];
+    notes.forEach((freq, idx) => {
+      const t = audioCtx.currentTime + (idx * 0.09);
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, t);
+      gain.gain.setValueAtTime(0.2, t);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.35);
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start(t);
+      osc.stop(t + 0.4);
+    });
+  }
+
+  // Sound Toggle Button
+  const soundToggle = document.getElementById('soundToggle');
+  const soundIcon = document.getElementById('soundIcon');
+  const soundText = document.getElementById('soundText');
+  if (soundToggle) {
+    soundToggle.addEventListener('click', function() {
+      soundEnabled = !soundEnabled;
+      if (soundEnabled) {
+        soundIcon.textContent = '🔊';
+        soundText.textContent = 'Sound ON';
+        initAudio();
+      } else {
+        soundIcon.textContent = '🔇';
+        soundText.textContent = 'Muted';
+      }
+    });
+  }
+
+  // ---------------- Lot Navigation ----------------
+  const lotBlocks = Array.from(document.querySelectorAll('.lot-block'));
+  let currentLotIdx = 0;
+
+  function showLot(idx) {
+    if (!lotBlocks.length) return;
+    if (idx < 0) idx = lotBlocks.length - 1;
+    if (idx >= lotBlocks.length) idx = 0;
+    currentLotIdx = idx;
+
+    lotBlocks.forEach((block, i) => {
+      block.style.display = (i === idx) ? 'flex' : 'none';
+      if (i === idx) {
+        resetTimerForBlock(block);
+      }
+    });
+  }
+
+  document.addEventListener('click', function(e) {
+    if (e.target.matches('[data-action="next"]')) {
+      showLot(currentLotIdx + 1);
+    } else if (e.target.matches('[data-action="prev"]')) {
+      showLot(currentLotIdx - 1);
+    }
+  });
+
+  // ---------------- Interactive 15-Second Timer ----------------
+  const timerStates = new Map();
+
+  function initTimerForBlock(block) {
+    const numEl = block.querySelector('[data-timer-num]');
+    const circleEl = block.querySelector('[data-timer-circle]');
+    if (!numEl || !circleEl) return;
+
+    const fullOffset = 138;
+    let secondsLeft = 15;
+    let intervalId = null;
+
+    function render(sec) {
+      numEl.textContent = sec;
+      const progress = (15 - sec) / 15;
+      circleEl.style.strokeDashoffset = (progress * fullOffset);
+      if (sec <= 3) {
+        circleEl.style.stroke = 'var(--error)';
+        numEl.style.color = '#ff8585';
+      } else {
+        circleEl.style.stroke = 'var(--heritage-gold)';
+        numEl.style.color = '#ffffff';
+      }
+    }
+
+    function tick() {
+      if (secondsLeft > 0) {
+        secondsLeft--;
+        render(secondsLeft);
+        if (secondsLeft === 0) {
+          clearInterval(intervalId);
+          intervalId = null;
+          playGavel();
+        }
+      }
+    }
+
+    function start() {
+      initAudio();
+      if (intervalId) return;
+      if (secondsLeft === 0) secondsLeft = 15;
+      intervalId = setInterval(tick, 1000);
+    }
+
+    function pause() {
+      if (intervalId) {
+        clearInterval(intervalId);
+        intervalId = null;
+      }
+    }
+
+    function reset() {
+      pause();
+      secondsLeft = 15;
+      render(secondsLeft);
+    }
+
+    block.querySelectorAll('[data-timer-act]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const act = btn.dataset.timerAct;
+        if (act === 'start') start();
+        else if (act === 'pause') pause();
+        else if (act === 'reset') reset();
+      });
+    });
+
+    timerStates.set(block, { start, pause, reset });
+  }
+
+  function resetTimerForBlock(block) {
+    const st = timerStates.get(block);
+    if (st) st.reset();
+  }
+
+  lotBlocks.forEach(b => initTimerForBlock(b));
+
+  // ---------------- Quick Increments & Price Sync ----------------
+  document.querySelectorAll('.lot-block').forEach(block => {
+    const priceDisplay = block.querySelector('[data-price-display]');
+    const leaderDisplay = block.querySelector('[data-leader-display]');
+    const bidInput = block.querySelector('[data-bid-input]');
+    const ownerSelect = block.querySelector('[data-owner-select]');
+    const purseHint = block.querySelector('[data-purse-hint]');
+
+    function updatePurseHint() {
+      if (!ownerSelect) return;
+      const selected = ownerSelect.options[ownerSelect.selectedIndex];
+      if (!selected) return;
+      const budget = parseInt(selected.dataset.budget || 0, 10);
+      const bid = parseInt(bidInput.value || 0, 10);
+      if (leaderDisplay) {
+        leaderDisplay.textContent = selected.dataset.name || selected.text.split('—')[0].trim();
+      }
+      if (priceDisplay) {
+        priceDisplay.textContent = bid.toLocaleString('en-IN');
+      }
+      if (purseHint) {
+        if (bid > budget) {
+          purseHint.innerHTML = `<span style="color:#ff8585;">⚠️ Bid ₹${bid.toLocaleString('en-IN')} exceeds purse (₹${budget.toLocaleString('en-IN')})!</span>`;
+        } else {
+          purseHint.innerHTML = `<span style="color:var(--heritage-gold);">Purse after sale: ₹${(budget - bid).toLocaleString('en-IN')}</span>`;
+        }
+      }
+    }
+
+    if (ownerSelect) ownerSelect.addEventListener('change', updatePurseHint);
+    if (bidInput) bidInput.addEventListener('input', updatePurseHint);
+
+    block.querySelectorAll('.quick-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const inc = parseInt(btn.dataset.inc || 0, 10);
+        const curr = parseInt(bidInput.value || 0, 10);
+        bidInput.value = curr + inc;
+        updatePurseHint();
+      });
+    });
+
+    updatePurseHint();
+  });
+
+  // ---------------- AJAX Sale & Pass Submissions ----------------
+  const celebrationModal = document.getElementById('celebrationModal');
+  const soldPlayerTitle = document.getElementById('soldPlayerTitle');
+  const soldTeamBanner = document.getElementById('soldTeamBanner');
+  const soldPriceBanner = document.getElementById('soldPriceBanner');
+  const closeCelebrationBtn = document.getElementById('closeCelebrationBtn');
+
+  if (closeCelebrationBtn) {
+    closeCelebrationBtn.addEventListener('click', () => {
+      celebrationModal.style.display = 'none';
+      window.location.reload();
+    });
+  }
+
+  document.querySelectorAll('.live-bid-form').forEach(form => {
+    form.addEventListener('submit', async function(e) {
+      e.preventDefault();
+      initAudio();
+
+      const formData = new FormData(form);
+      const action = formData.get('action');
+
+      try {
+        const resp = await fetch(form.action, {
+          method: 'POST',
+          body: formData,
+          headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+          }
+        });
+
+        const data = await resp.json();
+
+        if (resp.ok && data.status === 'success') {
+          playGavel();
+          playFanfare();
+
+          soldPlayerTitle.textContent = data.player_name;
+          soldTeamBanner.textContent = data.team_name;
+          soldPriceBanner.textContent = '₹' + Number(data.bid_amount).toLocaleString('en-IN');
+          celebrationModal.style.display = 'flex';
+        } else {
+          alert(data.message || 'Error executing action.');
+        }
+      } catch (err) {
+        // Fallback to standard form submission
+        form.submit();
+      }
+    });
+  });
+
+  // Pass / Unsold button handler
+  document.querySelectorAll('[data-action="unsold"]').forEach(btn => {
+    btn.addEventListener('click', async function() {
+      const playerId = btn.dataset.playerId;
+      const form = btn.closest('.lot-block').querySelector('form');
+      const csrf = form.querySelector('[name="_csrf_token"]').value;
+
+      const fd = new FormData();
+      fd.append('_csrf_token', csrf);
+      fd.append('action', 'unsold');
+      fd.append('player_id', playerId);
+
+      try {
+        const resp = await fetch(form.action, {
+          method: 'POST',
+          body: fd,
+          headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        });
+        const data = await resp.json();
+        if (resp.ok && data.status === 'success') {
+          window.location.reload();
+        } else {
+          alert(data.message || 'Error marking unsold.');
+        }
+      } catch (err) {
+        window.location.reload();
+      }
+    });
+  });
+
+  // Reopen / Refund button handler in history stream
+  document.querySelectorAll('[data-reopen-id]').forEach(btn => {
+    btn.addEventListener('click', async function() {
+      if (!confirm('Re-open this player into live auction pool and refund the franchise purse?')) return;
+      const playerId = btn.dataset.reopenId;
+      const csrf = document.querySelector('[name="_csrf_token"]').value;
+
+      const fd = new FormData();
+      fd.append('_csrf_token', csrf);
+      fd.append('action', 'reopen');
+      fd.append('player_id', playerId);
+
+      try {
+        const resp = await fetch(window.location.pathname, {
+          method: 'POST',
+          body: fd,
+          headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        });
+        const data = await resp.json();
+        if (resp.ok && data.status === 'success') {
+          window.location.reload();
+        } else {
+          alert(data.message || 'Error re-opening player.');
+        }
+      } catch (err) {
+        window.location.reload();
+      }
+    });
+  });
+
+})();
+</script>
+{% endblock %}

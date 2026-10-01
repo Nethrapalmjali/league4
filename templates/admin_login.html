@@ -1,0 +1,96 @@
+{% import "_icons.html" as ico %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin login · {{ brand.short }}</title>
+  <meta name="robots" content="noindex">
+  <link rel="icon" href="{{ url_for('static', filename='logos/gmulogo1.png') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/league.css') }}">
+  <style>
+    body {
+      display: grid;
+      place-items: center;
+      padding: 1.5rem;
+      background:
+        radial-gradient(900px 420px at 15% -10%, #7a3535 0%, transparent 60%),
+        linear-gradient(135deg, #5b1f1f 0%, #331212 60%, #1e0a0a 100%);
+    }
+    .login-card {
+      width: min(420px, 100%);
+      background: var(--white);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-lg);
+      overflow: hidden;
+    }
+    .login-card__head {
+      background: linear-gradient(135deg, var(--maroon), var(--maroon-deep));
+      color: #fff;
+      text-align: center;
+      padding: 2rem 1.5rem 1.7rem;
+      border-bottom: 3px solid var(--gold);
+    }
+    .login-card__head .mark { font-size: 2.4rem; line-height: 1; }
+    .login-card__head h1 {
+      font-size: 1.35rem;
+      font-weight: 900;
+      margin-top: 0.6rem;
+      color: var(--gold-light);
+    }
+    .login-card__head p {
+      font-size: 0.72rem;
+      letter-spacing: 2.6px;
+      text-transform: uppercase;
+      opacity: 0.7;
+      margin-top: 0.2rem;
+    }
+    .login-card__body { padding: 1.8rem 1.7rem 2rem; }
+  </style>
+</head>
+<body>
+  <div class="login-card">
+    <div class="login-card__head">
+      <div class="mark" aria-hidden="true">{{ ico.icon('shield', 34) }}</div>
+      <h1>{{ brand.short }} Admin</h1>
+      <p>{{ brand.university }}</p>
+    </div>
+
+    <div class="login-card__body">
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          <div class="flashes">
+            {% for category, message in messages %}
+              <div class="flash flash--{{ 'success' if category == 'success' else 'error' }}">
+                {{ ico.icon('check' if category == 'success' else 'alert', 18) }}
+                <span>{{ message }}</span>
+              </div>
+            {% endfor %}
+          </div>
+        {% endif %}
+      {% endwith %}
+
+      <form method="POST" action="{{ url_for('admin_login') }}">
+        <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="next" value="{{ request.args.get('next', '') }}">
+
+        <div class="field" style="margin-bottom:1rem;">
+          <label for="username">Username</label>
+          <input type="text" id="username" name="username" required autocomplete="username" autofocus>
+        </div>
+
+        <div class="field" style="margin-bottom:1.5rem;">
+          <label for="password">Password</label>
+          <input type="password" id="password" name="password" required autocomplete="current-password">
+        </div>
+
+        <button type="submit" class="btn btn--primary btn--block">Sign in</button>
+      </form>
+
+      <p class="center" style="margin-top:1.4rem;">
+        <a href="{{ url_for('index') }}" class="back-link">← Back to the league</a>
+      </p>
+    </div>
+  </div>
+</body>
+</html>

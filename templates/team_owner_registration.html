@@ -1,0 +1,119 @@
+{% extends "base.html" %}
+
+{% block title %}Franchise registration · {{ brand.short }}{% endblock %}
+
+{% block container_class %}container container--narrow{% endblock %}
+
+{% block content %}
+<div class="page-top-nav">
+  <a href="{{ url_for('index') }}" class="back-link">← Back to home</a>
+</div>
+
+<section class="panel">
+  <div class="section-title">
+    <div class="sport-icon-badge">👑</div>
+    <span class="eyebrow">{{ brand.name }} · Franchise Entry</span>
+    <h2>Register as a Team Owner</h2>
+    <p>Own a franchise in {{ brand.name }}. Form your squad by bidding on registered players in the live auction.</p>
+  </div>
+
+  <form method="POST" enctype="multipart/form-data" novalidate>
+    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+
+    <div class="form-grid">
+      <div class="field">
+        <label for="name">Owner name <span class="req">*</span></label>
+        <input type="text" id="name" name="name" required autocomplete="name" value="{{ form.name or '' }}"
+          placeholder="Owner / Representative Full Name">
+        <span class="hint">Primary franchise owner name.</span>
+      </div>
+
+      <div class="field">
+        <label for="team_name">Team name <span class="req">*</span></label>
+        <input type="text" id="team_name" name="team_name" required value="{{ form.team_name or '' }}"
+          placeholder="e.g. GM Strikers">
+        <span class="hint">Official franchise team name.</span>
+      </div>
+
+      <div class="field">
+        <label for="usn">USN <span class="req">*</span></label>
+        <input type="text" id="usn" name="usn" required maxlength="20" class="input-upper" value="{{ form.usn or '' }}"
+          placeholder="e.g. 1GM22CS001">
+        <span class="hint">Owner / Representative USN.</span>
+      </div>
+
+      <div class="field">
+        <label for="email">Email address <span class="req">*</span></label>
+        <input type="email" id="email" name="email" required autocomplete="email" value="{{ form.email or '' }}"
+          placeholder="you@example.com">
+        <span class="hint">Official communication email.</span>
+      </div>
+
+      <div class="field">
+        <label for="contact">Mobile number <span class="req">*</span></label>
+        <input type="tel" id="contact" name="contact" required inputmode="numeric" autocomplete="tel"
+          value="{{ form.contact or '' }}" placeholder="10-digit number">
+        <span class="hint">Active calling & WhatsApp contact.</span>
+      </div>
+
+      <div class="field">
+        <label for="designation">Designation <span class="req">*</span></label>
+        <input type="text" id="designation" name="designation" required value="{{ form.designation or '' }}"
+          placeholder="e.g. Student / Faculty Organizer">
+        <span class="hint">Your role within university or team.</span>
+      </div>
+
+      <div class="field">
+        <label for="manager_name">Manager Name</label>
+        <input type="text" id="manager_name" name="manager_name" value="{{ form.manager_name or '' }}"
+          placeholder="Team Manager (Optional)">
+        <span class="hint">Optional co-manager / coordinator.</span>
+      </div>
+
+      <div class="field">
+        <label for="manager_contact_number">Manager Contact</label>
+        <input type="tel" id="manager_contact_number" name="manager_contact_number" value="{{ form.manager_contact_number or '' }}"
+          placeholder="10-digit number (Optional)">
+        <span class="hint">Secondary contact number.</span>
+      </div>
+
+      <div class="field">
+        <label for="team_logo">Team Logo</label>
+        <input type="file" id="team_logo" name="team_logo" accept="image/png,image/jpeg,image/gif,image/webp">
+        <span class="hint">Square PNG/JPG badge (Max 8 MB).</span>
+      </div>
+
+      <div class="field">
+        <label for="team_owner_photo">Owner Photo</label>
+        <input type="file" id="team_owner_photo" name="team_owner_photo" accept="image/png,image/jpeg,image/gif,image/webp">
+        <span class="hint">Owner profile photo (Max 8 MB).</span>
+      </div>
+
+      <div class="field field--wide">
+        <label class="form-label">Sports Participating <span class="req">*</span></label>
+        <div class="checkbox-grid" style="margin-top: 0.5rem;">
+          {% for option in sport_options %}
+          <label class="check">
+            <input type="checkbox" name="sports" value="{{ option }}" {% if option in selected_sports %}checked{% endif %}>
+            <span>{{ option }}</span>
+          </label>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+
+    <div class="form-footer">
+      <label class="terms">
+        <input type="checkbox" name="terms" required>
+        <span>I confirm these details are accurate and accept the
+          <a href="{{ url_for('terms') }}" target="_blank" rel="noopener">terms and conditions</a>.</span>
+      </label>
+
+      <div class="form-actions">
+        <button type="submit" class="btn btn--primary">Register Franchise</button>
+        <a href="{{ url_for('index') }}" class="back-link">← Cancel</a>
+      </div>
+    </div>
+  </form>
+</section>
+{% endblock %}

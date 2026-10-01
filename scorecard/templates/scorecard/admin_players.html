@@ -1,0 +1,43 @@
+{% extends "scorecard/_page.html" %}
+{% block title %}{{ team.name }} squad{% endblock %}
+
+{% block content %}
+  <div class="sc-page">
+    <header class="sc-page__head">
+      <span class="sc-eyebrow">{{ team.sport }} · {{ team.gender }}</span>
+      <h1>{{ team.name }}</h1>
+      <p><a href="{{ url_for('scorecard.admin_teams') }}">← All teams</a></p>
+    </header>
+
+    <section class="sc-card">
+      <h2>Add a player</h2>
+      <form method="post" class="sc-form sc-form--row">
+        <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+        <label><span>Name</span><input type="text" name="name" required></label>
+        <label><span>Jersey</span><input type="text" name="jersey_no" maxlength="4"></label>
+        <button class="btn btn--primary" type="submit">Add player</button>
+      </form>
+      <p class="sc-hint">Players are optional — a match can be scored without any.</p>
+    </section>
+
+    <div class="sc-list">
+      {% for player in team.players %}
+        <div class="sc-row sc-row--static">
+          <span class="sc-row__teams">
+            <span class="sc-row__team">{{ player.name }}</span>
+            {% if player.jersey_no %}<span class="sc-tag">{{ player.jersey_no }}</span>{% endif %}
+            {% if not player.active %}<span class="sc-when">Retired</span>{% endif %}
+          </span>
+          <span class="sc-row__tail">
+            <form method="post" action="{{ url_for('scorecard.admin_delete_player', player_id=player.id) }}">
+              <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+              <button class="btn btn--ghost btn--sm" type="submit">Remove</button>
+            </form>
+          </span>
+        </div>
+      {% else %}
+        <p class="sc-empty">No players listed.</p>
+      {% endfor %}
+    </div>
+  </div>
+{% endblock %}

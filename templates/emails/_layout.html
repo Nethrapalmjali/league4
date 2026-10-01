@@ -1,0 +1,201 @@
+{#
+  Shared email shell for every GM League Season 4 mail.
+
+  Email-client rules obeyed here on purpose:
+    * table-based layout only (no flex/grid, Outlook ignores them)
+    * every style inlined (Gmail strips <style> in some clients)
+    * 600px max width, fluid below that
+    * gradients declared with a solid background-color fallback for Outlook
+    * the emblem is an inline cid: attachment so image blockers don't gut it
+#}
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="x-apple-disable-message-reformatting" />
+  <meta name="color-scheme" content="light" />
+  <meta name="supported-color-schemes" content="light" />
+  <title>{{ subject }}</title>
+  <!--[if mso]>
+  <style type="text/css">
+    body, table, td, a { font-family: Arial, Helvetica, sans-serif !important; }
+  </style>
+  <![endif]-->
+</head>
+<body style="margin:0; padding:0; width:100%; background-color:#efe7e3; -webkit-font-smoothing:antialiased;">
+
+  <!-- Inbox preview line -->
+  <div style="display:none; font-size:1px; color:#efe7e3; line-height:1px; max-height:0; max-width:0; opacity:0; overflow:hidden;">
+    {% block preheader %}{{ brand.name }}{% endblock %}
+    &#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;
+  </div>
+
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#efe7e3;">
+    <tr>
+      <td align="center" style="padding:28px 12px 40px 12px;">
+
+        <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="width:600px; max-width:600px; background-color:#ffffff; border-radius:18px; overflow:hidden; box-shadow:0 12px 34px rgba(45,10,10,0.16);">
+
+          <!-- ============================ CREST BAND ============================ -->
+          <tr>
+            <td bgcolor="#5B1F1F" style="background-color:#5B1F1F; background-image:linear-gradient(135deg,#461818 0%,#5B1F1F 42%,#331212 100%); padding:36px 34px 30px 34px;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td align="center" style="padding-bottom:16px;">
+                    {% if logo_cid %}
+                      <img src="cid:brandlogo" width="66" height="66" alt="{{ brand.university }}"
+                           style="display:block; width:66px; height:66px; border:0; border-radius:50%; background:#ffffff; padding:5px;" />
+                    {% else %}
+                      <div style="font-size:26px; line-height:30px; font-weight:800; letter-spacing:3px; color:#ECC35C;">GM</div>
+                    {% endif %}
+                  </td>
+                </tr>
+                <tr>
+                  <td align="center" style="font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-size:12px; letter-spacing:3.4px; text-transform:uppercase; color:#ECC35C; font-weight:700; padding-bottom:10px;">
+                    {{ brand.university }}
+                  </td>
+                </tr>
+                <tr>
+                  <td align="center" style="font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-size:31px; line-height:38px; font-weight:800; color:#ffffff; letter-spacing:-0.4px;">
+                    {{ brand.name }}
+                  </td>
+                </tr>
+                <tr>
+                  <td align="center" style="padding-top:14px;">
+                    <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center">
+                      <tr>
+                        <td bgcolor="#E2B458" style="background-color:#E2B458; background-image:linear-gradient(135deg,#ECC35C,#E2B458); border-radius:100px; padding:8px 20px; font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-size:12px; font-weight:800; letter-spacing:1.6px; text-transform:uppercase; color:#471515;">
+                          {% block hero_badge %}Confirmed{% endblock %}
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Gold hairline under the crest -->
+          <tr>
+            <td height="4" bgcolor="#E2B458" style="height:4px; line-height:4px; font-size:0; background-color:#E2B458; background-image:linear-gradient(90deg,#8a6410,#ECC35C 45%,#E2B458);">&nbsp;</td>
+          </tr>
+
+          <!-- ============================== BODY ================================ -->
+          <tr>
+            <td style="padding:38px 34px 12px 34px; font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+              {% block content %}{% endblock %}
+            </td>
+          </tr>
+
+          <!-- ==================== MESSAGE FROM THE DIRECTOR ===================== -->
+          {% if brand.director_name %}
+          <tr>
+            <td style="padding:6px 34px 32px 34px;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td bgcolor="#FFFBF2" align="center"
+                      style="background-color:#FFFBF2; background-image:linear-gradient(135deg,#FFFBF2,#FFF4DF); border:1px solid #EBD9AE; border-radius:16px; padding:24px 22px; font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+                    <div style="font-size:11px; font-weight:800; letter-spacing:2.6px; text-transform:uppercase; color:#B4884A; padding-bottom:6px;">
+                      A message from the Director
+                    </div>
+                    <div style="font-family:Georgia,'Times New Roman',serif; font-size:24px; line-height:30px; font-weight:700; color:#5B1F1F; padding-bottom:8px;">
+                      All the best.
+                    </div>
+                    <div style="font-size:14px; line-height:22px; color:#6b615c; max-width:400px; margin:0 auto;">
+                      {{ brand.director_message }}
+                    </div>
+                    <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" style="margin-top:16px;">
+                      <tr><td style="border-top:2px dashed #E3CE9C; font-size:0; line-height:0; height:1px; width:170px;">&nbsp;</td></tr>
+                    </table>
+                    <div style="font-size:15px; font-weight:800; color:#5B1F1F; padding-top:12px;">
+                      {{ brand.director_name }}
+                    </div>
+                    <div style="font-size:11px; font-weight:800; letter-spacing:1.8px; text-transform:uppercase; color:#B4884A; padding-top:3px;">
+                      {{ brand.director_title }}
+                    </div>
+                    <div style="font-size:12px; color:#9a8f89; padding-top:2px;">
+                      {{ brand.university }}
+                    </div>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          {% endif %}
+
+          <!-- ====================== AUTO-GENERATED NOTICE ======================= -->
+          <tr>
+            <td bgcolor="#f6f1ee" style="background-color:#f6f1ee; border-top:1px solid #ece3dd; padding:18px 34px;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td width="6" style="font-size:0; line-height:0;">&nbsp;</td>
+                  <td style="font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+                    <div style="font-size:12px; font-weight:800; letter-spacing:1.6px; text-transform:uppercase; color:#8a6410; padding-bottom:3px;">
+                      This is an auto-generated email
+                    </div>
+                    <div style="font-size:13px; line-height:20px; color:#6b615c;">
+                      It was sent automatically by the {{ brand.short }} event management system.
+                      <strong style="color:#5B1F1F;">Please do not reply to this message</strong> &mdash; replies to this
+                      address are not read. For anything you need, contact the organising committee
+                      on {{ brand.support_phones_text }}{% if brand.support_email %} or at {{ brand.support_email }}{% endif %}.
+                    </div>
+                    {% if brand.whatsapp_url %}
+                    <div style="font-size:13px; line-height:20px; color:#6b615c; padding-top:10px;">
+                      <a href="{{ brand.whatsapp_url }}" style="display:inline-block; background:#25d366; color:#ffffff; text-decoration:none; font-weight:800; font-size:13px; padding:9px 16px; border-radius:100px;">
+                        Any doubts? WhatsApp us on {{ brand.whatsapp_number }}
+                      </a>
+                    </div>
+                    {% endif %}
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- ============================= FOOTER =============================== -->
+          <tr>
+            <td bgcolor="#331212" style="background-color:#331212; background-image:linear-gradient(135deg,#471515,#331212); padding:30px 34px; font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td align="center" style="font-size:17px; font-weight:800; color:#ECC35C; letter-spacing:0.4px; padding-bottom:6px;">
+                    {{ brand.name }}
+                  </td>
+                </tr>
+                <tr>
+                  <td align="center" style="font-size:13px; line-height:21px; color:#e5cfcf; opacity:0.92; padding-bottom:16px;">
+                    {{ brand.tagline }}
+                  </td>
+                </tr>
+                <tr>
+                  <td align="center" style="font-size:13px; line-height:22px; color:#d8bcbc; padding-bottom:14px;">
+                    {% for phone in brand.support_phones %}
+                      <a href="tel:+91{{ phone }}" style="color:#ECC35C; text-decoration:none;">{{ phone }}</a>
+                      {% if not loop.last %}<span style="color:#7a4a4a;">&nbsp;&nbsp;|&nbsp;&nbsp;</span>{% endif %}
+                    {% endfor %}
+                    {% if brand.whatsapp_number %}
+                      <span style="color:#7a4a4a;">&nbsp;&nbsp;|&nbsp;&nbsp;</span>
+                      <a href="{{ brand.whatsapp_url }}" style="color:#ECC35C; text-decoration:none;">WhatsApp {{ brand.whatsapp_number }}</a>
+                    {% endif %}
+                    {% if brand.support_email %}
+                      <br /><a href="mailto:{{ brand.support_email }}" style="color:#ECC35C; text-decoration:none;">{{ brand.support_email }}</a>
+                    {% endif %}
+                  </td>
+                </tr>
+                <tr>
+                  <td align="center" style="border-top:1px solid rgba(241,196,83,0.22); padding-top:15px; font-size:11px; line-height:18px; color:#a98484;">
+                    &copy; {{ year }} {{ brand.university }}. All rights reserved.<br />
+                    You are receiving this because you registered for {{ brand.name }}.
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+        </table>
+
+      </td>
+    </tr>
+  </table>
+</body>
+</html>

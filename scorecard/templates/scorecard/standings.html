@@ -1,0 +1,103 @@
+{% extends "scorecard/_page.html" %}
+{% block title %}{{ sport }} standings{% endblock %}
+{% block description %}League table and leading scorers for {{ sport }} in {{ brand.name }}.{% endblock %}
+
+{% block content %}
+  <div class="sc-page">
+    <header class="sc-page__head">
+      <span class="sc-eyebrow">{{ brand.name }}</span>
+      <h1>Standings</h1>
+      <p>
+        Built from finished matches only — a result corrected later updates this
+        table with it. <a href="{{ url_for('scorecard.index') }}">Live scores</a>
+      </p>
+    </header>
+
+    {% if sports|length > 1 %}
+      <nav class="sc-tabs" aria-label="Sport">
+        {% for name in sports %}
+          <a class="sc-tab{% if name == sport %} is-active{% endif %}"
+             href="{{ url_for('scorecard.standings', sport=name) }}"
+             {% if name == sport %}aria-current="page"{% endif %}>{{ name }}</a>
+        {% endfor %}
+      </nav>
+    {% endif %}
+
+    <section class="sc-block">
+      <h2 class="sc-block__title">{{ sport }} table</h2>
+      {% if not table %}
+        <p class="sc-empty">No {{ sport }} teams yet.</p>
+      {% else %}
+        {% if played == 0 %}
+          <p class="sc-hint">No {{ sport }} match has finished yet, so everyone is still on zero.</p>
+        {% endif %}
+        <div class="sc-scroll">
+          <table class="sc-table">
+            <thead>
+              <tr>
+                <th class="sc-table__pos">#</th>
+                <th>Team</th>
+                <th title="Played">P</th>
+                <th title="Won">W</th>
+                <th title="Drawn">D</th>
+                <th title="Lost">L</th>
+                <th title="Scored">F</th>
+                <th title="Conceded">A</th>
+                <th title="Difference">+/−</th>
+                <th title="Points">Pts</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for row in table %}
+                <tr{% if loop.first and played %} class="sc-table__leader"{% endif %}>
+                  <td class="sc-table__pos">{{ row.position }}</td>
+                  <td class="sc-table__team">
+                    <span class="sc-tag">{{ row.team.tag }}</span>{{ row.team.name }}
+                  </td>
+                  <td>{{ row.played }}</td>
+                  <td>{{ row.won }}</td>
+                  <td>{{ row.drawn }}</td>
+                  <td>{{ row.lost }}</td>
+                  <td>{{ row.scored }}</td>
+                  <td>{{ row.conceded }}</td>
+                  <td>{{ '+' if row.diff > 0 }}{{ row.diff }}</td>
+                  <td class="sc-table__pts">{{ row.points }}</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        <p class="sc-hint">Three points for a win, one for a draw.</p>
+      {% endif %}
+    </section>
+
+    <section class="sc-block">
+      <h2 class="sc-block__title">Leading scorers</h2>
+      {% if not leaders %}
+        <p class="sc-empty">
+          Nobody has been credited with a score in {{ sport }} yet. Scorers can
+          name the player when they record each point.
+        </p>
+      {% else %}
+        <ol class="sc-leaders">
+          {% for player, points, entries in leaders %}
+            <li class="sc-leader">
+              <span class="sc-leader__rank">{{ loop.index }}</span>
+              <span class="sc-leader__who">
+                <strong>{{ player.name }}</strong>
+                <span class="sc-leader__team">
+                  {{ player.team.name if player.team else '—' }}
+                  {%- if player.jersey_no %} · {{ player.jersey_no }}{% endif %}
+                </span>
+              </span>
+              <span class="sc-leader__count">
+                <b>{{ points }}</b>
+                <span>{{ 'pt' if points == 1 else 'pts' }} · {{ entries }}×</span>
+              </span>
+            </li>
+          {% endfor %}
+        </ol>
+      {% endif %}
+    </section>
+  </div>
+{% endblock %}

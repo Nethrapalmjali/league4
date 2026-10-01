@@ -1,0 +1,112 @@
+{% extends "scorecard/_page.html" %}
+{% block title %}Fixtures{% endblock %}
+
+{% block content %}
+  <div class="sc-page">
+    <header class="sc-page__head">
+      <span class="sc-eyebrow">Scorecard admin</span>
+      <h1>Fixtures</h1>
+      <p>
+        <a href="{{ url_for('scorecard.admin_teams') }}">Teams</a> ·
+        <a href="{{ url_for('scorecard.admin_scorers') }}">Scorers</a> ·
+        <a href="{{ url_for('scorecard.admin_link') }}">Link to auction</a>
+      </p>
+    </header>
+
+    <section class="sc-card">
+      <h2>New match</h2>
+      {% if teams|length < 2 %}
+        <p class="sc-empty">
+          Add at least two teams first — <a href="{{ url_for('scorecard.admin_teams') }}">go to teams</a>.
+        </p>
+      {% else %}
+        <form method="post" class="sc-form sc-form--row">
+          <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+          <label>
+            <span>Sport</span>
+            <select name="sport" required>
+              {% for sport in sports %}<option value="{{ sport }}">{{ sport }}</option>{% endfor %}
+            </select>
+          </label>
+          <label>
+            <span>Stage</span>
+            <select name="stage">
+              {% for stage in stages %}<option value="{{ stage }}">{{ stage }}</option>{% endfor %}
+            </select>
+          </label>
+          <label>
+            <span>Team A</span>
+            <select name="team_a_id" required>
+              {% for team in teams %}<option value="{{ team.id }}">{{ team.name }} ({{ team.sport }})</option>{% endfor %}
+            </select>
+          </label>
+          <label>
+            <span>Team B</span>
+            {# Defaults to the second team: leaving both on the first one is the
+               easiest way to get a rejected fixture and wonder why. #}
+            <select name="team_b_id" required>
+              {% for team in teams %}
+                <option value="{{ team.id }}"{% if loop.index == 2 %} selected{% endif %}>
+                  {{ team.name }} ({{ team.sport }})
+                </option>
+              {% endfor %}
+            </select>
+          </label>
+          <label><span>Venue</span><input type="text" name="venue" placeholder="Main ground"></label>
+          <label><span>Starts</span><input type="datetime-local" name="starts_at"></label>
+          <label>
+            <span>Scorer</span>
+            <select name="scorer_id">
+              <option value="">Anyone</option>
+              {% for scorer in scorers %}<option value="{{ scorer.id }}">{{ scorer.name }}</option>{% endfor %}
+            </select>
+          </label>
+          <div class="sc-form__buttons">
+            <button class="btn btn--primary" type="submit" name="start_now" value="1">
+              Start now &amp; score
+            </button>
+            <button class="btn btn--ghost" type="submit">Save for later</button>
+          </div>
+        </form>
+        <p class="sc-hint">
+          <strong>Start now &amp; score</strong> opens the scoring screen straight away.
+          <strong>Save for later</strong> just adds it to the list below — you open it
+          with the <strong>Score</strong> button when the match begins.
+        </p>
+      {% endif %}
+    </section>
+
+    <div class="sc-list">
+      {% for match in matches %}
+        <div class="sc-row sc-row--static">
+          <span class="sc-row__meta">
+            <span class="sc-row__sport">{{ match.sport }}</span>
+            <span class="sc-row__stage">{{ match.stage }}</span>
+          </span>
+          <span class="sc-row__teams">
+            <span class="sc-row__team">{{ match.team_a.name }}</span>
+            <span class="sc-row__score">{{ match.score_a or 0 }}<i>–</i>{{ match.score_b or 0 }}</span>
+            <span class="sc-row__team sc-row__team--b">{{ match.team_b.name }}</span>
+          </span>
+          <span class="sc-row__tail">
+            {% if match.status == 'live' %}<span class="sc-live">Live</span>
+            {% elif match.status == 'final' %}<span class="sc-final">Done</span>
+            {% elif match.starts_at %}<span class="sc-when">{{ match.starts_at.strftime('%d %b, %H:%M') }}</span>
+            {% endif %}
+            <a class="btn btn--sm {{ 'btn--ghost' if match.status == 'final' else 'btn--primary' }}"
+               href="{{ url_for('scorecard.console', match_id=match.id) }}">
+              {{ 'Review' if match.status == 'final' else 'Open scoring' }}
+            </a>
+            <form method="post" action="{{ url_for('scorecard.admin_delete_match', match_id=match.id) }}"
+                  onsubmit="return confirm('Delete this fixture and its events?')">
+              <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+              <button class="btn btn--ghost btn--sm" type="submit">Delete</button>
+            </form>
+          </span>
+        </div>
+      {% else %}
+        <p class="sc-empty">No fixtures yet.</p>
+      {% endfor %}
+    </div>
+  </div>
+{% endblock %}

@@ -1,0 +1,33 @@
+{% extends "scorecard/_page.html" %}
+{% block title %}Scorer sign in{% endblock %}
+
+{% block content %}
+  <div class="sc-page sc-page--narrow">
+    <section class="sc-card">
+      <span class="sc-eyebrow">{{ brand.name }}</span>
+      <h1>Scorer sign in</h1>
+      <p>Use the name and passcode the committee gave you. This opens the scoring
+         screen only — nothing else on the site.</p>
+
+      <form method="post" class="sc-form">
+        <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+        <label>
+          <span>Your name</span>
+          <input type="text" name="name" required autocomplete="username"
+                 placeholder="As given to you">
+        </label>
+        <label>
+          <span>Passcode</span>
+          <input type="password" name="passcode" required autocomplete="current-password">
+        </label>
+        <button class="btn btn--primary" type="submit">Sign in</button>
+      </form>
+
+      <p class="sc-hint">
+        On the committee? This form only takes scorer passcodes —
+        <a href="{{ url_for('admin_login', next=url_for('scorecard.scorer_home')) }}">sign in as admin instead</a>
+        and you can score every match.
+      </p>
+    </section>
+  </div>
+{% endblock %}

@@ -1,0 +1,147 @@
+{# Reusable, inline-styled building blocks shared by every league email. #}
+
+{# Big opening line, e.g. "You're in, Rahul." #}
+{% macro headline(text) %}
+<h1 style="margin:0 0 14px 0; font-size:26px; line-height:34px; font-weight:800; color:#5B1F1F; letter-spacing:-0.3px;">{{ text }}</h1>
+{% endmacro %}
+
+{% macro paragraph(text) %}
+<p style="margin:0 0 16px 0; font-size:15px; line-height:25px; color:#4b4b4b;">{{ text }}</p>
+{% endmacro %}
+
+{#
+  Ticket-stub detail card: gold-edged panel, perforated divider, label/value rows.
+  `rows` is a list of (label, value) pairs; empty values are skipped.
+#}
+{% macro ticket(title, code, rows) %}
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:6px 0 26px 0;">
+  <tr>
+    <td bgcolor="#FFFBF2" style="background-color:#FFFBF2; border:1px solid #EBD9AE; border-left:5px solid #E2B458; border-radius:14px; padding:22px 24px;">
+
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td style="font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-size:11px; letter-spacing:2.4px; text-transform:uppercase; font-weight:800; color:#B4884A;">
+            {{ title }}
+          </td>
+          {% if code %}
+          <td align="right" style="font-family:'Courier New',Courier,monospace; font-size:12px; font-weight:700; color:#5B1F1F; background:#F3E4C0; border-radius:6px; padding:4px 9px; white-space:nowrap;">
+            {{ code }}
+          </td>
+          {% endif %}
+        </tr>
+      </table>
+
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top:8px;">
+        <tr><td style="border-top:2px dashed #E3CE9C; font-size:0; line-height:0; height:1px;">&nbsp;</td></tr>
+      </table>
+
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top:6px;">
+        {% for label, value in rows %}
+          {% if value %}
+          <tr>
+            <td width="42%" style="padding:9px 10px 9px 0; font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-size:12px; letter-spacing:0.6px; text-transform:uppercase; font-weight:700; color:#96826a; vertical-align:top; border-bottom:1px solid #F0E5CD;">
+              {{ label }}
+            </td>
+            <td style="padding:9px 0; font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-size:15px; line-height:22px; font-weight:600; color:#33241a; vertical-align:top; border-bottom:1px solid #F0E5CD;">
+              {{ value }}
+            </td>
+          </tr>
+          {% endif %}
+        {% endfor %}
+      </table>
+
+    </td>
+  </tr>
+</table>
+{% endmacro %}
+
+{# Numbered "what happens next" list. `items` is a list of (title, detail). #}
+{% macro steps(heading, items) %}
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 26px 0;">
+  <tr>
+    <td style="font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-size:11px; letter-spacing:2.4px; text-transform:uppercase; font-weight:800; color:#5B1F1F; padding-bottom:14px;">
+      {{ heading }}
+    </td>
+  </tr>
+  {% for title, detail in items %}
+  <tr>
+    <td style="padding-bottom:14px;">
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+        <tr>
+          <td width="34" valign="top">
+            <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+              <tr>
+                <td width="26" height="26" align="center" valign="middle" bgcolor="#5B1F1F"
+                    style="width:26px; height:26px; background-color:#5B1F1F; border-radius:50%; font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-size:12px; font-weight:800; color:#ECC35C;">
+                  {{ loop.index }}
+                </td>
+              </tr>
+            </table>
+          </td>
+          <td valign="top" style="font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+            <div style="font-size:15px; font-weight:700; color:#33241a; line-height:22px;">{{ title }}</div>
+            <div style="font-size:14px; color:#6d6d6d; line-height:21px;">{{ detail }}</div>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+  {% endfor %}
+</table>
+{% endmacro %}
+
+{# Gold call-to-action button (padding on the anchor keeps it tappable everywhere). #}
+{% macro button(url, label) %}
+<table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" style="margin:4px auto 26px auto;">
+  <tr>
+    <td align="center" bgcolor="#E2B458"
+        style="background-color:#E2B458; background-image:linear-gradient(135deg,#ECC35C,#E2B458); border-radius:100px;">
+      <a href="{{ url }}"
+         style="display:inline-block; padding:14px 34px; font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-size:14px; font-weight:800; letter-spacing:1.2px; text-transform:uppercase; color:#471515; text-decoration:none;">
+        {{ label }}
+      </a>
+    </td>
+  </tr>
+</table>
+{% endmacro %}
+
+{# Oversized figure used for a winning bid / remaining purse. #}
+{% macro amount_hero(label, value, caption) %}
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:2px 0 26px 0;">
+  <tr>
+    <td align="center" bgcolor="#5B1F1F"
+        style="background-color:#5B1F1F; background-image:linear-gradient(135deg,#461818,#331212); border-radius:14px; padding:26px 20px;">
+      <div style="font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-size:11px; letter-spacing:2.6px; text-transform:uppercase; font-weight:800; color:#c79a9a; padding-bottom:8px;">{{ label }}</div>
+      <div style="font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-size:38px; line-height:44px; font-weight:800; color:#ECC35C; letter-spacing:-0.5px;">{{ value }}</div>
+      {% if caption %}
+      <div style="font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-size:13px; line-height:20px; color:#e0c4c4; padding-top:8px;">{{ caption }}</div>
+      {% endif %}
+    </td>
+  </tr>
+</table>
+{% endmacro %}
+
+{# Soft callout for reminders / warnings. #}
+{% macro note(text) %}
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 24px 0;">
+  <tr>
+    <td bgcolor="#F6F1EE" style="background-color:#F6F1EE; border-left:4px solid #5B1F1F; border-radius:8px; padding:14px 18px; font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-size:13.5px; line-height:21px; color:#5a4a4a;">
+      {{ text }}
+    </td>
+  </tr>
+</table>
+{% endmacro %}
+
+{# Sign-off block. #}
+{% macro signoff(brand) %}
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:4px 0 6px 0;">
+  <tr><td style="border-top:1px solid #eee7e2; font-size:0; line-height:0; height:1px;">&nbsp;</td></tr>
+  <tr>
+    <td style="padding-top:18px; font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-size:14px; line-height:22px; color:#6d6d6d;">
+      See you on the court,<br />
+      <span style="color:#5B1F1F; font-weight:800;">The {{ brand.short }} Organising Committee</span><br />
+      <span style="font-size:13px; color:#8b8b8b;">{{ brand.university }}</span>
+    </td>
+  </tr>
+</table>
+{% endmacro %}

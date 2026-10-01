@@ -1,0 +1,584 @@
+{% extends "admin_base.html" %}
+{% import "_icons.html" as ico %}
+{% block title %}Dashboard{% endblock %}
+
+{% macro player_table(sport, players) %}
+  {% if players %}
+    <div class="card__head">
+      <div class="card__title">{{ sport }} · {{ players|length }} registered</div>
+      <input type="search" class="search" placeholder="Search name, USN, email…" data-search="{{ sport|lower }}">
+      <div style="display:flex; gap:0.5rem; align-items:center;">
+        <a href="{{ url_for('export_summary', sport=sport) }}" class="btn btn--gold btn--sm">{{ ico.icon('download', 15) }} Export {{ sport }}</a>
+        <button type="button" class="btn btn--danger btn--sm" data-bulk="players" data-scope="{{ sport|lower }}" disabled>
+          Delete selected (<span data-count="{{ sport|lower }}">0</span>)
+        </button>
+      </div>
+    </div>
+    <div class="card__body card__body--flush">
+      <div class="table-wrap">
+        <table data-table="{{ sport|lower }}">
+          <thead>
+            <tr>
+              <th style="width:34px;"><input type="checkbox" class="rowcheck" data-selectall="{{ sport|lower }}" aria-label="Select all"></th>
+              <th>Photo</th>
+              <th>Entry ID</th>
+              <th>Name</th>
+              <th>USN</th>
+              <th>Email</th>
+              <th>Contact</th>
+              <th>Branch</th>
+              <th>College</th>
+              <th>Position</th>
+              <th>Category</th>
+              <th>Experience</th>
+              <th>Achievements</th>
+              <th>Status</th>
+              <th>Bid</th>
+              <th>Team</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for player in players %}
+            <tr data-row data-text="{{ (player.name ~ ' ' ~ (player.usn or '') ~ ' ' ~ (player.email or '') ~ ' ' ~ (player.branch or '') ~ ' ' ~ (player.sold_to or ''))|lower }}">
+              <td><input type="checkbox" class="rowcheck" data-scope="{{ sport|lower }}" value="{{ player.id }}" aria-label="Select {{ player.name }}"></td>
+              <td>
+                {% if player.photo %}
+                  <img src="{{ url_for('static', filename=player.photo) }}" class="thumb" alt="{{ player.name }}" loading="lazy">
+                {% else %}
+                  <div class="thumb thumb--empty">N/A</div>
+                {% endif %}
+              </td>
+              <td class="cell-mono">{{ player.reg_code }}</td>
+              <td class="cell-strong">{{ player.name }}</td>
+              <td class="cell-mono">{{ player.usn or '—' }}</td>
+              <td class="cell-wrap">
+                {% if player.email %}
+                  <a href="mailto:{{ player.email }}">{{ player.email }}</a>
+                {% else %}
+                  <span class="badge badge--warn">missing</span>
+                {% endif %}
+              </td>
+              <td class="cell-mono">{{ player.contact or '—' }}</td>
+              <td>{{ player.branch or '—' }}</td>
+              <td>{{ player.college_name or '—' }}</td>
+              <td>{{ player.position or '—' }}</td>
+              <td>{{ 'Women' if player.gender == 'Female' else 'Men' }}</td>
+              <td>{{ player.experience or '—' }}</td>
+              <td class="cell-wrap cell-muted">{{ player.achievements or 'None' }}</td>
+              <td>
+                {% if player.sold %}
+                  <span class="badge badge--sold">Sold</span>
+                {% else %}
+                  <span class="badge badge--open">In pool</span>
+                {% endif %}
+              </td>
+              <td class="cell-strong">{{ '₹ {:,}'.format(player.bid_amount) if player.bid_amount else '—' }}</td>
+              <td>{{ player.sold_to or '—' }}</td>
+              <td>
+                <div class="row-actions">
+                  <a href="{{ url_for('admin_edit_player', id=player.id) }}" class="link-btn link-btn--edit">Edit</a>
+                  {% if player.email %}
+                  <form method="POST" action="{{ url_for('admin_resend_confirmation', kind='player', record_id=player.id) }}">
+                    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="link-btn link-btn--mail" title="Re-send confirmation email">Email</button>
+                  </form>
+                  {% endif %}
+                  {% if player.sold %}
+                  <form method="POST" action="{{ url_for('admin_reset_bid', player_id=player.id) }}"
+                        onsubmit="return confirm('Reset the bid for {{ player.name }}? The purse will be refunded to {{ player.sold_to }}.');">
+                    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="link-btn link-btn--warn">Reset bid</button>
+                  </form>
+                  {% endif %}
+                  <form method="POST" action="{{ url_for('admin_delete_player', id=player.id) }}"
+                        onsubmit="return confirm('Delete {{ player.name }} permanently?');">
+                    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="link-btn link-btn--del">Delete</button>
+                  </form>
+                </div>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  {% else %}
+    <div class="card__head"><div class="card__title">{{ sport }}</div></div>
+    <div class="empty">No players have registered for {{ sport }} yet.</div>
+  {% endif %}
+{% endmacro %}
+
+{% block body %}
+<div class="scrim" data-close-sidebar></div>
+
+<aside class="sidebar">
+  <div class="sidebar__brand">
+    <span class="sidebar__mark" aria-hidden="true">{{ ico.icon('trophy', 22) }}</span>
+    <span>
+      <span class="sidebar__title">{{ brand.short }}</span><br>
+      <span class="sidebar__sub">Admin console</span>
+    </span>
+  </div>
+
+  <nav class="sidebar__nav">
+    <button type="button" class="nav-item is-active" data-target="overview">Overview</button>
+
+    <div class="sidebar__label">Player data</div>
+    {% for sport in sports %}
+      <button type="button" class="nav-item" data-target="{{ sport|lower }}">
+        <span>{{ sport }}</span>
+        <span class="nav-item__count">{{ players_by_sport[sport]|length }}</span>
+      </button>
+    {% endfor %}
+
+    <div class="sidebar__label">League</div>
+    <button type="button" class="nav-item" data-target="owners">
+      <span>Team owners</span>
+      <span class="nav-item__count">{{ owners|length }}</span>
+    </button>
+    <button type="button" class="nav-item" data-target="mail">Email automation</button>
+
+    <div class="sidebar__label">Exports</div>
+    <a class="nav-item icon-text" href="{{ url_for('export_all_summaries') }}">{{ ico.icon('download', 16) }} All summaries</a>
+    <a class="nav-item icon-text" href="{{ url_for('export_owners') }}">{{ ico.icon('download', 16) }} Team owners</a>
+
+    <div class="sidebar__label">Live auction desk</div>
+    {% for sport in sports %}
+      <a class="nav-item icon-text" href="{{ url_for('bidding', sport=sport|lower, gender='male') }}">
+        {{ ico.icon('gavel', 15) }} Bid {{ sport }} (M)
+      </a>
+      {% if sport != 'Football' %}
+      <a class="nav-item icon-text" href="{{ url_for('bidding', sport=sport|lower, gender='female') }}">
+        {{ ico.icon('gavel', 15) }} Bid {{ sport }} (W)
+      </a>
+      {% endif %}
+    {% endfor %}
+
+    <div class="sidebar__label">Live scorecard</div>
+    <a class="nav-item icon-text" href="{{ url_for('scorecard.admin_matches') }}">{{ ico.icon('trophy', 16) }} Fixtures &amp; scoring</a>
+    <a class="nav-item icon-text" href="{{ url_for('scorecard.admin_teams') }}">{{ ico.icon('shield', 16) }} Scorecard teams</a>
+    <a class="nav-item icon-text" href="{{ url_for('scorecard.admin_scorers') }}">{{ ico.icon('user', 16) }} Scorers</a>
+  </nav>
+
+  <div class="sidebar__foot">
+    <a href="{{ url_for('index') }}" class="nav-item icon-text">{{ ico.icon('arrow-left', 16) }} View public site</a>
+    <a href="{{ url_for('admin_logout') }}" class="nav-item icon-text">{{ ico.icon('lock', 16) }} Log out</a>
+  </div>
+</aside>
+
+<div class="content">
+  <div class="topbar">
+    <div style="display:flex; align-items:center; gap:0.8rem;">
+      <button type="button" class="icon-btn" data-toggle-sidebar aria-label="Toggle navigation">{{ ico.icon('menu', 18) }}</button>
+      <div>
+        <h1>Admin Dashboard</h1>
+        <p>{{ brand.name }} · {{ brand.university }}</p>
+      </div>
+    </div>
+    <a href="{{ url_for('export_all_summaries') }}" class="btn btn--gold">{{ ico.icon('download', 16) }} Export everything</a>
+  </div>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      <div class="flashes">
+        {% for category, message in messages %}
+          <div class="flash flash--{{ 'success' if category == 'success' else ('info' if category == 'info' else 'error') }}">
+            {{ ico.icon('check' if category == 'success' else ('info' if category == 'info' else 'alert'), 19) }}
+            <span>{{ message }}</span>
+          </div>
+        {% endfor %}
+      </div>
+    {% endif %}
+  {% endwith %}
+
+  <!-- ============================== OVERVIEW ============================== -->
+  <section id="overview" class="section is-active">
+    <div class="stat-row">
+      <div class="stat-card">
+        <div class="stat-card__label">Total players</div>
+        <div class="stat-card__value">{{ total_players }}</div>
+        <div class="stat-card__note">across {{ sports|length }} sports</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-card__label">Players signed</div>
+        <div class="stat-card__value">{{ sold_players|length }}</div>
+        <div class="stat-card__note">{{ total_players - sold_players|length }} still in the pool</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-card__label">Franchises</div>
+        <div class="stat-card__value">{{ owners|length }}</div>
+        <div class="stat-card__note">registered team owners</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-card__label">Purse spent</div>
+        <div class="stat-card__value">₹{{ '{:,}'.format(spent) }}</div>
+        <div class="stat-card__note">₹{{ '{:,}'.format(remaining) }} remaining</div>
+      </div>
+      <div class="stat-card {{ 'stat-card--alert' if missing_email else '' }}">
+        <div class="stat-card__label">Missing email</div>
+        <div class="stat-card__value">{{ missing_email }}</div>
+        <div class="stat-card__note">{{ 'these players get no mail' if missing_email else 'everyone is reachable' }}</div>
+      </div>
+    </div>
+
+    <div class="grid-2">
+      <div class="card">
+        <div class="card__head"><div class="card__title">Registrations by sport</div></div>
+        <div class="card__body card__body--flush">
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr><th>Sport</th><th>Registered</th><th>Men</th><th>Women</th><th>Signed</th><th></th></tr>
+              </thead>
+              <tbody>
+                {% for sport in sports %}
+                  {% set group = players_by_sport[sport] %}
+                  <tr>
+                    <td class="cell-strong">{{ sport }}</td>
+                    <td>{{ group|length }}</td>
+                    <td>{{ group|selectattr('gender', 'equalto', 'Male')|list|length }}</td>
+                    <td>{{ group|selectattr('gender', 'equalto', 'Female')|list|length }}</td>
+                    <td>{{ group|selectattr('sold')|list|length }}</td>
+                    <td><a href="{{ url_for('export_summary', sport=sport) }}" class="link-btn link-btn--edit">Export</a></td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card__head"><div class="card__title">Top signings</div></div>
+        <div class="card__body card__body--flush">
+          {% if sold_players %}
+            <div class="table-wrap">
+              <table>
+                <thead><tr><th>Player</th><th>Sport</th><th>Team</th><th>Bid</th></tr></thead>
+                <tbody>
+                  {% for player in sold_players[:10] %}
+                    <tr>
+                      <td class="cell-strong">{{ player.name }}</td>
+                      <td>{{ player.sport }}</td>
+                      <td>{{ player.sold_to }}</td>
+                      <td class="cell-strong">₹{{ '{:,}'.format(player.bid_amount or 0) }}</td>
+                    </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          {% else %}
+            <div class="empty">No players have been sold yet. Open a bidding room to start the auction.</div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card__head"><div class="card__title">Open a bidding room</div></div>
+      <div class="card__body">
+        <div style="display:flex; flex-wrap:wrap; gap:0.6rem;">
+          {% for sport in sports %}
+            <a href="{{ url_for('bidding', sport=sport|lower, gender='male') }}" class="btn btn--maroon btn--sm">{{ sport }} (Men)</a>
+            {% if sport != 'Football' %}
+              <a href="{{ url_for('bidding', sport=sport|lower, gender='female') }}" class="btn btn--ghost btn--sm">{{ sport }} (Women)</a>
+            {% endif %}
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========================== PER-SPORT SECTIONS ========================= -->
+  {% for sport in sports %}
+    <section id="{{ sport|lower }}" class="section">
+      <div class="card">
+        {{ player_table(sport, players_by_sport[sport]) }}
+      </div>
+    </section>
+  {% endfor %}
+
+  <!-- ============================== OWNERS ================================ -->
+  <section id="owners" class="section">
+    <div class="card">
+      {% if owners %}
+        <div class="card__head">
+          <div class="card__title">Team owners · {{ owners|length }} franchises</div>
+          <input type="search" class="search" placeholder="Search team, owner, email…" data-search="owners">
+          <div style="display:flex; gap:0.5rem; align-items:center;">
+            <a href="{{ url_for('export_owners') }}" class="btn btn--gold btn--sm">{{ ico.icon('download', 15) }} Export owners</a>
+            <button type="button" class="btn btn--danger btn--sm" data-bulk="owners" data-scope="owners" disabled>
+              Delete selected (<span data-count="owners">0</span>)
+            </button>
+          </div>
+        </div>
+        <div class="card__body card__body--flush">
+          <div class="table-wrap">
+            <table data-table="owners">
+              <thead>
+                <tr>
+                  <th style="width:34px;"><input type="checkbox" class="rowcheck" data-selectall="owners" aria-label="Select all"></th>
+                  <th>Logo</th>
+                  <th>Owner</th>
+                  <th>Franchise ID</th>
+                  <th>Team</th>
+                  <th>Owner name</th>
+                  <th>USN</th>
+                  <th>Email</th>
+                  <th>Contact</th>
+                  <th>Designation</th>
+                  <th>Sports</th>
+                  <th>Remaining purse</th>
+                  <th>Manager</th>
+                  <th>Manager contact</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for owner in owners %}
+                <tr data-row data-text="{{ (owner.team_name ~ ' ' ~ owner.name ~ ' ' ~ (owner.email or '') ~ ' ' ~ (owner.usn or '') ~ ' ' ~ (owner.sports or ''))|lower }}">
+                  <td><input type="checkbox" class="rowcheck" data-scope="owners" value="{{ owner.id }}" aria-label="Select {{ owner.team_name }}"></td>
+                  <td>
+                    {% if owner.team_logo %}
+                      <img src="{{ url_for('static', filename=owner.team_logo) }}" class="thumb" alt="{{ owner.team_name }} logo" loading="lazy">
+                    {% else %}
+                      <div class="thumb thumb--empty">N/A</div>
+                    {% endif %}
+                  </td>
+                  <td>
+                    {% if owner.team_owner_photo %}
+                      <img src="{{ url_for('static', filename=owner.team_owner_photo) }}" class="thumb" alt="{{ owner.name }}" loading="lazy">
+                    {% else %}
+                      <div class="thumb thumb--empty">N/A</div>
+                    {% endif %}
+                  </td>
+                  <td class="cell-mono">{{ owner.reg_code }}</td>
+                  <td class="cell-strong">{{ owner.team_name }}</td>
+                  <td>{{ owner.name }}</td>
+                  <td class="cell-mono">{{ owner.usn or '—' }}</td>
+                  <td class="cell-wrap">
+                    {% if owner.email %}
+                      <a href="mailto:{{ owner.email }}">{{ owner.email }}</a>
+                    {% else %}
+                      <span class="badge badge--warn">missing</span>
+                    {% endif %}
+                  </td>
+                  <td class="cell-mono">{{ owner.contact or '—' }}</td>
+                  <td>{{ owner.designation or '—' }}</td>
+                  <td class="cell-wrap">
+                    {% for sport in (owner.sports or '').split(',') if sport %}
+                      <span class="badge badge--gold">{{ sport }}</span>
+                    {% endfor %}
+                  </td>
+                  <td class="cell-strong">₹{{ '{:,}'.format(owner.budget or 0) }}</td>
+                  <td>{{ owner.manager_name or '—' }}</td>
+                  <td class="cell-mono">{{ owner.manager_contact_number or '—' }}</td>
+                  <td>
+                    <div class="row-actions">
+                      <a href="{{ url_for('admin_edit_team_owner', id=owner.id) }}" class="link-btn link-btn--edit">Edit</a>
+                      {% if owner.email %}
+                      <form method="POST" action="{{ url_for('admin_resend_confirmation', kind='owner', record_id=owner.id) }}">
+                        <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" class="link-btn link-btn--mail" title="Re-send franchise card">Email</button>
+                      </form>
+                      {% endif %}
+                      <form method="POST" action="{{ url_for('admin_delete_owner', id=owner.id) }}"
+                            onsubmit="return confirm('Delete {{ owner.team_name }} permanently? Players already sold to this team keep their allocation.');">
+                        <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" class="link-btn link-btn--del">Delete</button>
+                      </form>
+                    </div>
+                  </td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      {% else %}
+        <div class="card__head"><div class="card__title">Team owners</div></div>
+        <div class="empty">No franchises registered yet.</div>
+      {% endif %}
+    </div>
+  </section>
+
+  <!-- =========================== EMAIL AUTOMATION ========================= -->
+  <section id="mail" class="section">
+    <div class="grid-2">
+      <div class="card">
+        <div class="card__head"><div class="card__title">SMTP status</div></div>
+        <div class="card__body">
+          <dl class="kv">
+            <dt>Mode</dt>
+            <dd>
+              {% if 'live' in mail_status.mode %}
+                <span class="badge badge--sold">{{ mail_status.mode }}</span>
+              {% elif 'disabled' in mail_status.mode %}
+                <span class="badge badge--warn">{{ mail_status.mode }}</span>
+              {% else %}
+                <span class="badge badge--info">{{ mail_status.mode }}</span>
+              {% endif %}
+            </dd>
+            <dt>Server</dt><dd>{{ mail_status.server }}</dd>
+            <dt>Security</dt><dd>{{ mail_status.security }}</dd>
+            <dt>Account</dt><dd>{{ mail_status.username }}</dd>
+            <dt>From</dt><dd>{{ mail_status.sender }}</dd>
+          </dl>
+
+          {% if 'outbox' in mail_status.mode %}
+            <div class="callout" style="margin-top:1.1rem;">
+              <strong>No credentials yet.</strong> Mail is being written to the
+              <code>outbox/</code> folder as <code>.eml</code> files instead of being sent.
+              Fill <code>MAIL_USERNAME</code> and <code>MAIL_PASSWORD</code> in <code>.env</code>
+              and restart to go live.
+            </div>
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card__head"><div class="card__title">Send a test email</div></div>
+        <div class="card__body">
+          <p class="cell-muted" style="font-size:0.88rem; margin-bottom:1rem;">
+            Sends the branded test template to any address, synchronously, and reports the
+            exact SMTP response — the fastest way to prove your credentials work.
+          </p>
+          <form method="POST" action="{{ url_for('admin_mail_test') }}">
+            <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+            <div class="field">
+              <label for="recipient">Recipient</label>
+              <input type="email" id="recipient" name="recipient" required placeholder="you@example.com">
+            </div>
+            <div class="form-actions">
+              <button type="submit" class="btn btn--gold">Send test email</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card__head"><div class="card__title">What goes out automatically</div></div>
+      <div class="card__body card__body--flush">
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Trigger</th><th>Recipient</th><th>Template</th></tr></thead>
+            <tbody>
+              <tr><td class="cell-strong">Player registers</td><td>The player</td><td>Entry pass with entry ID and full profile</td></tr>
+              <tr><td class="cell-strong">Team owner registers</td><td>The owner</td><td>Franchise card with squad details and purse</td></tr>
+              <tr><td class="cell-strong">Bid won at auction</td><td>The player</td><td>“SOLD” notification with team and bid value</td></tr>
+              <tr><td class="cell-strong">Bid won at auction</td><td>The owner</td><td>Signing sheet with player contact and remaining purse</td></tr>
+              <tr><td class="cell-strong">Admin clicks “Email”</td><td>Player or owner</td><td>Re-sends the original confirmation</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<script>
+  (function () {
+    const body = document.body;
+    const csrf = "{{ csrf_token() }}";
+
+    /* ---------------------------------------------------------- sidebar */
+    const toggle = document.querySelector('[data-toggle-sidebar]');
+    const scrim = document.querySelector('[data-close-sidebar]');
+    const isMobile = () => window.matchMedia('(max-width: 1024px)').matches;
+
+    toggle.addEventListener('click', () => {
+      body.classList.toggle(isMobile() ? 'sidebar-open' : 'sidebar-collapsed');
+    });
+    scrim.addEventListener('click', () => body.classList.remove('sidebar-open'));
+
+    /* ------------------------------------------------------ section nav */
+    const navButtons = document.querySelectorAll('.nav-item[data-target]');
+    const sections = document.querySelectorAll('.section');
+
+    function activate(target) {
+      sections.forEach(s => s.classList.toggle('is-active', s.id === target));
+      navButtons.forEach(b => b.classList.toggle('is-active', b.dataset.target === target));
+      if (isMobile()) body.classList.remove('sidebar-open');
+      history.replaceState(null, '', '#' + target);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    navButtons.forEach(button => button.addEventListener('click', () => activate(button.dataset.target)));
+
+    const initial = location.hash.replace('#', '');
+    if (initial && document.getElementById(initial)) activate(initial);
+
+    /* ------------------------------------------------------ live search */
+    document.querySelectorAll('[data-search]').forEach(input => {
+      input.addEventListener('input', () => {
+        const table = document.querySelector(`[data-table="${input.dataset.search}"]`);
+        if (!table) return;
+        const needle = input.value.trim().toLowerCase();
+        table.querySelectorAll('[data-row]').forEach(row => {
+          row.classList.toggle('is-hidden', needle !== '' && !row.dataset.text.includes(needle));
+        });
+      });
+    });
+
+    /* --------------------------------------------------- bulk selection */
+    function selectedIds(scope) {
+      return [...document.querySelectorAll(`.rowcheck[data-scope="${scope}"]:checked`)]
+        .filter(box => !box.closest('[data-row]').classList.contains('is-hidden'))
+        .map(box => Number(box.value));
+    }
+
+    function refresh(scope) {
+      const count = selectedIds(scope).length;
+      const label = document.querySelector(`[data-count="${scope}"]`);
+      const button = document.querySelector(`[data-bulk][data-scope="${scope}"]`);
+      if (label) label.textContent = count;
+      if (button) button.disabled = count === 0;
+    }
+
+    document.querySelectorAll('.rowcheck[data-scope]').forEach(box => {
+      box.addEventListener('change', () => refresh(box.dataset.scope));
+    });
+
+    document.querySelectorAll('[data-selectall]').forEach(master => {
+      master.addEventListener('change', () => {
+        const scope = master.dataset.selectall;
+        document.querySelectorAll(`.rowcheck[data-scope="${scope}"]`).forEach(box => {
+          if (!box.closest('[data-row]').classList.contains('is-hidden')) box.checked = master.checked;
+        });
+        refresh(scope);
+      });
+    });
+
+    document.querySelectorAll('[data-bulk]').forEach(button => {
+      button.addEventListener('click', async () => {
+        const scope = button.dataset.scope;
+        const ids = selectedIds(scope);
+        const noun = button.dataset.bulk === 'owners' ? 'team owner' : 'player';
+        if (!ids.length) return;
+        if (!confirm(`Permanently delete ${ids.length} ${noun}${ids.length > 1 ? 's' : ''}? This cannot be undone.`)) return;
+
+        button.disabled = true;
+        try {
+          const url = button.dataset.bulk === 'owners'
+            ? "{{ url_for('admin_delete_owners') }}"
+            : "{{ url_for('admin_delete_players') }}";
+          const response = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrf },
+            body: JSON.stringify({ ids })
+          });
+          const payload = await response.json();
+          if (!response.ok) throw new Error(payload.error || 'Delete failed');
+          location.reload();
+        } catch (error) {
+          alert(error.message);
+          button.disabled = false;
+        }
+      });
+    });
+  })();
+</script>
+{% endblock %}

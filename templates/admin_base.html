@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}{% endblock %} · Admin · {{ brand.name }}</title>
+  <link rel="icon" href="{{ url_for('static', filename='logos/gmulogo1.png') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}">
+  {% block head %}{% endblock %}
+</head>
+<body>
+  {% block body %}
+  {% if session.get('admin_logged_in') %}
+  <aside class="sidebar">
+    <div class="sidebar__brand">
+      <div class="sidebar__mark">🏆</div>
+      <div>
+        <div class="sidebar__title">{{ brand.short }}</div>
+        <div class="sidebar__sub">Admin Panel</div>
+      </div>
+    </div>
+    <div class="sidebar__nav">
+      <span class="sidebar__label">Manage League</span>
+      <a href="{{ url_for('admin_dashboard') }}" class="nav-item {{ 'is-active' if request.endpoint == 'admin_dashboard' else '' }}">
+        Dashboard
+      </a>
+      <span class="sidebar__label">Live Desk</span>
+      {% for s in sports %}
+      <a href="{{ url_for('bidding', sport=s.lower(), gender='male') }}" class="nav-item {{ 'is-active' if (sport and sport.lower() == s.lower() and gender and gender.lower() == 'male') else '' }}">
+        Bid {{ s }} (M)
+      </a>
+      {% if s != 'Football' %}
+      <a href="{{ url_for('bidding', sport=s.lower(), gender='female') }}" class="nav-item {{ 'is-active' if (sport and sport.lower() == s.lower() and gender and gender.lower() == 'female') else '' }}">
+        Bid {{ s }} (W)
+      </a>
+      {% endif %}
+      {% endfor %}
+      <a href="{{ url_for('scorecard.index') }}" class="nav-item">
+        Live Scorecard
+      </a>
+    </div>
+    <div class="sidebar__foot">
+      <a href="{{ url_for('index') }}" class="nav-item" style="color: rgba(255, 255, 255, 0.7); margin-bottom: 0.35rem;">
+        View Public Site
+      </a>
+      <a href="{{ url_for('admin_logout') }}" class="nav-item" style="color: var(--gold-light);">
+        Logout
+      </a>
+    </div>
+  </aside>
+
+  <main class="content">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div style="margin-bottom: 1.5rem;">
+          {% for category, message in messages %}
+            <div style="padding: 1rem; border-radius: 8px; margin-bottom: 0.5rem; font-weight: 600; 
+                        background: {% if category == 'success' %}#eaf7f0; color: #17563a; border-left: 4px solid var(--success);
+                                    {% elif category == 'error' %}#fdecea; color: #8e2119; border-left: 4px solid var(--danger);
+                                    {% else %}#fff8e8; color: #6d5210; border-left: 4px solid var(--gold);{% endif %}">
+              {{ message }}
+            </div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+
+    {% block content %}{% endblock %}
+  </main>
+  {% else %}
+    {% block login_content %}{% endblock %}
+  {% endif %}
+  {% endblock %}
+</body>
+</html>

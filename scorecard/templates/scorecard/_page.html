@@ -1,0 +1,8 @@
+{# Public scorecard pages sit inside the league site's own shell, so the header,
+   footer and branding stay consistent. Only the stylesheet is ours. #}
+{% extends "base.html" %}
+
+{% block head %}
+  <link rel="stylesheet" href="{{ url_for('scorecard.static', filename='scorecard.css') }}">
+  {% block scorecard_head %}{% endblock %}
+{% endblock %}

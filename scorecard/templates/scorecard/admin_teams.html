@@ -1,0 +1,63 @@
+{% extends "scorecard/_page.html" %}
+{% block title %}Scorecard teams{% endblock %}
+
+{% block content %}
+  <div class="sc-page">
+    <header class="sc-page__head">
+      <span class="sc-eyebrow">Scorecard admin</span>
+      <h1>Teams</h1>
+      <p>
+        <a href="{{ url_for('scorecard.admin_matches') }}">Fixtures</a> ·
+        <a href="{{ url_for('scorecard.admin_scorers') }}">Scorers</a> ·
+        <a href="{{ url_for('scorecard.admin_link') }}">Link to auction</a>
+      </p>
+    </header>
+
+    <section class="sc-card">
+      <h2>Add a team</h2>
+      <form method="post" class="sc-form sc-form--row">
+        <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+        <label><span>Team name</span><input type="text" name="name" required></label>
+        <label><span>Tag</span><input type="text" name="short_name" maxlength="6" placeholder="CLC"></label>
+        <label>
+          <span>Sport</span>
+          <select name="sport" required>
+            {% for sport in sports %}<option value="{{ sport }}">{{ sport }}</option>{% endfor %}
+          </select>
+        </label>
+        <label>
+          <span>Category</span>
+          <select name="gender"><option>Men</option><option>Women</option><option>Mixed</option></select>
+        </label>
+        <button class="btn btn--primary" type="submit">Add team</button>
+      </form>
+    </section>
+
+    <div class="sc-list">
+      {% for team in teams %}
+        <div class="sc-row sc-row--static">
+          <span class="sc-row__meta">
+            <span class="sc-row__sport">{{ team.sport }}</span>
+            <span class="sc-row__stage">{{ team.gender }}</span>
+          </span>
+          <span class="sc-row__teams">
+            <span class="sc-row__team">{{ team.name }}</span>
+            <span class="sc-tag">{{ team.tag }}</span>
+          </span>
+          <span class="sc-row__tail">
+            <a class="btn btn--ghost btn--sm" href="{{ url_for('scorecard.admin_players', team_id=team.id) }}">
+              Players ({{ team.players|length }})
+            </a>
+            <form method="post" action="{{ url_for('scorecard.admin_delete_team', team_id=team.id) }}"
+                  onsubmit="return confirm('Remove {{ team.name }}?')">
+              <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+              <button class="btn btn--ghost btn--sm" type="submit">Remove</button>
+            </form>
+          </span>
+        </div>
+      {% else %}
+        <p class="sc-empty">No teams yet. Add the first one above.</p>
+      {% endfor %}
+    </div>
+  </div>
+{% endblock %}

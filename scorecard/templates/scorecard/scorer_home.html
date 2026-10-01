@@ -1,0 +1,37 @@
+{% extends "scorecard/_page.html" %}
+{% block title %}Matches to score{% endblock %}
+
+{% block content %}
+  <div class="sc-page">
+    <header class="sc-page__head">
+      <span class="sc-eyebrow">Signed in as {{ scorer_name }}</span>
+      <h1>Matches to score</h1>
+      <p>Open a match to start recording. <a href="{{ url_for('scorecard.scorer_logout') }}">Sign out</a></p>
+    </header>
+
+    <div class="sc-list">
+      {% for match in matches %}
+        <a class="sc-row" href="{{ url_for('scorecard.console', match_id=match.id) }}">
+          <span class="sc-row__meta">
+            <span class="sc-row__sport">{{ match.sport }}</span>
+            <span class="sc-row__stage">{{ match.stage }}</span>
+          </span>
+          <span class="sc-row__teams">
+            <span class="sc-row__team">{{ match.team_a.name }}</span>
+            <span class="sc-row__score">{{ match.score_a or 0 }}<i>–</i>{{ match.score_b or 0 }}</span>
+            <span class="sc-row__team sc-row__team--b">{{ match.team_b.name }}</span>
+          </span>
+          <span class="sc-row__tail">
+            {% if match.status == 'live' %}
+              <span class="sc-live">Live{% if match.period %} · {{ match.period }}{% endif %}</span>
+            {% else %}
+              <span class="sc-when">Not started</span>
+            {% endif %}
+          </span>
+        </a>
+      {% else %}
+        <p class="sc-empty">Nothing assigned to you right now.</p>
+      {% endfor %}
+    </div>
+  </div>
+{% endblock %}

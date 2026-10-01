@@ -1,0 +1,104 @@
+{# Standalone on purpose: a scorer at a noisy court needs big targets and no
+   site chrome to mis-tap. #}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="robots" content="noindex">
+  <title>Scoring · {{ match.team_a.tag }} v {{ match.team_b.tag }}</title>
+  <meta name="theme-color" content="#5b1f1f">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/league.css') }}">
+  <link rel="stylesheet" href="{{ url_for('scorecard.static', filename='scorecard.css') }}">
+</head>
+<body class="sc-console-body"
+      data-match="{{ match.id }}"
+      data-event-url="{{ url_for('scorecard.add_event', match_id=match.id) }}"
+      data-undo-url="{{ url_for('scorecard.undo_event', match_id=match.id) }}"
+      data-period-url="{{ url_for('scorecard.set_period', match_id=match.id) }}"
+      data-status-url="{{ url_for('scorecard.set_status', match_id=match.id) }}"
+      data-csrf="{{ csrf_token() }}">
+
+  <header class="sc-console__top">
+    <a class="sc-console__back" href="{{ url_for('scorecard.scorer_home') }}">← Matches</a>
+    <span class="sc-console__meta">{{ match.sport }} · {{ match.stage }}</span>
+    <span class="sc-console__period" data-period>{{ match.period or 'Not started' }}</span>
+  </header>
+
+  <div class="sc-console__score">
+    <div class="sc-console__side">
+      <span class="sc-console__tag">{{ match.team_a.tag }}</span>
+      <span class="sc-console__num" data-score-a>{{ match.score_a or 0 }}</span>
+    </div>
+    <div class="sc-console__side sc-console__side--b">
+      <span class="sc-console__tag">{{ match.team_b.tag }}</span>
+      <span class="sc-console__num" data-score-b>{{ match.score_b or 0 }}</span>
+    </div>
+  </div>
+
+  <p class="sc-console__error" data-error hidden></p>
+
+  <div class="sc-console__pads">
+    {% for side, team in [('a', match.team_a), ('b', match.team_b)] %}
+      <section class="sc-pad">
+        <h2 class="sc-pad__name">{{ team.name }}</h2>
+
+        <label class="sc-pad__field">
+          <span>Scored by</span>
+          <select data-player="{{ side }}">
+            <option value="">Not recorded</option>
+            {% for player in players[side] %}
+              <option value="{{ player.id }}">
+                {{ player.name }}{% if player.jersey_no %} · {{ player.jersey_no }}{% endif %}
+              </option>
+            {% endfor %}
+          </select>
+        </label>
+
+        <div class="sc-pad__actions">
+          {% for action in rules.actions %}
+            <button type="button" class="sc-action{% if action.points %} sc-action--scores{% endif %}"
+                    data-side="{{ side }}" data-action="{{ action.key }}">
+              {{ action.label }}
+              {% if action.points %}<i>+{{ action.points }}</i>{% endif %}
+            </button>
+          {% endfor %}
+        </div>
+      </section>
+    {% endfor %}
+  </div>
+
+  <div class="sc-console__bar">
+    <label class="sc-console__clock">
+      <span>Minute</span>
+      <input type="text" data-clock inputmode="numeric" placeholder="12'" maxlength="8">
+    </label>
+    <button type="button" class="btn btn--ghost" data-undo>Undo last</button>
+    <button type="button" class="btn btn--ghost" data-next-period>Next period</button>
+    {% if match.status != 'final' %}
+      <button type="button" class="btn btn--primary" data-finish>End match</button>
+    {% else %}
+      <span class="sc-final">Match finished</span>
+    {% endif %}
+  </div>
+
+  <section class="sc-console__log">
+    <h2>Recorded</h2>
+    <ol data-log>
+      {% for event in events %}
+        <li class="sc-feed__item sc-feed__item--{{ match.side_of(event.team_id) }}">
+          <span class="sc-feed__clock">{{ event.clock or '—' }}</span>
+          <span class="sc-feed__what">
+            <strong>{{ event.kind }}</strong>
+            {% if event.player %}<span class="sc-feed__who">{{ event.player.name }}</span>{% endif %}
+          </span>
+        </li>
+      {% else %}
+        <li class="sc-feed__empty">Nothing recorded yet.</li>
+      {% endfor %}
+    </ol>
+  </section>
+
+  <script src="{{ url_for('scorecard.static', filename='console.js') }}" defer></script>
+</body>
+</html>

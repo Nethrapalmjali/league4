@@ -1,0 +1,31 @@
+# Environments & Secrets
+.env
+.env.*
+!.env.example
+
+# Databases & SQLite
+instance/
+*.db
+*.sqlite
+*.sqlite3
+
+# Python Virtual Environments & Bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+env/
+venv/
+ENV/
+
+# Uploaded Media (Student Photos, Team Logos)
+static/player_photos/*
+!static/player_photos/.gitkeep
+static/team_logos/*
+!static/team_logos/.gitkeep
+static/owner_photos/*
+!static/owner_photos/.gitkeep
+
+# Deployment & Serverless Caches
+.netlify/
+.vercel/
