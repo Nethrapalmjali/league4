@@ -980,6 +980,11 @@ def bidding(sport, gender):
                         email_player_sold(player, owner, bid_amount)
                     except Exception:
                         pass
+                    try:
+                        from scorecard.sync import sync_sold_player
+                        sync_sold_player(player, owner)
+                    except Exception as sync_exc:
+                        app.logger.warning("Auto-sync player to scorecard failed: %s", sync_exc)
                     msg = f"🔨 SOLD! {player.name} goes to {owner.team_name} for {rupees(bid_amount)}!"
                     if is_ajax:
                         return jsonify({
@@ -1024,6 +1029,11 @@ def bidding(sport, gender):
                 player.sold_to = None
                 player.bid_amount = None
                 db.session.commit()
+                try:
+                    from scorecard.sync import sync_reopened_player
+                    sync_reopened_player(player)
+                except Exception as sync_exc:
+                    app.logger.warning("Auto-remove reopened player from scorecard failed: %s", sync_exc)
                 msg = f"{player.name} re-opened into live auction pool."
                 if is_ajax:
                     return jsonify({"status": "success", "message": msg, "player_id": player.id})
@@ -1144,6 +1154,48 @@ def bidding(sport, gender):
 @app.route("/terms")
 def terms():
     return render_template("terms.html")
+
+
+@app.route("/auction")
+@app.route("/squads")
+def auction_squads():
+    selected_sport = request.args.get("sport", "").capitalize()
+    if selected_sport and selected_sport not in SPORTS:
+        selected_sport = ""
+
+    owners = TeamOwner.query.order_by(TeamOwner.team_name).all()
+    all_sold = Player.query.filter_by(sold=True).order_by(Player.bid_amount.desc()).all()
+
+    total_spent = sum(p.bid_amount or 0 for p in all_sold)
+    total_sold = len(all_sold)
+    highest_bid = all_sold[0].bid_amount if all_sold else 0
+    top_signings = all_sold[:6]
+
+    franchise_squads = []
+    for o in owners:
+        if selected_sport:
+            squad = [p for p in all_sold if p.sold_to == o.team_name and p.sport == selected_sport]
+        else:
+            squad = [p for p in all_sold if p.sold_to == o.team_name]
+        spent = sum(p.bid_amount or 0 for p in squad)
+        franchise_squads.append({
+            "owner": o,
+            "squad": squad,
+            "squad_count": len(squad),
+            "spent": spent,
+            "budget": o.budget or 0,
+        })
+
+    return render_template(
+        "auction_squads.html",
+        franchise_squads=franchise_squads,
+        selected_sport=selected_sport,
+        sports=SPORTS,
+        total_spent=total_spent,
+        total_sold=total_sold,
+        highest_bid=highest_bid,
+        top_signings=top_signings,
+    )
 
 
 # --------------------------------------------------------------------------- #
@@ -1271,6 +1323,11 @@ def admin_reset_bid(player_id):
     player.sold_to = None
     try:
         db.session.commit()
+        try:
+            from scorecard.sync import sync_reopened_player
+            sync_reopened_player(player)
+        except Exception as sync_exc:
+            app.logger.warning("Could not auto-remove player from scorecard: %s", sync_exc)
         flash(f"Bid reset for {player.name}. The purse has been refunded.", "success")
     except Exception as exc:
         db.session.rollback()

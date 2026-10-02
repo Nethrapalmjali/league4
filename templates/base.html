@@ -35,6 +35,7 @@
       </a>
       <nav class="site-nav" aria-label="Primary">
         <a href="{{ url_for('index') }}#register">Players</a>
+        <a href="{{ url_for('auction_squads') }}">Auction</a>
         <a href="{{ url_for('scorecard.index') }}">Scores</a>
         <a href="{{ url_for('index') }}#committee">Committee</a>
         <a href="{{ url_for('terms') }}">Rules</a>
@@ -73,6 +74,7 @@
       <p class="site-footer__tag">{{ brand.tagline }}</p>
       <div class="site-footer__links">
         <a href="{{ url_for('index') }}#register">Player registration</a>
+        <a href="{{ url_for('auction_squads') }}">Auction &amp; Squads</a>
         <a href="{{ url_for('team_owner_registration') }}">Team owner registration</a>
         <a href="{{ url_for('terms') }}">Terms &amp; rules</a>
         {% for phone in brand.support_phones %}

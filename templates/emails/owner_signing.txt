@@ -17,7 +17,7 @@ BID AMOUNT:       {{ amount_display }}
 REMAINING PURSE:  {{ budget_display }}
 --------------------------------------------------
 
-View squads: {{ brand.site_url }}
+View squads: {{ brand.site_url }}/auction
 
 This bid has been deducted from your franchise budget. The player's contact details are available in your team dashboard.
 

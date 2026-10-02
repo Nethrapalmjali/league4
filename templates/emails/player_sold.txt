@@ -16,7 +16,7 @@ TEAM OWNER:  {{ owner_name }}
 FINAL BID:   {{ amount_display }}
 --------------------------------------------------
 
-View squads: {{ brand.site_url }}
+View squads: {{ brand.site_url }}/auction
 
 Report to your team management for training schedule and jersey distribution.
 

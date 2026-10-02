@@ -56,6 +56,15 @@ def admin_teams():
     )
 
 
+@scorecard_bp.route("/admin/sync_squads", methods=["POST"])
+@admin_required
+def admin_sync_squads():
+    from .sync import sync_all_auction_squads
+    count = sync_all_auction_squads()
+    flash(f"Successfully synchronised {count} auctioned player(s) into tournament team rosters.", "success")
+    return redirect(request.referrer or url_for("scorecard.admin_teams"))
+
+
 @scorecard_bp.route("/admin/teams/<int:team_id>/delete", methods=["POST"])
 @admin_required
 def admin_delete_team(team_id):

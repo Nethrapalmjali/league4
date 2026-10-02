@@ -24,7 +24,7 @@
 
   {{ m.ticket("PLAYER CONTRACT RECEIPT", player.reg_code, signing_rows) }}
 
-  {{ m.button(brand.site_url, "VIEW SQUADS") }}
+  {{ m.button(brand.site_url ~ "/auction", "VIEW SQUADS") }}
 
   {{ m.note("This bid has been deducted from your franchise budget. The player's contact details are available in your team dashboard.") }}
 {% endblock %}

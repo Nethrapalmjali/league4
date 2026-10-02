@@ -1,0 +1,203 @@
+{% extends "base.html" %}
+{% import "_icons.html" as ico %}
+
+{% block title %}Auction Squads & Franchises · {{ brand.name }}{% endblock %}
+
+{% block hero %}
+<section class="hero hero--subpage">
+  <div class="hero__inner">
+    <div class="hero__content">
+      <span class="hero__badge">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"
+          stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px; vertical-align: middle;">
+          <circle cx="12" cy="8" r="7"></circle>
+          <polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"></polyline>
+        </svg>
+        Official Auction Roster
+      </span>
+      <h1>Franchise Squads <br><em>&amp; Live Auction Results</em></h1>
+      <p class="hero__lead">
+        Explore signed player rosters, hammer prices, and remaining purse balances across all {{ brand.name }} franchises.
+      </p>
+      {% if session.get('admin_logged_in') %}
+        <div class="hero__actions" style="margin-top: 1rem;">
+          <a href="{{ url_for('bidding', sport='football', gender='male') }}" class="btn btn--primary">
+            🔨 Enter Live Auction Desk
+          </a>
+          <a href="{{ url_for('scorecard.admin_teams') }}" class="btn btn--ghost">
+            Scorecard Teams
+          </a>
+        </div>
+      {% endif %}
+    </div>
+
+    <div class="hero__stats">
+      <div class="stat-grid">
+        <div class="stat">
+          <span class="stat__num">{{ total_sold }}</span>
+          <span class="stat__label">Players Signed</span>
+        </div>
+        <div class="stat">
+          <span class="stat__num">{{ franchise_squads|length }}</span>
+          <span class="stat__label">Franchises</span>
+        </div>
+        <div class="stat">
+          <span class="stat__num">₹{{ '{:,}'.format(total_spent) }}</span>
+          <span class="stat__label">Total Spend</span>
+        </div>
+        <div class="stat">
+          <span class="stat__num">₹{{ '{:,}'.format(highest_bid) }}</span>
+          <span class="stat__label">Top Bid</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}
+
+{% block content %}
+<div class="content-section" style="padding-top: 2rem;">
+
+  <!-- Sport Filter Strip -->
+  <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem; margin-bottom: 2.5rem; padding-bottom: 1.25rem; border-bottom: 1px solid var(--line);">
+    <div style="display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap;">
+      <span style="font-weight:700; font-size:0.88rem; text-transform:uppercase; letter-spacing:0.05em; color:var(--muted); margin-right:0.4rem;">Sport:</span>
+      <a href="{{ url_for('auction_squads') }}" class="btn btn--sm {{ 'btn--primary' if not selected_sport else 'btn--ghost' }}">
+        All Sports
+      </a>
+      {% for s in sports %}
+        <a href="{{ url_for('auction_squads', sport=s|lower) }}" class="btn btn--sm {{ 'btn--primary' if selected_sport == s else 'btn--ghost' }}">
+          {{ s }}
+        </a>
+      {% endfor %}
+    </div>
+
+    {% if session.get('admin_logged_in') %}
+      <div style="font-size:0.85rem; color:var(--muted);">
+        Signed in as Admin · <a href="{{ url_for('admin_dashboard') }}" style="color:var(--maroon); font-weight:700;">Dashboard</a>
+      </div>
+    {% endif %}
+  </div>
+
+  <!-- Top Signings Ribbon -->
+  {% if top_signings %}
+    <div style="margin-bottom: 3rem;">
+      <div class="section-title" style="margin-bottom: 1.25rem;">
+        <span class="eyebrow">Marquee Deals</span>
+        <h2 style="font-size:1.6rem; margin-bottom:0.25rem;">Highest Auction Signings</h2>
+      </div>
+
+      <div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1rem;">
+        {% for p in top_signings %}
+          <div style="background:#ffffff; border:1px solid var(--line); border-left:4px solid var(--gold); border-radius:8px; padding:1rem 1.25rem; display:flex; align-items:center; gap:1rem; box-shadow:0 2px 6px rgba(0,0,0,0.03);">
+            <div style="width:48px; height:48px; border-radius:50%; overflow:hidden; background:var(--bg-warm); display:flex; align-items:center; justify-content:center; flex-shrink:0; border:1px solid var(--line);">
+              {% if p.photo %}
+                <img src="{{ media_url(p.photo) }}" alt="{{ p.name }}" style="width:100%; height:100%; object-fit:cover;">
+              {% else %}
+                <span style="font-weight:800; color:var(--maroon); font-size:1.1rem;">{{ p.name[:2]|upper }}</span>
+              {% endif %}
+            </div>
+            <div style="flex:1; min-width:0;">
+              <div style="font-weight:700; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">{{ p.name }}</div>
+              <div style="font-size:0.78rem; color:var(--muted);">{{ p.sport }} · {{ p.sold_to }}</div>
+            </div>
+            <div style="font-weight:800; color:var(--maroon); font-size:1.05rem; white-space:nowrap;">
+              ₹{{ '{:,}'.format(p.bid_amount or 0) }}
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    </div>
+  {% endif %}
+
+  <!-- Franchise Squad Cards -->
+  <div class="section-title">
+    <span class="eyebrow">League Franchises</span>
+    <h2>Team Squads {% if selected_sport %}— {{ selected_sport }}{% endif %}</h2>
+    <p>Official rosters of players acquired through the live bidding process.</p>
+  </div>
+
+  <div style="display:flex; flex-direction:column; gap:2.5rem; margin-top:1.5rem;">
+    {% for item in franchise_squads %}
+      {% set owner = item.owner %}
+      {% set squad = item.squad %}
+      <div style="background:#ffffff; border:1px solid var(--line); border-radius:12px; overflow:hidden; box-shadow:0 4px 14px rgba(0,0,0,0.04);">
+        
+        <!-- Franchise Header Bar -->
+        <div style="background:var(--bg-warm); border-bottom:1px solid var(--line); padding:1.25rem 1.75rem; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1.25rem;">
+          <div style="display:flex; align-items:center; gap:1rem;">
+            <div style="width:54px; height:54px; border-radius:50%; border:2px solid var(--gold); background:#ffffff; overflow:hidden; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+              {% if owner.team_logo %}
+                <img src="{{ media_url(owner.team_logo) }}" alt="{{ owner.team_name }}" style="width:100%; height:100%; object-fit:cover;">
+              {% else %}
+                <span style="font-weight:800; color:var(--maroon); font-size:1.2rem;">{{ owner.team_name[:2]|upper }}</span>
+              {% endif %}
+            </div>
+            <div>
+              <h3 style="font-size:1.35rem; margin:0 0 0.2rem; color:var(--maroon); font-family:'Playfair Display', Georgia, serif;">
+                {{ owner.team_name }}
+              </h3>
+              <div style="font-size:0.82rem; color:var(--muted);">
+                Owner: <strong>{{ owner.name }}</strong>
+                {% if owner.manager_name %} · Manager: {{ owner.manager_name }}{% endif %}
+              </div>
+            </div>
+          </div>
+
+          <!-- Purse Stats Pill -->
+          <div style="display:flex; align-items:center; gap:1.5rem;">
+            <div style="text-align:right;">
+              <div style="font-size:0.75rem; text-transform:uppercase; letter-spacing:0.05em; color:var(--muted);">Remaining Purse</div>
+              <div style="font-weight:800; font-size:1.15rem; color:var(--maroon);">₹{{ '{:,}'.format(owner.budget or 0) }}</div>
+            </div>
+            <div style="text-align:right; border-left:1px solid var(--line); padding-left:1.5rem;">
+              <div style="font-size:0.75rem; text-transform:uppercase; letter-spacing:0.05em; color:var(--muted);">Squad Size</div>
+              <div style="font-weight:800; font-size:1.15rem; color:var(--text);">{{ squad|length }} Players</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Squad Players Grid -->
+        <div style="padding:1.5rem 1.75rem;">
+          {% if squad %}
+            <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(260px, 1fr)); gap:1.25rem;">
+              {% for p in squad %}
+                <div style="border:1px solid var(--line); border-radius:8px; padding:1rem; background:#ffffff; display:flex; flex-direction:column; justify-content:space-between; gap:0.75rem; transition:box-shadow 0.2s;">
+                  <div style="display:flex; align-items:center; gap:0.85rem;">
+                    <div style="width:48px; height:48px; border-radius:50%; background:var(--bg-warm); overflow:hidden; display:flex; align-items:center; justify-content:center; flex-shrink:0; border:1px solid var(--line);">
+                      {% if p.photo %}
+                        <img src="{{ media_url(p.photo) }}" alt="{{ p.name }}" style="width:100%; height:100%; object-fit:cover;">
+                      {% else %}
+                        <span style="font-weight:700; color:var(--maroon); font-size:1rem;">{{ p.name[:2]|upper }}</span>
+                      {% endif %}
+                    </div>
+                    <div style="min-width:0; flex:1;">
+                      <div style="font-weight:700; font-size:0.95rem; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">{{ p.name }}</div>
+                      <div style="font-size:0.78rem; color:var(--muted);">{{ p.sport }} · {{ p.position or 'Player' }}</div>
+                    </div>
+                  </div>
+
+                  <div style="font-size:0.78rem; color:var(--muted); line-height:1.4;">
+                    <div>🏫 {{ p.college_name or brand.university }}</div>
+                    {% if p.branch %}<div>🎓 {{ p.branch }} · USN: {{ p.usn or 'N/A' }}</div>{% endif %}
+                  </div>
+
+                  <div style="display:flex; justify-content:space-between; align-items:center; padding-top:0.5rem; border-top:1px dashed var(--line); margin-top:0.25rem;">
+                    <span style="font-size:0.75rem; text-transform:uppercase; letter-spacing:0.04em; color:var(--muted);">Winning Bid</span>
+                    <span style="font-weight:800; font-size:0.98rem; color:var(--maroon);">₹{{ '{:,}'.format(p.bid_amount or 0) }}</span>
+                  </div>
+                </div>
+              {% endfor %}
+            </div>
+          {% else %}
+            <div style="padding:2rem 1rem; text-align:center; color:var(--muted); font-size:0.92rem;">
+              No players signed yet {% if selected_sport %}for {{ selected_sport }}{% endif %}.
+            </div>
+          {% endif %}
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+
+</div>
+{% endblock %}

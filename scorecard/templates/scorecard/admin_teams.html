@@ -6,11 +6,19 @@
     <header class="sc-page__head">
       <span class="sc-eyebrow">Scorecard admin</span>
       <h1>Teams</h1>
-      <p>
-        <a href="{{ url_for('scorecard.admin_matches') }}">Fixtures</a> ·
-        <a href="{{ url_for('scorecard.admin_scorers') }}">Scorers</a> ·
-        <a href="{{ url_for('scorecard.admin_link') }}">Link to auction</a>
-      </p>
+      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem; margin-top:0.75rem;">
+        <p style="margin:0;">
+          <a href="{{ url_for('scorecard.admin_matches') }}">Fixtures</a> ·
+          <a href="{{ url_for('scorecard.admin_scorers') }}">Scorers</a> ·
+          <a href="{{ url_for('scorecard.admin_link') }}">Link to auction</a>
+        </p>
+        <form method="post" action="{{ url_for('scorecard.admin_sync_squads') }}" style="margin:0;">
+          <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+          <button type="submit" class="btn btn--sm btn--primary" style="background:#1b8751; border-color:#1b8751;">
+            🔄 Sync All Auction Squads
+          </button>
+        </form>
+      </div>
     </header>
 
     <section class="sc-card">
