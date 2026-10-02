@@ -1,0 +1,30 @@
+{% extends "emails/_layout.html" %}
+{% import "emails/_macros.html" as m %}
+
+{% block preheader %}Signed: {{ player.name }} for {{ amount_display }} — {{ team_name }}{% endblock %}
+
+{% block hero_badge %}Player Signed{% endblock %}
+
+{% block content %}
+  {{ m.headline("New Signing for " ~ team_name ~ "!") }}
+
+  {{ m.paragraph(team_name ~ " has successfully signed " ~ player.name ~ " for the " ~ sport ~ " squad.") }}
+
+  {{ m.amount_hero("SIGNING AMOUNT", amount_display, "Remaining Purse: " ~ budget_display) }}
+
+  {% set signing_rows = [
+    ("PLAYER", player.name),
+    ("SPORT", sport),
+    ("POSITION", player.position),
+    ("CATEGORY", category),
+    ("BRANCH", player.branch),
+    ("BID AMOUNT", amount_display),
+    ("REMAINING PURSE", budget_display)
+  ] %}
+
+  {{ m.ticket("PLAYER CONTRACT RECEIPT", player.reg_code, signing_rows) }}
+
+  {{ m.button(brand.site_url, "VIEW SQUADS") }}
+
+  {{ m.note("This bid has been deducted from your franchise budget. The player's contact details are available in your team dashboard.") }}
+{% endblock %}

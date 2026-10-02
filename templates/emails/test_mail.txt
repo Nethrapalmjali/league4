@@ -1,0 +1,15 @@
+{{ brand.name }} — SMTP Configuration Test
+
+Mail Delivery Verified.
+Your SMTP email credentials and connection settings for {{ brand.name }} are fully operational. Automated confirmations and signing notices are ready to deliver.
+
+SMTP DIAGNOSTICS:
+--------------------------------------------------
+SERVER:     {{ smtp_server }}
+SECURITY:   {{ smtp_security }}
+USERNAME:   {{ smtp_username }}
+SENDER:     {{ smtp_sender }}
+TIMESTAMP:  {{ sent_at }}
+--------------------------------------------------
+
+Open admin console: {{ brand.site_url }}/admin/login

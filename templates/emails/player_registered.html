@@ -1,0 +1,43 @@
+{% extends "emails/_layout.html" %}
+{% import "emails/_macros.html" as m %}
+
+{% block preheader %}You're registered for {{ sport }} · {{ reg_code }}{% endblock %}
+
+{% block hero_badge %}Registration Confirmed{% endblock %}
+
+{% block content %}
+  {{ m.headline("You're in, " ~ (player.name.split()[0] if player.name else "Player") ~ ".") }}
+
+  {{ m.paragraph("Your name is officially on the " ~ sport ~ " sheet for " ~ brand.name ~ ". From here, every team owner in the league can see your profile — and when the auction opens, they'll be bidding on it.") }}
+
+  {% set pass_rows = [
+    ("NAME", player.name),
+    ("USN", player.usn),
+    ("SPORT", sport),
+    ("POSITION", player.position),
+    ("BRANCH", player.branch),
+    ("COLLEGE", player.college_name),
+    ("CATEGORY", category),
+    ("EXPERIENCE", player.experience),
+    ("EMAIL", ('<a href="mailto:' ~ player.email ~ '" style="color:#0056b3; text-decoration:underline;">' ~ player.email ~ '</a>') if player.email else None),
+    ("CONTACT", player.contact)
+  ] %}
+
+  {{ m.ticket("PLAYER ENTRY PASS", reg_code, pass_rows) }}
+
+  {{ m.button(brand.site_url, "VIEW THE LEAGUE") }}
+
+  {% set phone1 = brand.support_phone %}
+  {% set phone2 = brand.support_phone_alt %}
+  {% set phone_links = [] %}
+  {% if phone1 %}
+    {% set _ = phone_links.append('<a href="tel:+91' ~ phone1 ~ '" style="color:#0056b3; text-decoration:underline;">' ~ phone1 ~ '</a>') %}
+  {% endif %}
+  {% if phone2 %}
+    {% set _ = phone_links.append('<a href="tel:+91' ~ phone2 ~ '" style="color:#0056b3; text-decoration:underline;">' ~ phone2 ~ '</a>') %}
+  {% endif %}
+  {% set phones_display = phone_links | join(' or ') if phone_links else brand.support_phones_text %}
+
+  {% set mistake_note = 'Spotted a mistake in the details above? Reply-to is unmonitored — reach the organising committee on ' ~ phones_display ~ ((' with your USN ' ~ player.usn) if player.usn else '') ~ " and we'll fix it before the auction." %}
+  {{ m.note(mistake_note) }}
+{% endblock %}

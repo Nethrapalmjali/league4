@@ -1,0 +1,29 @@
+{% extends "emails/_layout.html" %}
+{% import "emails/_macros.html" as m %}
+
+{% block preheader %}SOLD! {{ team_name }} signed you for {{ amount_display }}{% endblock %}
+
+{% block hero_badge %}Signed at Auction{% endblock %}
+
+{% block content %}
+  {{ m.headline("Congratulations, " ~ (player.name.split()[0] if player.name else "Player") ~ "!") }}
+
+  {{ m.paragraph("You have been signed by " ~ team_name ~ " in the " ~ brand.name ~ " " ~ sport ~ " live auction.") }}
+
+  {{ m.amount_hero("WINNING BID", amount_display, "Signed to " ~ team_name) }}
+
+  {% set contract_rows = [
+    ("PLAYER", player.name),
+    ("SPORT", sport),
+    ("CATEGORY", category),
+    ("FRANCHISE", team_name),
+    ("TEAM OWNER", owner_name),
+    ("FINAL BID", amount_display)
+  ] %}
+
+  {{ m.ticket("AUCTION SIGNING PASS", player.reg_code, contract_rows) }}
+
+  {{ m.button(brand.site_url, "VIEW SQUADS") }}
+
+  {{ m.note("Report to your team management for training schedule and team jersey details.") }}
+{% endblock %}

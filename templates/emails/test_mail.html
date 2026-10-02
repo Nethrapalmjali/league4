@@ -1,0 +1,24 @@
+{% extends "emails/_layout.html" %}
+{% import "emails/_macros.html" as m %}
+
+{% block preheader %}SMTP Configuration Test — {{ brand.name }}{% endblock %}
+
+{% block hero_badge %}SMTP Test OK{% endblock %}
+
+{% block content %}
+  {{ m.headline("Mail Delivery Verified") }}
+
+  {{ m.paragraph("Your SMTP email credentials and connection settings for " ~ brand.name ~ " are fully operational. Automated confirmations and signing notices are ready to deliver.") }}
+
+  {% set config_rows = [
+    ("SERVER", smtp_server),
+    ("SECURITY", smtp_security),
+    ("USERNAME", smtp_username),
+    ("SENDER", smtp_sender),
+    ("TIMESTAMP", sent_at)
+  ] %}
+
+  {{ m.ticket("SMTP DIAGNOSTICS", "PASS", config_rows) }}
+
+  {{ m.button(brand.site_url, "OPEN ADMIN CONSOLE") }}
+{% endblock %}

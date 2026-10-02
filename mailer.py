@@ -118,7 +118,8 @@ class Mailer:
             try:
                 with open(logo_path, "rb") as f:
                     logo_img = MIMEImage(f.read())
-                logo_img.add_header("Content-ID", "<logo_cid>")
+                logo_img.add_header("Content-ID", "<brandlogo>")
+                logo_img.add_header("X-Attachment-Id", "brandlogo")
                 logo_img.add_header("Content-Disposition", "inline", filename=os.path.basename(logo_path))
                 msg.attach(logo_img)
             except Exception as e:

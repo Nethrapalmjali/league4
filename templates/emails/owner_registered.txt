@@ -1,0 +1,26 @@
+{{ brand.name }} — Franchise Registration Confirmed
+
+Welcome to the league, {{ owner.name.split()[0] if owner.name else "Owner" }}.
+{{ owner.team_name }} is officially registered as a franchise for {{ brand.name }}. Your team purse is loaded and ready for the upcoming live player auction.
+
+FRANCHISE ENTRY PASS: {{ reg_code }}
+--------------------------------------------------
+TEAM NAME:        {{ owner.team_name }}
+OWNER:            {{ owner.name }}
+DESIGNATION:      {{ owner.designation }}
+USN:              {{ owner.usn }}
+SPORTS:           {{ owner.sports }}
+AUCTION PURSE:    ₹ {{ "{:,}".format(owner.budget or 1000000) }}
+EMAIL:            {{ owner.email }}
+CONTACT:          {{ owner.contact }}
+MANAGER:          {{ owner.manager_name }}
+MANAGER CONTACT:  {{ owner.manager_contact_number }}
+--------------------------------------------------
+
+View the league: {{ brand.site_url }}
+
+Spotted a mistake or have questions about auction rules? Reach the organising committee on {{ brand.support_phones_text }}.
+
+A message from the Director:
+"{{ brand.director_message }}"
+— {{ brand.director_name }}, {{ brand.director_title }}, {{ brand.university }}

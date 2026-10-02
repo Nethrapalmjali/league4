@@ -1,0 +1,25 @@
+{{ brand.name }} — SOLD AT AUCTION!
+
+Congratulations, {{ player.name.split()[0] if player.name else "Player" }}!
+You have been signed by {{ team_name }} in the {{ brand.name }} {{ sport }} live auction.
+
+WINNING BID: {{ amount_display }}
+Signed to: {{ team_name }}
+
+AUCTION SIGNING DETAILS:
+--------------------------------------------------
+PLAYER:      {{ player.name }}
+SPORT:       {{ sport }}
+CATEGORY:    {{ category }}
+FRANCHISE:   {{ team_name }}
+TEAM OWNER:  {{ owner_name }}
+FINAL BID:   {{ amount_display }}
+--------------------------------------------------
+
+View squads: {{ brand.site_url }}
+
+Report to your team management for training schedule and jersey distribution.
+
+A message from the Director:
+"{{ brand.director_message }}"
+— {{ brand.director_name }}, {{ brand.director_title }}, {{ brand.university }}

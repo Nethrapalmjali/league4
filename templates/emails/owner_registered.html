@@ -1,0 +1,32 @@
+{% extends "emails/_layout.html" %}
+{% import "emails/_macros.html" as m %}
+
+{% block preheader %}{{ owner.team_name }} is registered · {{ reg_code }}{% endblock %}
+
+{% block hero_badge %}Franchise Confirmed{% endblock %}
+
+{% block content %}
+  {{ m.headline("Welcome to the league, " ~ (owner.name.split()[0] if owner.name else "Owner") ~ ".") }}
+
+  {{ m.paragraph(owner.team_name ~ " is officially registered as a franchise for " ~ brand.name ~ ". Your team purse is loaded and ready for the upcoming live player auction.") }}
+
+  {% set franchise_rows = [
+    ("TEAM NAME", owner.team_name),
+    ("OWNER", owner.name),
+    ("DESIGNATION", owner.designation),
+    ("USN", owner.usn),
+    ("SPORTS", owner.sports),
+    ("AUCTION PURSE", "₹ " ~ "{:,}".format(owner.budget or 1000000)),
+    ("EMAIL", ('<a href="mailto:' ~ owner.email ~ '" style="color:#0056b3; text-decoration:underline;">' ~ owner.email ~ '</a>') if owner.email else None),
+    ("CONTACT", owner.contact),
+    ("MANAGER", owner.manager_name),
+    ("MANAGER CONTACT", owner.manager_contact_number)
+  ] %}
+
+  {{ m.ticket("FRANCHISE ENTRY PASS", reg_code, franchise_rows) }}
+
+  {{ m.button(brand.site_url, "VIEW THE LEAGUE") }}
+
+  {% set mistake_note = "Spotted a mistake or have questions about auction rules? Reach the organising committee on " ~ brand.support_phones_text ~ " or via WhatsApp." %}
+  {{ m.note(mistake_note) }}
+{% endblock %}

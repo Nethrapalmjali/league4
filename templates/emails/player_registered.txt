@@ -1,0 +1,26 @@
+{{ brand.name }} — Registration Confirmed
+
+You're in, {{ player.name.split()[0] if player.name else "Player" }}.
+Your name is officially on the {{ sport }} sheet for {{ brand.name }}. From here, every team owner in the league can see your profile — and when the auction opens, they'll be bidding on it.
+
+PLAYER ENTRY PASS: {{ reg_code }}
+--------------------------------------------------
+NAME:       {{ player.name }}
+USN:        {{ player.usn }}
+SPORT:      {{ sport }}
+POSITION:   {{ player.position }}
+BRANCH:     {{ player.branch }}
+COLLEGE:    {{ player.college_name }}
+CATEGORY:   {{ category }}
+EXPERIENCE: {{ player.experience }}
+EMAIL:      {{ player.email }}
+CONTACT:    {{ player.contact }}
+--------------------------------------------------
+
+View the league: {{ brand.site_url }}
+
+Spotted a mistake in the details above? Reply-to is unmonitored — reach the organising committee on {{ brand.support_phones_text }}{% if player.usn %} with your USN {{ player.usn }}{% endif %} and we'll fix it before the auction.
+
+A message from the Director:
+"{{ brand.director_message }}"
+— {{ brand.director_name }}, {{ brand.director_title }}, {{ brand.university }}
