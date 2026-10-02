@@ -84,7 +84,12 @@ def sync_reopened_player(player):
     if not player:
         return False
     try:
-        sc_players = ScPlayer.query.filter_by(ems_player_id=player.id).all()
+        sc_players = ScPlayer.query.filter(
+            db.or_(
+                ScPlayer.ems_player_id == player.id,
+                db.func.lower(ScPlayer.name) == player.name.lower().strip(),
+            )
+        ).all()
         for sc_p in sc_players:
             has_events = ScEvent.query.filter_by(player_id=sc_p.id).count()
             if has_events:
