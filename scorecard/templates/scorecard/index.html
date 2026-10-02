@@ -35,7 +35,8 @@
       <h1>Live scores</h1>
       <p>
         Follow every match as it happens. Scores update on their own — no need to refresh.
-        <a href="{{ url_for('scorecard.standings') }}">Standings &amp; leading scorers →</a>
+        <a href="{{ url_for('scorecard.standings') }}">Standings &amp; leading scorers →</a> ·
+        <a href="{{ url_for('scorecard.scorer_login') }}">Scorer sign in →</a>
       </p>
       {% if session.get('admin_logged_in') %}
         <p class="sc-hint">

@@ -13,6 +13,8 @@
 </head>
 <body class="sc-console-body"
       data-match="{{ match.id }}"
+      data-match-status="{{ match.status }}"
+      data-starts-at="{{ match.starts_at.isoformat() if match.starts_at else '' }}"
       data-event-url="{{ url_for('scorecard.add_event', match_id=match.id) }}"
       data-undo-url="{{ url_for('scorecard.undo_event', match_id=match.id) }}"
       data-period-url="{{ url_for('scorecard.set_period', match_id=match.id) }}"
@@ -24,6 +26,30 @@
     <span class="sc-console__meta">{{ match.sport }} · {{ match.stage }}</span>
     <span class="sc-console__period" data-period>{{ match.period or 'Not started' }}</span>
   </header>
+
+  <!-- Live Match Timer & Clock Controls -->
+  <div class="sc-timer-bar" data-timer-bar>
+    <div class="sc-timer__info">
+      <span class="sc-timer__icon">⏱️</span>
+      <div class="sc-timer__clock-wrap">
+        <span class="sc-timer__digital" data-timer-digital>00:00</span>
+        <span class="sc-timer__min-badge" data-timer-badge>1'</span>
+      </div>
+      <span class="sc-timer__state-tag" data-timer-status>Not Started</span>
+    </div>
+    <div class="sc-timer__actions">
+      <button type="button" class="btn btn--sm sc-timer__btn-toggle" data-timer-toggle>
+        ▶ Start Match Clock
+      </button>
+      <button type="button" class="btn btn--sm sc-timer__btn-set" data-timer-set title="Adjust or set start minute">
+        ⚙️ Set Min
+      </button>
+    </div>
+  </div>
+
+  <div class="sc-timer-prompt" data-timer-prompt hidden>
+    <span>📢 <strong>Match clock is idle.</strong> Tap <strong>▶ Start Match Clock</strong> when the whistle blows to auto-fetch timestamps.</span>
+  </div>
 
   <div class="sc-console__score">
     <div class="sc-console__side">
@@ -75,10 +101,22 @@
   </div>
 
   <div class="sc-console__bar">
-    <label class="sc-console__clock">
-      <span>Minute</span>
-      <input type="text" data-clock inputmode="numeric" placeholder="12'" maxlength="8">
-    </label>
+    <div class="sc-console__clock-container">
+      <label class="sc-console__clock">
+        <div class="sc-clock__label-row">
+          <span>Event Minute</span>
+          <span class="sc-clock__status-badge" data-clock-badge>Live Sync</span>
+        </div>
+        <div class="sc-clock__input-row">
+          <input type="text" data-clock inputmode="numeric" placeholder="1'" maxlength="8">
+          <button type="button" class="btn btn--sm sc-btn-snap" data-snap-live title="Re-sync with live match clock" hidden>
+            ↺ Snap to Live
+          </button>
+        </div>
+      </label>
+      <span class="sc-clock__hint">Auto-fetches minute. Click to edit anytime for mistakes/delays!</span>
+    </div>
+
     <button type="button" class="btn btn--ghost" data-undo>Undo last</button>
     <button type="button" class="btn btn--ghost" data-next-period>Next period</button>
     {% if match.status != 'final' %}
