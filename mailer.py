@@ -1,5 +1,6 @@
 import os
 import smtplib
+import threading
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from email.mime.image import MIMEImage
@@ -58,13 +59,26 @@ class Mailer:
             self.app.logger.info(f"Suppressed sending email to {to}: {subject}")
             return True
 
-        # Send email in background or directly
-        try:
-            self._send_raw(to, subject, html_body, txt_body)
+        # Send email asynchronously in a background daemon thread so HTTP requests
+        # (especially during live auction bidding) return instantly without hitting timeouts.
+        serverless = bool(os.getenv("VERCEL") or os.getenv("AWS_LAMBDA_FUNCTION_NAME"))
+        if serverless:
+            try:
+                self._send_raw(to, subject, html_body, txt_body)
+                return True
+            except Exception as e:
+                self.app.logger.error(f"Failed to send email to {to}: {e}")
+                return False
+        else:
+            def _async_worker():
+                try:
+                    self._send_raw(to, subject, html_body, txt_body)
+                except Exception as e:
+                    self.app.logger.error(f"Async email to {to} failed: {e}")
+
+            t = threading.Thread(target=_async_worker, daemon=True)
+            t.start()
             return True
-        except Exception as e:
-            self.app.logger.error(f"Failed to send email to {to}: {e}")
-            return False
 
     def send_now(self, to, subject, template, context):
         # Synchronous send
@@ -91,6 +105,10 @@ class Mailer:
             return False, str(e)
 
     def _send_raw(self, to, subject, html_body, txt_body):
+        if not to or "@" not in str(to):
+            self.app.logger.warning(f"Skipping email send: invalid recipient '{to}'")
+            return
+
         config = self.app.config
         server_addr = config.get("MAIL_SERVER", "smtp.gmail.com")
         port = config.get("MAIL_PORT", 587)
