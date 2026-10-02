@@ -9,16 +9,41 @@
       <span class="sc-row__stage">{{ match.stage }}{% if match.gender %} · {{ match.gender }}{% endif %}</span>
     </span>
     <span class="sc-row__teams">
-      <span class="sc-row__team">{{ match.team_a.name }}</span>
-      {% if show_score %}
-        <span class="sc-row__score">{{ match.score_a or 0 }}<i>–</i>{{ match.score_b or 0 }}</span>
-      {% else %}
-        <span class="sc-row__vs">v</span>
-      {% endif %}
-      <span class="sc-row__team sc-row__team--b">{{ match.team_b.name }}</span>
-      {% if show_score and match.scorers_summary %}
-        <span class="sc-row__scorers-line">⚽ {{ match.scorers_summary }}</span>
-      {% endif %}
+      <span class="sc-row__side sc-row__side--a">
+        <span class="sc-row__team">{{ match.team_a.name }}</span>
+        {% if show_score and match.scorers_a %}
+          <span class="sc-row__scorers sc-row__scorers--a">
+            {% for s in match.scorers_a %}
+              <span class="sc-row__scorer-item">
+                <span class="sc-row__scorer-name">{{ s.name }}</span>
+                {% if s.clock %}<span class="sc-row__scorer-clock">{{ s.clock }}</span>{% endif %}
+              </span>
+            {% endfor %}
+          </span>
+        {% endif %}
+      </span>
+
+      <span class="sc-row__center">
+        {% if show_score %}
+          <span class="sc-row__score">{{ match.score_a or 0 }}<i>–</i>{{ match.score_b or 0 }}</span>
+        {% else %}
+          <span class="sc-row__vs">v</span>
+        {% endif %}
+      </span>
+
+      <span class="sc-row__side sc-row__side--b">
+        <span class="sc-row__team sc-row__team--b">{{ match.team_b.name }}</span>
+        {% if show_score and match.scorers_b %}
+          <span class="sc-row__scorers sc-row__scorers--b">
+            {% for s in match.scorers_b %}
+              <span class="sc-row__scorer-item">
+                <span class="sc-row__scorer-name">{{ s.name }}</span>
+                {% if s.clock %}<span class="sc-row__scorer-clock">{{ s.clock }}</span>{% endif %}
+              </span>
+            {% endfor %}
+          </span>
+        {% endif %}
+      </span>
     </span>
     <span class="sc-row__tail">
       {% if match.status == 'live' %}

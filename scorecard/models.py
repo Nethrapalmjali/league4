@@ -120,36 +120,89 @@ class ScMatch(db.Model):
         self.updated_at = datetime.utcnow()
 
     @property
-    def scorers_summary(self):
-        """Compact summary of scorers (e.g. 'Chetan 14\', Ravi 32\'')."""
-        scored = [e for e in self.events if not e.voided and (e.points or 0) > 0]
-        scored.sort(key=lambda x: x.id)
-        if not scored:
-            return ""
-        parts = []
-        for e in scored:
-            who = e.player.name if e.player else ("Goal" if self.sport == "Football" else "Point")
-            clk = f" {e.clock}" if e.clock else ""
-            parts.append(f"{who}{clk}")
-        return ", ".join(parts)
+    def sport_icon(self):
+        return {
+            "Football": "⚽",
+            "Cricket": "🏏",
+            "Badminton": "🏸",
+            "Volleyball": "🏐",
+            "Basketball": "🏀",
+            "Kabaddi": "🤼",
+            "Table Tennis": "🏓",
+            "Tennis": "🎾",
+        }.get(self.sport, "⚽")
 
     def scorers_for_side(self, side):
-        """List of scoring contributions for side 'a' or 'b'."""
+        """List of grouped scoring contributions for side 'a' or 'b'.
+        Groups multiple goals/points by the same player:
+        e.g. Chetan 1', Chetan 2' -> [{'name': 'Chetan', 'clock': "1', 2'", 'points': 2}]
+        """
         target_team_id = self.team_a_id if side == "a" else self.team_b_id
         scored = [
             e for e in self.events
             if not e.voided and (e.points or 0) > 0 and e.team_id == target_team_id
         ]
         scored.sort(key=lambda x: x.id)
-        res = []
+
+        grouped = {}
+        order = []
         for e in scored:
+            who = e.player.name if e.player else ("Goal" if self.sport == "Football" else "Point")
+            if who not in grouped:
+                grouped[who] = {
+                    "name": who,
+                    "clocks": [],
+                    "points": 0,
+                    "kind": e.kind,
+                    "icon": self.sport_icon,
+                }
+                order.append(who)
+            if e.clock:
+                clk = e.clock.strip()
+                if clk.isdigit():
+                    clk = f"{clk}'"
+                grouped[who]["clocks"].append(clk)
+            grouped[who]["points"] += (e.points or 1)
+
+        res = []
+        for who in order:
+            data = grouped[who]
+            clocks = data["clocks"]
+            if clocks:
+                clocks_text = ", ".join(clocks)
+            elif data["points"] > 1:
+                clocks_text = f"×{data['points']}"
+            else:
+                clocks_text = ""
             res.append({
-                "name": e.player.name if e.player else ("Goal" if self.sport == "Football" else "Point"),
-                "clock": e.clock or "",
-                "kind": e.kind,
-                "points": e.points,
+                "name": data["name"],
+                "clock": clocks_text,
+                "clocks_text": clocks_text,
+                "points": data["points"],
+                "kind": data["kind"],
+                "icon": data["icon"],
             })
         return res
+
+    @property
+    def scorers_a(self):
+        return self.scorers_for_side("a")
+
+    @property
+    def scorers_b(self):
+        return self.scorers_for_side("b")
+
+    @property
+    def scorers_summary(self):
+        """Compact summary of scorers (e.g. 'Chetan 1\', 2\', Ravi 32\'')."""
+        all_scorers = self.scorers_for_side("a") + self.scorers_for_side("b")
+        if not all_scorers:
+            return ""
+        parts = []
+        for s in all_scorers:
+            clk = f" {s['clock']}" if s.get("clock") else ""
+            parts.append(f"{s['name']}{clk}")
+        return ", ".join(parts)
 
     @property
     def player_of_the_match(self):

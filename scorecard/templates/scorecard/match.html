@@ -29,7 +29,7 @@
           <span class="sc-side__name">{{ match.team_a.name }}</span>
           <div class="sc-side__scorers" data-scorers-a>
             {% for s in team_a_scorers %}
-              <span class="sc-scorer-pill">⚽ {{ s.name }}{% if s.clock %} <small>{{ s.clock }}</small>{% endif %}</span>
+              <span class="sc-scorer-pill">{{ s.icon or "⚽" }} {{ s.name }}{% if s.clock %} <small>{{ s.clock }}</small>{% endif %}</span>
             {% endfor %}
           </div>
         </div>
@@ -43,7 +43,7 @@
           <span class="sc-side__name">{{ match.team_b.name }}</span>
           <div class="sc-side__scorers sc-side__scorers--b" data-scorers-b>
             {% for s in team_b_scorers %}
-              <span class="sc-scorer-pill">⚽ {{ s.name }}{% if s.clock %} <small>{{ s.clock }}</small>{% endif %}</span>
+              <span class="sc-scorer-pill">{{ s.icon or "⚽" }} {{ s.name }}{% if s.clock %} <small>{{ s.clock }}</small>{% endif %}</span>
             {% endfor %}
           </div>
         </div>

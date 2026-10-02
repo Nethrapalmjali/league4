@@ -77,7 +77,8 @@
     scorers.forEach(function (s) {
       var pill = document.createElement("span");
       pill.className = "sc-scorer-pill";
-      var txt = "⚽ " + s.name;
+      var icon = s.icon || "⚽";
+      var txt = icon + " " + s.name;
       if (s.clock) {
         txt += " <small>" + s.clock + "</small>";
       }
