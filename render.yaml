@@ -42,3 +42,8 @@ services:
         value: "GM League Season 4"
       - key: MAIL_SENDER_EMAIL
         value: nethrapalmjali21@gmail.com
+      - key: SITE_URL
+        value: https://gmlweb.onrender.com
+      - key: RENDER_EXTERNAL_URL
+        value: https://gmlweb.onrender.com
+

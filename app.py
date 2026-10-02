@@ -192,7 +192,7 @@ BRAND = {
     "season": env_str("LEAGUE_SEASON", "Season 4"),
     "university": env_str("LEAGUE_UNIVERSITY", "GM University"),
     "tagline": env_str("LEAGUE_TAGLINE", "Season 4 — Where Legends Are Born"),
-    "site_url": env_str("SITE_URL", "http://127.0.0.1:5000"),
+    "site_url": env_str("SITE_URL", "https://gmlweb.onrender.com"),
     "support_phone": env_str("SUPPORT_PHONE", "6363962653"),
     "support_phone_alt": env_str("SUPPORT_PHONE_ALT", "7019670142"),
     "support_email": env_str("SUPPORT_EMAIL"),
@@ -213,6 +213,38 @@ BRAND = {
 BRAND["wordmark"] = env_str("LEAGUE_WORDMARK") or (
     BRAND["name"].replace(BRAND["season"], "").strip(" -—–·") or BRAND["name"]
 )
+
+
+def resolve_site_url():
+    """Return the live public website URL so email buttons always link to the real site."""
+    explicit = env_str("SITE_URL")
+    if explicit and not explicit.startswith("http://127.0.0.1") and not explicit.startswith("http://localhost"):
+        return explicit.rstrip("/")
+    try:
+        if request and request.host_url:
+            host = request.host_url.rstrip("/")
+            if host.startswith("http://") and ("onrender.com" in host or "vercel.app" in host):
+                host = "https://" + host[len("http://"):]
+            if not host.startswith("http://127.0.0.1") and not host.startswith("http://localhost"):
+                return host
+    except Exception:
+        pass
+    render_url = env_str("RENDER_EXTERNAL_URL")
+    if render_url:
+        return render_url.rstrip("/")
+    vercel_url = env_str("VERCEL_URL")
+    if vercel_url:
+        if not vercel_url.startswith("http"):
+            vercel_url = "https://" + vercel_url
+        return vercel_url.rstrip("/")
+    return "https://gmlweb.onrender.com"
+
+
+def get_brand():
+    b = dict(BRAND)
+    b["site_url"] = resolve_site_url()
+    return b
+
 
 # Both helpline numbers, in one list so no template has to know there are two.
 BRAND["support_phones"] = [p for p in (BRAND["support_phone"], BRAND["support_phone_alt"]) if p]
@@ -450,7 +482,7 @@ app.jinja_env.filters["media_url"] = media_url
 def inject_globals():
     return {
         "csrf_token": csrf_token,
-        "brand": BRAND,
+        "brand": get_brand(),
         "sports": SPORTS,
         "now_year": datetime.now().year,
         "media_url": media_url,
@@ -621,7 +653,7 @@ def email_player_registered(player):
             "sport": player.sport,
             "reg_code": player.reg_code,
             "category": category_of(player),
-            "brand": BRAND,
+            "brand": get_brand(),
             "logo_cid": has_logo(),
         },
     )
@@ -632,7 +664,7 @@ def email_owner_registered(owner):
         to=owner.email,
         subject=f"{owner.team_name} is registered — {BRAND['name']}",
         template="owner_registered",
-        context={"owner": owner, "reg_code": owner.reg_code, "brand": BRAND, "logo_cid": has_logo()},
+        context={"owner": owner, "reg_code": owner.reg_code, "brand": get_brand(), "logo_cid": has_logo()},
     )
 
 
@@ -648,7 +680,7 @@ def email_player_sold(player, owner, amount):
             "owner_name": owner.name,
             "category": category_of(player),
             "amount_display": rupees(amount),
-            "brand": BRAND,
+            "brand": get_brand(),
             "logo_cid": has_logo(),
         },
     )
@@ -664,7 +696,7 @@ def email_player_sold(player, owner, amount):
             "category": category_of(player),
             "amount_display": rupees(amount),
             "budget_display": rupees(owner.budget),
-            "brand": BRAND,
+            "brand": get_brand(),
             "logo_cid": has_logo(),
         },
     )
@@ -1187,7 +1219,7 @@ def admin_mail_test():
         subject=f"SMTP test — {BRAND['name']} event management system",
         template="test_mail",
         context={
-            "brand": BRAND,
+            "brand": get_brand(),
             "logo_cid": has_logo(),
             "sent_at": datetime.now().strftime("%d %b %Y, %I:%M %p"),
             "smtp_server": status["server"],
