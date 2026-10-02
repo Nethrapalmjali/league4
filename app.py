@@ -126,7 +126,8 @@ _secret_key = env_str("SECRET_KEY", "gml_s4_master_secret_2026_super_safe_token_
 if not _secret_key:
     _secret_key = "gml_s4_master_secret_2026_super_safe_token_9827341289"
 
-_default_db_uri = "sqlite:////tmp/league.db" if SERVERLESS else "sqlite:///league.db"
+_supabase_db_uri = "postgresql://postgres.bqoszyelbcxrqojvutva:vlwBjAOpbOFUXT7G@aws-0-ap-southeast-2.pooler.supabase.com:6543/postgres?sslmode=require"
+_default_db_uri = env_str("DATABASE_URL", _supabase_db_uri)
 
 app.config.update(
     SECRET_KEY=_secret_key,
