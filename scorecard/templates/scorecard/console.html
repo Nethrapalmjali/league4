@@ -14,6 +14,9 @@
 <body class="sc-console-body"
       data-match="{{ match.id }}"
       data-match-status="{{ match.status }}"
+      data-match-sport="{{ match.sport }}"
+      data-match-period="{{ match.period or (rules.periods[0] if rules.periods else 'P1') }}"
+      data-match-periods='{{ rules.periods | tojson }}'
       data-starts-at="{{ match.starts_at.isoformat() if match.starts_at else '' }}"
       data-event-url="{{ url_for('scorecard.add_event', match_id=match.id) }}"
       data-undo-url="{{ url_for('scorecard.undo_event', match_id=match.id) }}"
@@ -49,6 +52,24 @@
 
   <div class="sc-timer-prompt" data-timer-prompt hidden>
     <span>📢 <strong>Match clock is idle.</strong> Tap <strong>▶ Start Match Clock</strong> when the whistle blows to auto-fetch timestamps.</span>
+  </div>
+
+  <!-- Smart Period Assistant & Auto-Suggestion -->
+  <div class="sc-period-guide" data-period-guide>
+    <div class="sc-period-guide__main">
+      <div class="sc-period-guide__badge" data-period-badge>First Half</div>
+      <div class="sc-period-guide__text" data-period-text>
+        First Half in progress. When the half-time whistle blows, tap <strong>Advance to H2</strong>.
+      </div>
+    </div>
+    <div class="sc-period-guide__actions">
+      <button type="button" class="btn btn--sm sc-btn-period-undo" data-period-undo title="Undo period change if clicked by mistake" hidden>
+        ↶ Undo to <span data-prev-period-tag>H1</span>
+      </button>
+      <button type="button" class="btn btn--sm sc-btn-period-next" data-period-next>
+        Advance to <span data-next-period-tag>H2</span> →
+      </button>
+    </div>
   </div>
 
   <div class="sc-console__score">
@@ -117,8 +138,9 @@
       <span class="sc-clock__hint">Auto-fetches minute. Click to edit anytime for mistakes/delays!</span>
     </div>
 
-    <button type="button" class="btn btn--ghost" data-undo>Undo last</button>
-    <button type="button" class="btn btn--ghost" data-next-period>Next period</button>
+    <button type="button" class="btn btn--ghost" data-undo title="Undo last point or event">Undo last score</button>
+    <button type="button" class="btn btn--ghost sc-btn-period-undo-bar" data-period-undo-bar title="Undo period change" hidden>↶ Undo Period</button>
+    <button type="button" class="btn btn--secondary sc-btn-period-next-bar" data-next-period>Advance to <span data-next-period-bar-tag>H2</span> →</button>
     {% if match.status != 'final' %}
       <button type="button" class="btn btn--primary" data-finish>End match</button>
     {% else %}

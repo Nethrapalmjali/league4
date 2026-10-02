@@ -43,6 +43,28 @@ SPORT_RULES = {
             {"key": "point", "label": "Point", "points": 1},
         ],
     },
+    "Volleyball": {
+        "periods": ["Set 1", "Set 2", "Set 3", "Set 4", "Set 5"],
+        "actions": [
+            {"key": "point", "label": "Point", "points": 1},
+        ],
+    },
+    "Cricket": {
+        "periods": ["Innings 1", "Innings 2"],
+        "actions": [
+            {"key": "run1", "label": "1 Run", "points": 1},
+            {"key": "run4", "label": "4 Runs", "points": 4},
+            {"key": "run6", "label": "6 Runs", "points": 6},
+            {"key": "wicket", "label": "Wicket", "points": 0},
+            {"key": "extra", "label": "Extra", "points": 1},
+        ],
+    },
+    "Table Tennis": {
+        "periods": ["Game 1", "Game 2", "Game 3", "Game 4", "Game 5"],
+        "actions": [
+            {"key": "point", "label": "Point", "points": 1},
+        ],
+    },
 }
 
 # Anything not listed above still works — it just gets a plain one-point button

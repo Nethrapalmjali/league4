@@ -27,11 +27,20 @@ def _console_payload(match):
         .limit(40)
         .all()
     )
+    periods = rules_for(match.sport)["periods"]
+    curr_idx = periods.index(match.period) if match.period in periods else 0
+    prev_period = periods[curr_idx - 1] if curr_idx > 0 else None
+    next_period = periods[curr_idx + 1] if curr_idx < len(periods) - 1 else None
+
     return {
         "score_a": match.score_a or 0,
         "score_b": match.score_b or 0,
         "period": match.period,
         "status": match.status,
+        "sport": match.sport,
+        "periods": periods,
+        "prev_period": prev_period,
+        "next_period": next_period,
         "events": [
             {
                 "id": event.id,
@@ -198,11 +207,16 @@ def set_period(match_id):
         return error
 
     periods = rules_for(match.sport)["periods"]
+    action = request.form.get("action")
     wanted = request.form.get("period")
-    if wanted in periods:
+
+    current = periods.index(match.period) if match.period in periods else 0
+
+    if action == "prev" or wanted == "prev":
+        match.period = periods[max(0, current - 1)]
+    elif wanted in periods:
         match.period = wanted
-    else:  # no explicit choice — step to the next one
-        current = periods.index(match.period) if match.period in periods else -1
+    else:  # no explicit choice or 'next' — step to the next one
         match.period = periods[min(current + 1, len(periods) - 1)]
 
     match.updated_at = datetime.utcnow()

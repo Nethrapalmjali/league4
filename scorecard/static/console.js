@@ -29,6 +29,26 @@
   var clockBadge = document.querySelector("[data-clock-badge]");
   var snapBtn = document.querySelector("[data-snap-live]");
 
+  var periodGuide = document.querySelector("[data-period-guide]");
+  var periodBadge = document.querySelector("[data-period-badge]");
+  var periodText = document.querySelector("[data-period-text]");
+  var periodUndoBtn = document.querySelector("[data-period-undo]");
+  var periodUndoBarBtn = document.querySelector("[data-period-undo-bar]");
+  var prevPeriodTags = document.querySelectorAll("[data-prev-period-tag]");
+  var periodNextBtns = document.querySelectorAll("[data-period-next], [data-next-period]");
+  var nextPeriodTags = document.querySelectorAll("[data-next-period-tag], [data-next-period-bar-tag]");
+
+  var currentSport = body.dataset.matchSport || "";
+  var currentPeriod = body.dataset.matchPeriod || "H1";
+  var currentPrevPeriod = null;
+  var currentNextPeriod = null;
+  var periodsList = [];
+  try {
+    periodsList = JSON.parse(body.dataset.matchPeriods || "[]");
+  } catch (e) {
+    periodsList = [];
+  }
+
   var timerInterval = null;
   var startTime = null;
   var pausedSec = 0;
@@ -157,6 +177,14 @@
       }
       if (snapBtn) snapBtn.hidden = true;
     }
+
+    // Dynamic half-time suggestion check for football in H1
+    if ((currentSport || "").trim().toLowerCase() === "football" && currentPeriod === "H1") {
+      var guideInfo = getGuideInfo();
+      if (periodText && periodText.innerHTML !== guideInfo.text) {
+        periodText.innerHTML = guideInfo.text;
+      }
+    }
   }
 
   function startClock() {
@@ -241,12 +269,233 @@
     });
   }
 
-  // Initial timer setup on page load
+  /* ---------------- Smart Period Assistant & Auto-Suggestions ---------------- */
+
+  var PERIOD_GUIDES = {
+    football: {
+      H1: {
+        badge: "1st Half (H1)",
+        text: "⚽ <strong>1st Half in progress.</strong> When the 45' half-time whistle blows, tap <strong>Advance to H2 →</strong>.",
+        halfTimeText: "⏱️ <strong>45' reached!</strong> When the referee blows the half-time whistle, tap <strong>Advance to H2 →</strong>."
+      },
+      H2: {
+        badge: "2nd Half (H2)",
+        text: "⚽ <strong>2nd Half in progress (45'–90'+).</strong> When the full-time whistle blows, tap <strong>End match</strong>."
+      }
+    },
+    kabaddi: {
+      H1: {
+        badge: "1st Half (H1)",
+        text: "🤼 <strong>1st Half in progress (20 mins).</strong> At the half-time break, tap <strong>Advance to H2 →</strong>."
+      },
+      H2: {
+        badge: "2nd Half (H2)",
+        text: "🤼 <strong>2nd Half underway.</strong> At the final whistle/buzzer, tap <strong>End match</strong>."
+      }
+    },
+    basketball: {
+      Q1: {
+        badge: "1st Quarter (Q1)",
+        text: "🏀 <strong>1st Quarter underway.</strong> Tap <strong>Advance to Q2 →</strong> at the quarter horn."
+      },
+      Q2: {
+        badge: "2nd Quarter (Q2)",
+        text: "🏀 <strong>2nd Quarter underway.</strong> Half-time break follows Q2. Tap <strong>Advance to Q3 →</strong>."
+      },
+      Q3: {
+        badge: "3rd Quarter (Q3)",
+        text: "🏀 <strong>3rd Quarter underway.</strong> Tap <strong>Advance to Q4 →</strong> at the quarter horn."
+      },
+      Q4: {
+        badge: "4th Quarter (Q4)",
+        text: "🏀 <strong>4th Quarter (Final).</strong> At the final buzzer, tap <strong>End match</strong>."
+      }
+    },
+    badminton: {
+      "Game 1": {
+        badge: "Game 1",
+        text: "🏸 <strong>Game 1 in progress (First to 21, win by 2).</strong> Tap <strong>Advance to Game 2 →</strong> after game point."
+      },
+      "Game 2": {
+        badge: "Game 2",
+        text: "🏸 <strong>Game 2 underway.</strong> If tied 1-1, tap <strong>Advance to Game 3 →</strong> for the decider."
+      },
+      "Game 3": {
+        badge: "Game 3 (Decider)",
+        text: "🏸 <strong>Deciding Game underway!</strong> Tap <strong>End match</strong> when match point is won."
+      }
+    },
+    volleyball: {
+      "Set 1": {
+        badge: "Set 1",
+        text: "🏐 <strong>Set 1 underway (First to 25, win by 2).</strong> Tap <strong>Advance to Set 2 →</strong> after set point."
+      },
+      "Set 2": {
+        badge: "Set 2",
+        text: "🏐 <strong>Set 2 underway.</strong> Tap <strong>Advance to Set 3 →</strong> after set point."
+      },
+      "Set 3": {
+        badge: "Set 3",
+        text: "🏐 <strong>Set 3 underway.</strong> Tap <strong>Advance to Set 4 →</strong> if needed, or <strong>End match</strong>."
+      },
+      "Set 4": {
+        badge: "Set 4",
+        text: "🏐 <strong>Set 4 underway.</strong> Tap <strong>Advance to Set 5 →</strong> (Deciding tie-break to 15) if tied 2-2."
+      },
+      "Set 5": {
+        badge: "Set 5 (Tie-break)",
+        text: "🏐 <strong>Set 5 Tie-breaker to 15!</strong> Tap <strong>End match</strong> when match point is won."
+      }
+    },
+    cricket: {
+      "Innings 1": {
+        badge: "1st Innings",
+        text: "🏏 <strong>1st Innings in progress.</strong> When all out or target overs complete, tap <strong>Advance to Innings 2 →</strong>."
+      },
+      "Innings 2": {
+        badge: "2nd Innings (Chase)",
+        text: "🏏 <strong>2nd Innings underway (Target Chase).</strong> When target is chased or overs complete, tap <strong>End match</strong>."
+      }
+    },
+    "table tennis": {
+      "Game 1": { badge: "Game 1", text: "🏓 <strong>Game 1 underway (First to 11, win by 2).</strong> Tap <strong>Advance to Game 2 →</strong> after game point." },
+      "Game 2": { badge: "Game 2", text: "🏓 <strong>Game 2 underway.</strong> Tap <strong>Advance to Game 3 →</strong> after game point." },
+      "Game 3": { badge: "Game 3", text: "🏓 <strong>Game 3 underway.</strong> Tap <strong>Advance to Game 4 →</strong> if needed." },
+      "Game 4": { badge: "Game 4", text: "🏓 <strong>Game 4 underway.</strong> Tap <strong>Advance to Game 5 →</strong> for decider." },
+      "Game 5": { badge: "Game 5 (Decider)", text: "🏓 <strong>Deciding Game 5 underway!</strong> Tap <strong>End match</strong> when match point is won." }
+    }
+  };
+
+  function getGuideInfo() {
+    var sportKey = (currentSport || "").trim().toLowerCase();
+    var sportGuide = PERIOD_GUIDES[sportKey] || {};
+    var guide = sportGuide[currentPeriod];
+
+    var badgeText = guide ? guide.badge : ("Period " + currentPeriod);
+    var guideText = "";
+
+    if (sportKey === "football" && currentPeriod === "H1" && getElapsedSec() >= 45 * 60 && guide && guide.halfTimeText) {
+      guideText = guide.halfTimeText;
+    } else if (guide && guide.text) {
+      guideText = guide.text;
+    } else if (currentNextPeriod) {
+      guideText = "Current period: <strong>" + currentPeriod + "</strong>. Tap <strong>Advance to " + currentNextPeriod + " →</strong> when this period concludes.";
+    } else {
+      guideText = "Final period: <strong>" + currentPeriod + "</strong>. Tap <strong>End match</strong> when the match concludes.";
+    }
+
+    return { badge: badgeText, text: guideText };
+  }
+
+  function updatePeriodAssistant(period, sport, prevP, nextP, status) {
+    if (period) currentPeriod = period;
+    if (sport) currentSport = sport;
+    if (typeof prevP !== "undefined") currentPrevPeriod = prevP;
+    if (typeof nextP !== "undefined") currentNextPeriod = nextP;
+
+    var curStatus = status || body.dataset.matchStatus || "scheduled";
+    if (curStatus === "final") {
+      if (periodBadge) periodBadge.textContent = "Match Finished";
+      if (periodText) periodText.innerHTML = "🏆 <strong>Match has concluded.</strong> Scores and statistics are finalized.";
+      if (periodUndoBtn) periodUndoBtn.hidden = true;
+      if (periodUndoBarBtn) periodUndoBarBtn.hidden = true;
+      periodNextBtns.forEach(function (btn) {
+        btn.disabled = true;
+        btn.style.display = "none";
+      });
+      return;
+    }
+
+    var info = getGuideInfo();
+    if (periodBadge) periodBadge.textContent = info.badge;
+    if (periodText) periodText.innerHTML = info.text;
+
+    // Undo period buttons: visible whenever a previous period is available
+    if (currentPrevPeriod) {
+      if (periodUndoBtn) {
+        periodUndoBtn.hidden = false;
+        periodUndoBtn.disabled = false;
+      }
+      if (periodUndoBarBtn) {
+        periodUndoBarBtn.hidden = false;
+        periodUndoBarBtn.disabled = false;
+        periodUndoBarBtn.textContent = "↶ Undo to " + currentPrevPeriod;
+      }
+      prevPeriodTags.forEach(function (el) { el.textContent = currentPrevPeriod; });
+    } else {
+      if (periodUndoBtn) periodUndoBtn.hidden = true;
+      if (periodUndoBarBtn) periodUndoBarBtn.hidden = true;
+    }
+
+    // Next period buttons
+    if (currentNextPeriod) {
+      periodNextBtns.forEach(function (btn) {
+        btn.disabled = false;
+        btn.style.display = "";
+        if (btn.classList.contains("sc-btn-period-next-bar")) {
+          btn.innerHTML = 'Advance to <span data-next-period-bar-tag>' + currentNextPeriod + '</span> →';
+        } else if (btn.classList.contains("sc-btn-period-next")) {
+          btn.innerHTML = 'Advance to <span data-next-period-tag>' + currentNextPeriod + '</span> →';
+        }
+      });
+      nextPeriodTags.forEach(function (el) { el.textContent = currentNextPeriod; });
+    } else {
+      // Last period reached (e.g. H2 in Football)
+      periodNextBtns.forEach(function (btn) {
+        btn.disabled = true;
+        btn.textContent = "Final Period (" + currentPeriod + ")";
+      });
+    }
+  }
+
+  function handleNextPeriod() {
+    var sportKey = (currentSport || "").trim().toLowerCase();
+    // Football special assistance when moving H1 -> H2
+    if (sportKey === "football" && currentPeriod === "H1") {
+      var sec = getElapsedSec();
+      if (sec < 45 * 60) {
+        var set45 = window.confirm(
+          "Advancing to 2nd Half (H2).\n\nDo you want to set the Match Clock to 45:00 for the start of the 2nd half?"
+        );
+        if (set45) {
+          var targetSec = 45 * 60;
+          if (isRunning) {
+            startTime = Date.now() - (targetSec * 1000);
+          } else {
+            pausedSec = targetSec;
+          }
+          saveTimerState();
+          updateTimerUi();
+        }
+      }
+    }
+
+    post(body.dataset.periodUrl, { action: "next" })
+      .then(redraw)
+      .catch(fail);
+  }
+
+  function handleUndoPeriod() {
+    var targetPrev = currentPrevPeriod || "previous period";
+    if (!window.confirm("Undo period change and return to " + targetPrev + "?")) return;
+
+    post(body.dataset.periodUrl, { action: "prev" })
+      .then(redraw)
+      .catch(fail);
+  }
+
+  // Initial timer & period assistant setup on page load
   loadTimerState();
   if (isRunning) {
     timerInterval = setInterval(updateTimerUi, 1000);
   }
   updateTimerUi();
+
+  var curIdx = periodsList.indexOf(currentPeriod);
+  if (curIdx === -1 && periodsList.length > 0) curIdx = 0;
+  var initPrev = curIdx > 0 ? periodsList[curIdx - 1] : null;
+  var initNext = curIdx < periodsList.length - 1 ? periodsList[curIdx + 1] : null;
+  updatePeriodAssistant(currentPeriod, currentSport, initPrev, initNext, initialStatus);
 
   /* ---------------- Redraw & Scoring Event Actions ---------------- */
 
@@ -255,6 +504,15 @@
     if (scoreA) scoreA.textContent = data.score_a;
     if (scoreB) scoreB.textContent = data.score_b;
     if (periodEl) periodEl.textContent = data.period || "Not started";
+
+    // Update smart period assistant
+    updatePeriodAssistant(
+      data.period,
+      data.sport || currentSport,
+      data.prev_period,
+      data.next_period,
+      data.status || body.dataset.matchStatus
+    );
 
     // After successfully submitting an event, reset manual minute so subsequent events track live clock
     if (isManualMinute) {
@@ -325,12 +583,16 @@
     });
   }
 
-  var nextPeriod = document.querySelector("[data-next-period]");
-  if (nextPeriod) {
-    nextPeriod.addEventListener("click", function () {
-      post(body.dataset.periodUrl, {}).then(redraw).catch(fail);
-    });
+  if (periodUndoBtn) {
+    periodUndoBtn.addEventListener("click", handleUndoPeriod);
   }
+  if (periodUndoBarBtn) {
+    periodUndoBarBtn.addEventListener("click", handleUndoPeriod);
+  }
+
+  periodNextBtns.forEach(function (btn) {
+    btn.addEventListener("click", handleNextPeriod);
+  });
 
   var finish = document.querySelector("[data-finish]");
   if (finish) {
