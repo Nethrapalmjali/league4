@@ -72,7 +72,14 @@ def match(match_id):
         .order_by(ScEvent.id.desc())
         .all()
     )
-    return render_template("scorecard/match.html", match=record, events=events)
+    return render_template(
+        "scorecard/match.html",
+        match=record,
+        events=events,
+        team_a_scorers=record.scorers_for_side("a"),
+        team_b_scorers=record.scorers_for_side("b"),
+        potm=record.player_of_the_match,
+    )
 
 
 @scorecard_bp.route("/api/live.json")
@@ -91,4 +98,13 @@ def api_match(match_id):
     )
     payload = _match_brief(record)
     payload["events"] = [_event_brief(event, record) for event in events]
+    payload["scorers_a"] = record.scorers_for_side("a")
+    payload["scorers_b"] = record.scorers_for_side("b")
+    potm = record.player_of_the_match
+    payload["potm"] = {
+        "player": potm["player"].name if potm and potm.get("player") else None,
+        "team": potm["team"].name if potm and potm.get("team") else None,
+        "points": potm["points"] if potm else 0,
+        "metric_label": potm["metric_label"] if potm else "",
+    } if potm else None
     return _cached(payload)

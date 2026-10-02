@@ -119,6 +119,70 @@ class ScMatch(db.Model):
         self.score_b = totals["b"]
         self.updated_at = datetime.utcnow()
 
+    @property
+    def scorers_summary(self):
+        """Compact summary of scorers (e.g. 'Chetan 14\', Ravi 32\'')."""
+        scored = [e for e in self.events if not e.voided and (e.points or 0) > 0]
+        scored.sort(key=lambda x: x.id)
+        if not scored:
+            return ""
+        parts = []
+        for e in scored:
+            who = e.player.name if e.player else ("Goal" if self.sport == "Football" else "Point")
+            clk = f" {e.clock}" if e.clock else ""
+            parts.append(f"{who}{clk}")
+        return ", ".join(parts)
+
+    def scorers_for_side(self, side):
+        """List of scoring contributions for side 'a' or 'b'."""
+        target_team_id = self.team_a_id if side == "a" else self.team_b_id
+        scored = [
+            e for e in self.events
+            if not e.voided and (e.points or 0) > 0 and e.team_id == target_team_id
+        ]
+        scored.sort(key=lambda x: x.id)
+        res = []
+        for e in scored:
+            res.append({
+                "name": e.player.name if e.player else ("Goal" if self.sport == "Football" else "Point"),
+                "clock": e.clock or "",
+                "kind": e.kind,
+                "points": e.points,
+            })
+        return res
+
+    @property
+    def player_of_the_match(self):
+        """Returns the top performer of the match based on scoring points."""
+        player_points = {}
+        for e in self.events:
+            if e.voided or (e.points or 0) <= 0 or not e.player:
+                continue
+            if e.player_id not in player_points:
+                player_points[e.player_id] = {
+                    "player": e.player,
+                    "team": e.team or (self.team_a if e.team_id == self.team_a_id else self.team_b),
+                    "points": 0,
+                }
+            player_points[e.player_id]["points"] += e.points or 0
+
+        if not player_points:
+            return None
+
+        ranked = sorted(player_points.values(), key=lambda x: -x["points"])
+        # Prefer winning team's top scorer if match is completed with a winner
+        if self.winner_team_id:
+            winner_players = [p for p in ranked if p["team"] and p["team"].id == self.winner_team_id]
+            best = winner_players[0] if winner_players else ranked[0]
+        else:
+            best = ranked[0]
+
+        metric = "Goals" if self.sport == "Football" else ("Raid Points" if self.sport == "Kabaddi" else "Points")
+        if best["points"] == 1 and metric.endswith("s"):
+            metric = metric[:-1]
+        best["metric_label"] = metric
+        return best
+
 
 class ScEvent(db.Model):
     __tablename__ = "sc_event"

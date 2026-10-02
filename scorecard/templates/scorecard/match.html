@@ -27,6 +27,11 @@
         <div class="sc-side">
           <span class="sc-side__tag">{{ match.team_a.tag }}</span>
           <span class="sc-side__name">{{ match.team_a.name }}</span>
+          <div class="sc-side__scorers" data-scorers-a>
+            {% for s in team_a_scorers %}
+              <span class="sc-scorer-pill">⚽ {{ s.name }}{% if s.clock %} <small>{{ s.clock }}</small>{% endif %}</span>
+            {% endfor %}
+          </div>
         </div>
         <div class="sc-board__score">
           <span data-score-a>{{ match.score_a or 0 }}</span>
@@ -36,11 +41,49 @@
         <div class="sc-side sc-side--b">
           <span class="sc-side__tag">{{ match.team_b.tag }}</span>
           <span class="sc-side__name">{{ match.team_b.name }}</span>
+          <div class="sc-side__scorers sc-side__scorers--b" data-scorers-b>
+            {% for s in team_b_scorers %}
+              <span class="sc-scorer-pill">⚽ {{ s.name }}{% if s.clock %} <small>{{ s.clock }}</small>{% endif %}</span>
+            {% endfor %}
+          </div>
         </div>
       </div>
 
       {% if match.venue %}<p class="sc-board__venue">{{ match.venue }}</p>{% endif %}
+
+      {% if potm %}
+        <div class="sc-potm-card" data-potm-card>
+          <div class="sc-potm__badge">
+            <span class="sc-potm__star">⭐</span> PLAYER OF THE MATCH
+          </div>
+          <div class="sc-potm__content">
+            <div class="sc-potm__info">
+              <span class="sc-potm__name">{{ potm.player.name }}</span>
+              <span class="sc-potm__team">{{ potm.team.name if potm.team else '' }}{% if potm.player.jersey_no %} · #{{ potm.player.jersey_no }}{% endif %}</span>
+            </div>
+            <div class="sc-potm__stat">
+              <span class="sc-potm__stat-num">{{ potm.points }}</span>
+              <span class="sc-potm__stat-label">{{ potm.metric_label }}</span>
+            </div>
+          </div>
+        </div>
+      {% endif %}
+
+      <div class="sc-board__actions">
+        <a class="btn btn--sm btn--ghost icon-text" href="https://wa.me/?text={{ (brand.name ~ ' · ' ~ match.sport ~ ' Result: ' ~ match.team_a.name ~ ' ' ~ (match.score_a or 0) ~ ' - ' ~ (match.score_b or 0) ~ ' ' ~ match.team_b.name ~ ' · ' ~ request.url)|urlencode }}" target="_blank" rel="noopener">
+          📲 Share Score on WhatsApp
+        </a>
+      </div>
     </section>
+
+    <!-- Real-time Live Celebratory Goal/Point Animation Toast -->
+    <div class="sc-celebration-toast" data-celebration-toast hidden>
+      <div class="sc-toast__icon" data-toast-icon>⚽</div>
+      <div class="sc-toast__body">
+        <span class="sc-toast__title" data-toast-title>GOAL!</span>
+        <span class="sc-toast__sub" data-toast-sub>Player Name (14')</span>
+      </div>
+    </div>
 
     <section class="sc-block">
       <h2 class="sc-block__title">How it happened</h2>

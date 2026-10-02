@@ -249,3 +249,140 @@ def admin_link():
         "scorecard/admin_link.html",
         teams=teams, owners=owners, suggestions=suggestions,
     )
+
+
+# -------------------------------------------------- tournament export & report --
+@scorecard_bp.route("/admin/export_tournament_excel")
+@admin_required
+def export_tournament_excel():
+    """Generates a structured multi-sheet Excel file of the entire tournament."""
+    from io import BytesIO
+    from flask import send_file
+    import xlsxwriter
+    from .stats import standings_for, leaders_for
+
+    output = BytesIO()
+    workbook = xlsxwriter.Workbook(output, {"in_memory": True})
+    title_format = workbook.add_format({"bold": True, "font_size": 13, "font_color": "#5b1f1f"})
+    header_format = workbook.add_format({"bold": True, "bg_color": "#ecc35c", "font_color": "#1b1c19", "border": 1})
+    cell_format = workbook.add_format({"border": 1})
+
+    # Sheet 1: Matches & Results
+    matches = ScMatch.query.order_by(ScMatch.starts_at.asc(), ScMatch.id.asc()).all()
+    ws_matches = workbook.add_worksheet("Matches & Results")
+    ws_matches.write(0, 0, "GM LEAGUE SEASON 4 — TOURNAMENT FIXTURES & RESULTS", title_format)
+
+    match_headers = ["Match ID", "Sport", "Stage", "Gender", "Team A", "Score A", "Score B", "Team B", "Winner", "Status", "Period", "Scorers", "Venue", "Scheduled At"]
+    ws_matches.write_row(2, 0, match_headers, header_format)
+
+    for row_idx, m in enumerate(matches, start=3):
+        winner_name = m.team_a.name if m.winner_team_id == m.team_a_id else (m.team_b.name if m.winner_team_id == m.team_b_id else ("Draw" if m.status == "final" else "—"))
+        row_data = [
+            m.id,
+            m.sport,
+            m.stage,
+            m.gender,
+            m.team_a.name,
+            m.score_a or 0,
+            m.score_b or 0,
+            m.team_b.name,
+            winner_name,
+            m.status.capitalize(),
+            m.period or "—",
+            m.scorers_summary or "—",
+            m.venue or "—",
+            m.starts_at.strftime("%Y-%m-%d %H:%M") if m.starts_at else "—",
+        ]
+        ws_matches.write_row(row_idx, 0, row_data, cell_format)
+
+    ws_matches.set_column(0, 0, 10)
+    ws_matches.set_column(1, 3, 14)
+    ws_matches.set_column(4, 4, 22)
+    ws_matches.set_column(5, 6, 10)
+    ws_matches.set_column(7, 8, 22)
+    ws_matches.set_column(9, 10, 12)
+    ws_matches.set_column(11, 11, 32)
+    ws_matches.set_column(12, 13, 20)
+
+    # Sheet 2: League Standings
+    ws_standings = workbook.add_worksheet("League Standings")
+    ws_standings.write(0, 0, "GM LEAGUE SEASON 4 — OFFICIAL STANDINGS", title_format)
+    stand_headers = ["Sport", "Rank", "Team Name", "Tag", "Played", "Won", "Drawn", "Lost", "For", "Against", "+/-", "Points"]
+    ws_standings.write_row(2, 0, stand_headers, header_format)
+
+    curr_row = 3
+    for sport in SPORTS:
+        table = standings_for(sport)
+        for r in table:
+            stand_row = [
+                sport,
+                r.get("position", 1),
+                r["team"].name,
+                r["team"].tag,
+                r["played"],
+                r["won"],
+                r["drawn"],
+                r["lost"],
+                r["scored"],
+                r["conceded"],
+                r["diff"],
+                r["points"],
+            ]
+            ws_standings.write_row(curr_row, 0, stand_row, cell_format)
+            curr_row += 1
+
+    ws_standings.set_column(0, 1, 12)
+    ws_standings.set_column(2, 2, 24)
+    ws_standings.set_column(3, 11, 10)
+
+    # Sheet 3: Top Scorers
+    ws_scorers = workbook.add_worksheet("Top Scorers")
+    ws_scorers.write(0, 0, "GM LEAGUE SEASON 4 — TOP SCORERS & LEADERS", title_format)
+    score_headers = ["Sport", "Rank", "Player Name", "Team", "Jersey", "Total Points/Goals"]
+    ws_scorers.write_row(2, 0, score_headers, header_format)
+
+    s_row = 3
+    for sport in SPORTS:
+        leaders = leaders_for(sport, limit=20)
+        for idx, (player, pts, entries) in enumerate(leaders, start=1):
+            s_data = [
+                sport,
+                idx,
+                player.name,
+                player.team.name if player.team else "—",
+                f"#{player.jersey_no}" if player.jersey_no else "—",
+                pts,
+            ]
+            ws_scorers.write_row(s_row, 0, s_data, cell_format)
+            s_row += 1
+
+    ws_scorers.set_column(0, 1, 12)
+    ws_scorers.set_column(2, 3, 24)
+    ws_scorers.set_column(4, 5, 16)
+
+    workbook.close()
+    output.seek(0)
+    return send_file(
+        output,
+        download_name="GML_Season4_Tournament_Report.xlsx",
+        as_attachment=True,
+        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    )
+
+
+@scorecard_bp.route("/admin/tournament_report")
+@admin_required
+def tournament_report():
+    """Print-ready official tournament summary with college branding."""
+    from .stats import standings_for, leaders_for
+    matches = ScMatch.query.order_by(ScMatch.starts_at.asc(), ScMatch.id.asc()).all()
+    sport_tables = {sport: standings_for(sport) for sport in SPORTS}
+    sport_leaders = {sport: leaders_for(sport, limit=10) for sport in SPORTS}
+    return render_template(
+        "scorecard/admin_report.html",
+        matches=matches,
+        sport_tables=sport_tables,
+        sport_leaders=sport_leaders,
+        sports=SPORTS,
+        now=datetime.utcnow(),
+    )

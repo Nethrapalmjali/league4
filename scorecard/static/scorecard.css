@@ -1131,3 +1131,189 @@ a.sc-row:hover {
     gap: 0.5rem;
   }
 }
+
+/* ------------------------------------------------ Match Scorers & Highlights */
+.sc-side__scorers {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  margin-top: 0.4rem;
+  font-size: 0.78rem;
+  color: var(--gold-light);
+}
+
+.sc-side__scorers--b {
+  align-items: flex-start;
+  text-align: left;
+}
+
+.sc-scorer-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.sc-scorer-pill small {
+  opacity: 0.85;
+  font-weight: 700;
+  font-size: 0.72rem;
+}
+
+.sc-row__scorers-line {
+  display: block;
+  font-size: 0.74rem;
+  color: var(--gold-dim);
+  font-weight: 500;
+  margin-top: 0.25rem;
+  width: 100%;
+}
+
+/* -------------------------------------------------- Player of the Match Card */
+.sc-potm-card {
+  background: linear-gradient(135deg, rgba(236, 195, 92, 0.18) 0%, rgba(255, 255, 255, 0.06) 100%);
+  border: 1.5px solid rgba(236, 195, 92, 0.5);
+  border-radius: var(--radius);
+  padding: 0.9rem 1.2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+  margin-top: 0.5rem;
+}
+
+.sc-potm__badge {
+  font-size: 0.74rem;
+  font-weight: 900;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--gold-light);
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.sc-potm__star {
+  font-size: 1rem;
+}
+
+.sc-potm__content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.sc-potm__info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.sc-potm__name {
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: #ffffff;
+}
+
+.sc-potm__team {
+  font-size: 0.82rem;
+  color: rgba(255, 255, 255, 0.75);
+}
+
+.sc-potm__stat {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  text-align: right;
+  line-height: 1.1;
+}
+
+.sc-potm__stat-num {
+  font-family: var(--font-display);
+  font-size: 1.8rem;
+  font-weight: 900;
+  color: var(--gold-light);
+}
+
+.sc-potm__stat-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.sc-board__actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  margin-top: 0.4rem;
+}
+
+/* ---------------------------------- Live Goal Celebratory Toast for Fans */
+.sc-celebration-toast {
+  position: fixed;
+  top: 1.5rem;
+  left: 50%;
+  transform: translateX(-50%) translateY(-100px);
+  background: linear-gradient(135deg, #1b0a0e 0%, #48070e 100%);
+  border: 2px solid #ecc35c;
+  color: #fff;
+  border-radius: var(--radius);
+  padding: 0.9rem 1.4rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.65), 0 0 20px rgba(236, 195, 92, 0.4);
+  z-index: 99999;
+  max-width: 90vw;
+  transition: transform 0.45s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.4s ease;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.sc-celebration-toast.sc-toast--show {
+  transform: translateX(-50%) translateY(0);
+  opacity: 1;
+}
+
+.sc-celebration-toast.sc-toast--hide {
+  transform: translateX(-50%) translateY(-60px);
+  opacity: 0;
+}
+
+.sc-toast__icon {
+  font-size: 2.2rem;
+  animation: bounceGoal 0.7s infinite alternate;
+}
+
+@keyframes bounceGoal {
+  0% { transform: scale(0.9) rotate(-8deg); }
+  100% { transform: scale(1.15) rotate(8deg); }
+}
+
+.sc-toast__body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.sc-toast__title {
+  font-family: var(--font-display);
+  font-size: 1.4rem;
+  font-weight: 900;
+  letter-spacing: 1.5px;
+  color: var(--gold-light);
+  line-height: 1.1;
+  text-shadow: 0 0 10px rgba(236, 195, 92, 0.5);
+}
+
+.sc-toast__sub {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: #f6efe9;
+}

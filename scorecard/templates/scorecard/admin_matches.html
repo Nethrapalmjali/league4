@@ -9,7 +9,9 @@
       <p>
         <a href="{{ url_for('scorecard.admin_teams') }}">Teams</a> ·
         <a href="{{ url_for('scorecard.admin_scorers') }}">Scorers</a> ·
-        <a href="{{ url_for('scorecard.admin_link') }}">Link to auction</a>
+        <a href="{{ url_for('scorecard.admin_link') }}">Link to auction</a> ·
+        <a href="{{ url_for('scorecard.export_tournament_excel') }}" style="color:#b8933b; font-weight:700;">📥 Export Excel</a> ·
+        <a href="{{ url_for('scorecard.tournament_report') }}" target="_blank" style="color:var(--maroon); font-weight:700;">📄 Print / PDF Report</a>
       </p>
     </header>
 

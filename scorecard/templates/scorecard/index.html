@@ -16,6 +16,9 @@
         <span class="sc-row__vs">v</span>
       {% endif %}
       <span class="sc-row__team sc-row__team--b">{{ match.team_b.name }}</span>
+      {% if show_score and match.scorers_summary %}
+        <span class="sc-row__scorers-line">⚽ {{ match.scorers_summary }}</span>
+      {% endif %}
     </span>
     <span class="sc-row__tail">
       {% if match.status == 'live' %}
