@@ -13,3 +13,5 @@ TIMESTAMP:  {{ sent_at }}
 --------------------------------------------------
 
 Open admin console: {{ brand.site_url }}/admin/login
+
+Follow this link to join my WhatsApp community: https://chat.whatsapp.com/B5lehw1CZpO9xww2fQ4V5h

@@ -198,6 +198,7 @@ BRAND = {
     "support_email": env_str("SUPPORT_EMAIL"),
     "whatsapp_number": env_str("WHATSAPP_NUMBER", "8618139789"),
     "whatsapp_country_code": env_str("WHATSAPP_COUNTRY_CODE", "91"),
+    "whatsapp_community_url": env_str("WHATSAPP_COMMUNITY_URL", "https://chat.whatsapp.com/B5lehw1CZpO9xww2fQ4V5h"),
     # Good-luck message signed off at the end of every automated email.
     "director_name": env_str("DIRECTOR_NAME", "Ajjaiah G B"),
     "director_title": env_str("DIRECTOR_TITLE", "Director — PE"),

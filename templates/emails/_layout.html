@@ -88,6 +88,38 @@
             </td>
           </tr>
 
+          <!-- ==================== WHATSAPP COMMUNITY INVITE ===================== -->
+          <tr>
+            <td style="padding:6px 34px 24px 34px;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
+                     style="background-color:#F0FDF4; background-image:linear-gradient(135deg,#F0FDF4,#DCFCE7); border:1.5px solid #86EFAC; border-radius:16px; padding:22px 20px; font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+                <tr>
+                  <td align="center">
+                    <div style="font-size:11px; font-weight:800; letter-spacing:2px; text-transform:uppercase; color:#15803D; padding-bottom:5px;">
+                      Official WhatsApp Community
+                    </div>
+                    <div style="font-family:Georgia,'Times New Roman',serif; font-size:20px; line-height:26px; font-weight:700; color:#14532D; padding-bottom:8px;">
+                      Join the {{ brand.name }} Community
+                    </div>
+                    <div style="font-size:13px; line-height:22px; color:#166534; max-width:440px; margin:0 auto 16px auto;">
+                      Follow this link to join my WhatsApp community: <br />
+                      <a href="{{ brand.whatsapp_community_url }}" target="_blank" rel="noopener" style="color:#047857; font-weight:700; text-decoration:underline; word-break:break-all;">{{ brand.whatsapp_community_url }}</a>
+                    </div>
+                    <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center">
+                      <tr>
+                        <td align="center" bgcolor="#25D366" style="background-color:#25D366; border-radius:100px; box-shadow:0 3px 8px rgba(37,211,102,0.35);">
+                          <a href="{{ brand.whatsapp_community_url }}" target="_blank" rel="noopener" style="display:inline-block; padding:12px 28px; font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-size:14px; font-weight:800; color:#ffffff; text-decoration:none; letter-spacing:0.3px;">
+                            👉 Join WhatsApp Community
+                          </a>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
           <!-- ==================== MESSAGE FROM THE DIRECTOR ===================== -->
           {% if brand.director_name %}
           <tr>
@@ -176,6 +208,10 @@
                     {% if brand.whatsapp_number %}
                       <span style="color:#7a4a4a;">&nbsp;&nbsp;|&nbsp;&nbsp;</span>
                       <a href="{{ brand.whatsapp_url }}" style="color:#ECC35C; text-decoration:none;">WhatsApp {{ brand.whatsapp_number }}</a>
+                    {% endif %}
+                    {% if brand.whatsapp_community_url %}
+                      <span style="color:#7a4a4a;">&nbsp;&nbsp;|&nbsp;&nbsp;</span>
+                      <a href="{{ brand.whatsapp_community_url }}" target="_blank" rel="noopener" style="color:#ECC35C; text-decoration:none;">WhatsApp Community</a>
                     {% endif %}
                     {% if brand.support_email %}
                       <br /><a href="mailto:{{ brand.support_email }}" style="color:#ECC35C; text-decoration:none;">{{ brand.support_email }}</a>

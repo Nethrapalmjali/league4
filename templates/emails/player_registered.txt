@@ -19,6 +19,8 @@ CONTACT:    {{ player.contact }}
 
 View the league: {{ brand.site_url }}
 
+Follow this link to join my WhatsApp community: https://chat.whatsapp.com/B5lehw1CZpO9xww2fQ4V5h
+
 Spotted a mistake in the details above? Reply-to is unmonitored — reach the organising committee on {{ brand.support_phones_text }}{% if player.usn %} with your USN {{ player.usn }}{% endif %} and we'll fix it before the auction.
 
 A message from the Director:

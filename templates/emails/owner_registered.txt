@@ -19,6 +19,8 @@ MANAGER CONTACT:  {{ owner.manager_contact_number }}
 
 View the league: {{ brand.site_url }}
 
+Follow this link to join my WhatsApp community: https://chat.whatsapp.com/B5lehw1CZpO9xww2fQ4V5h
+
 Spotted a mistake or have questions about auction rules? Reach the organising committee on {{ brand.support_phones_text }}.
 
 A message from the Director:

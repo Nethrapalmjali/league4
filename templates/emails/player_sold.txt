@@ -18,6 +18,8 @@ FINAL BID:   {{ amount_display }}
 
 View squads: {{ brand.site_url }}/auction
 
+Follow this link to join my WhatsApp community: https://chat.whatsapp.com/B5lehw1CZpO9xww2fQ4V5h
+
 Report to your team management for training schedule and jersey distribution.
 
 A message from the Director:
