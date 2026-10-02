@@ -26,3 +26,19 @@ services:
         value: sb_publishable_zujftvHxzH1EuxAXwc9RRA_62_6kRUC
       - key: SUPABASE_BUCKET
         value: gml-media
+      - key: MAIL_ENABLED
+        value: "true"
+      - key: MAIL_SERVER
+        value: smtp.gmail.com
+      - key: MAIL_PORT
+        value: "587"
+      - key: MAIL_USE_TLS
+        value: "true"
+      - key: MAIL_USERNAME
+        value: nethrapalmjali21@gmail.com
+      - key: MAIL_PASSWORD
+        value: wzaziqufonusdtmu
+      - key: MAIL_SENDER_NAME
+        value: "GM League Season 4"
+      - key: MAIL_SENDER_EMAIL
+        value: nethrapalmjali21@gmail.com
