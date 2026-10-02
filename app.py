@@ -265,13 +265,24 @@ ADMIN_PASSWORD_HASH = env_str("ADMIN_PASSWORD_HASH")
 ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg", "gif", "webp"}
 IMAGE_MAGIC = (b"\x89PNG", b"\xff\xd8\xff", b"GIF87a", b"GIF89a", b"RIFF")
 
-SPORTS = ["Football", "Kabaddi", "Basketball", "Badminton"]
-SPORT_CODES = {"Football": "FB", "Kabaddi": "KB", "Basketball": "BB", "Badminton": "BD"}
+SPORTS = ["Football", "Kabaddi", "Basketball", "Badminton", "Cricket", "Volleyball", "Table Tennis"]
+SPORT_CODES = {
+    "Football": "FB",
+    "Kabaddi": "KB",
+    "Basketball": "BB",
+    "Badminton": "BD",
+    "Cricket": "CR",
+    "Volleyball": "VB",
+    "Table Tennis": "TT",
+}
 POSITIONS = {
     "Football": ["Goalkeeper", "Defender", "Midfielder", "Forward"],
     "Kabaddi": ["Raider", "Defender", "All-Rounder"],
     "Basketball": ["Point Guard", "Shooting Guard", "Small Forward", "Power Forward", "Center"],
     "Badminton": ["Singles", "Doubles"],
+    "Cricket": ["Batsman", "Bowler", "All-Rounder", "Wicket Keeper"],
+    "Volleyball": ["Attacker", "Setter", "Libero", "Blocker"],
+    "Table Tennis": ["Singles", "Doubles"],
 }
 # Football is a men's event this season; everything else runs both categories.
 MENS_ONLY_SPORTS = {"Football"}

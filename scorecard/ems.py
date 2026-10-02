@@ -33,7 +33,13 @@ _ems = _host_module()
 
 db = _ems.db
 admin_required = _ems.admin_required
-SPORTS = _ems.SPORTS
+
+from .config import SPORT_RULES
+_base_sports = list(getattr(_ems, "SPORTS", []))
+for _s in SPORT_RULES.keys():
+    if _s not in _base_sports:
+        _base_sports.append(_s)
+SPORTS = _base_sports
 
 
 def team_owner_model():
