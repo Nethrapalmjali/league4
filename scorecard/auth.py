@@ -33,25 +33,32 @@ def sign_out():
 
 
 def scorer_required(view):
-    """Allow a signed-in scorer, or an admin acting as one."""
+    """Allow a signed-in scorer. Viewing the scorer home requires an explicit scorer sign-in."""
 
     @wraps(view)
     def wrapper(*args, **kwargs):
-        if current_scorer_id() or is_admin():
+        if current_scorer_id():
+            return view(*args, **kwargs)
+        # Viewing the scorer match dashboard (/scores/scorer) strictly requires signing in as a scorer
+        if request.endpoint == "scorecard.scorer_home":
+            flash("Sign in with your scorer name and passcode to view assigned matches.", "info")
+            return redirect(url_for("scorecard.scorer_login", next=request.path))
+        # Admin can access console actions directly from admin fixtures
+        if is_admin():
             return view(*args, **kwargs)
         if request.is_json or request.headers.get("X-CSRF-Token") is not None:
             return jsonify({"error": "Scorer login required."}), 401
-        flash("Sign in with your scorer passcode to record a match.", "error")
+        flash("Sign in with your scorer name and passcode to record a match.", "error")
         return redirect(url_for("scorecard.scorer_login", next=request.path))
 
     return wrapper
 
 
 def may_score(match):
-    """Admins score anything. A scorer scores unassigned matches or their own."""
+    """A signed-in scorer scores their assigned matches or unassigned ones. An admin can score any match."""
+    scorer_id = current_scorer_id()
+    if scorer_id:
+        return match.assigned_scorer_id in (None, scorer_id)
     if is_admin():
         return True
-    scorer_id = current_scorer_id()
-    if not scorer_id:
-        return False
-    return match.assigned_scorer_id in (None, scorer_id)
+    return False

@@ -48,18 +48,11 @@ def _console_payload(match):
 
 @scorecard_bp.route("/scorer/login", methods=["GET", "POST"])
 def scorer_login():
-    # A committee member already holds the admin session, and this form only
-    # accepts scorer passcodes — so send them straight through rather than
-    # letting them fail against credentials this page was never checking.
-    if is_admin():
-        return redirect(request.args.get("next") or url_for("scorecard.scorer_home"))
-
     if request.method == "POST":
         name = (request.form.get("name") or "").strip()
         passcode = request.form.get("passcode") or ""
         # Matched case-insensitively: a volunteer given the name "mandu" will
-        # type "Mandu" as often as not, and an exact match locks them out with
-        # a message that blames the passcode.
+        # type "Mandu" as often as not.
         scorer = ScScorer.query.filter(
             db.func.lower(ScScorer.name) == name.lower(),
             ScScorer.active.is_(True),
@@ -75,7 +68,7 @@ def scorer_login():
 def scorer_logout():
     sign_out()
     flash("Signed out of scoring.", "info")
-    return redirect(url_for("scorecard.index"))
+    return redirect(url_for("scorecard.scorer_login"))
 
 
 @scorecard_bp.route("/scorer")
@@ -83,7 +76,7 @@ def scorer_logout():
 def scorer_home():
     scorer_id = current_scorer_id()
     query = ScMatch.query.filter(ScMatch.status.in_([STATUS_SCHEDULED, STATUS_LIVE]))
-    if not is_admin():
+    if scorer_id:
         query = query.filter(
             db.or_(
                 ScMatch.assigned_scorer_id.is_(None),
@@ -94,7 +87,7 @@ def scorer_home():
     return render_template(
         "scorecard/scorer_home.html",
         matches=matches,
-        scorer_name=session.get(SESSION_NAME, "Admin"),
+        scorer_name=session.get(SESSION_NAME, "Scorer"),
     )
 
 

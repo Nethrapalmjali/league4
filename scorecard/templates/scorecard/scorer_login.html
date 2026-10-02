@@ -24,9 +24,9 @@
       </form>
 
       <p class="sc-hint">
-        On the committee? This form only takes scorer passcodes —
-        <a href="{{ url_for('admin_login', next=url_for('scorecard.scorer_home')) }}">sign in as admin instead</a>
-        and you can score every match.
+        On the committee? This form is for court scorers —
+        <a href="{{ url_for('admin_login', next=url_for('scorecard.admin_matches')) }}">sign in as admin instead</a>
+        to manage fixtures and tournament settings.
       </p>
     </section>
   </div>
