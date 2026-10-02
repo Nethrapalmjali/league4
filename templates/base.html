@@ -86,9 +86,6 @@
         {% if brand.whatsapp_url %}
           <a class="icon-text" href="{{ brand.whatsapp_url }}" target="_blank" rel="noopener">{{ ico.icon('whatsapp', 16) }}WhatsApp {{ brand.whatsapp_number }}</a>
         {% endif %}
-        {% if brand.whatsapp_community_url %}
-          <a class="icon-text" href="{{ brand.whatsapp_community_url }}" target="_blank" rel="noopener">{{ ico.icon('whatsapp', 16) }}Join WhatsApp Community</a>
-        {% endif %}
         <a href="{{ url_for('scorecard.scorer_login') }}">Scorer sign in</a>
         <a href="{{ url_for('admin_login') }}">Admin</a>
       </div>
