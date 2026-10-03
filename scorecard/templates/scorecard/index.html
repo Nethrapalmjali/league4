@@ -11,6 +11,9 @@
     <span class="sc-row__teams">
       <span class="sc-row__side sc-row__side--a">
         <span class="sc-row__team">{{ match.team_a.name }}</span>
+        {% if match.sport == 'Cricket' and match.cricket_stats and match.cricket_stats.inn1.overs != '0.0 ov' %}
+          <span class="sc-cricket-ov-tag">({{ match.cricket_stats.inn1.overs }})</span>
+        {% endif %}
         {% if show_score and match.scorers_a %}
           <span class="sc-row__scorers sc-row__scorers--a">
             {% for s in match.scorers_a %}
@@ -29,15 +32,21 @@
         {% else %}
           <span class="sc-row__vs">v</span>
         {% endif %}
+        {% if match.sport == 'Cricket' and match.cricket_stats and match.cricket_stats.equation %}
+          <span class="sc-cricket-card-equation">{{ match.cricket_stats.equation }}</span>
+        {% endif %}
       </span>
 
       <span class="sc-row__side sc-row__side--b">
         <span class="sc-row__team sc-row__team--b">{{ match.team_b.name }}</span>
+        {% if match.sport == 'Cricket' and match.cricket_stats and match.cricket_stats.inn2.overs != '0.0 ov' %}
+          <span class="sc-cricket-ov-tag sc-cricket-ov-tag--b">({{ match.cricket_stats.inn2.overs }})</span>
+        {% endif %}
         {% if show_score and match.scorers_b %}
           <span class="sc-row__scorers sc-row__scorers--b">
             {% for s in match.scorers_b %}
               <span class="sc-row__scorer-item">
-                <span class="sc-row__scorer-name">{{ s.name }}</span>
+                <span class="sc-row__scorer-name">{{ s.name }}{% if match.sport == 'Cricket' and match.period == 'Innings 2' %}*{% endif %}</span>
                 {% if s.clock %}<span class="sc-row__scorer-clock">{{ s.clock }}</span>{% endif %}
               </span>
             {% endfor %}

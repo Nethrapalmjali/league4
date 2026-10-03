@@ -205,8 +205,9 @@ a.sc-row:hover {
 .sc-row__scorer-name {
   color: var(--text);
   font-weight: 600;
-  white-space: normal;
-  word-break: break-word;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .sc-row__scorer-clock {
@@ -1485,4 +1486,175 @@ a.sc-row:hover {
   background: rgba(220, 53, 69, 0.25) !important;
   color: #ffffff !important;
   border-color: #ff8b8b !important;
+}
+
+/* ------------------------------------------------ Official Cricket Scorecard */
+.sc-cricket-ov-tag {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--gold);
+  margin-top: 0.15rem;
+  font-feature-settings: "tnum";
+}
+
+.sc-cricket-ov-tag--b {
+  text-align: left;
+}
+
+.sc-cricket-card-equation {
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: var(--gold-light);
+  background: rgba(236, 195, 92, 0.15);
+  border: 1px solid rgba(236, 195, 92, 0.35);
+  padding: 0.18rem 0.55rem;
+  border-radius: 100px;
+  margin-top: 0.35rem;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.sc-cricket-scorecard-section {
+  margin-top: 1.5rem;
+}
+
+.sc-cricket-innings-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 1.25rem;
+  margin-top: 1rem;
+}
+
+.sc-cricket-innings-card {
+  background: var(--white);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  overflow: hidden;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.04);
+}
+
+.sc-cricket-innings-card--live {
+  border-color: rgba(236, 195, 92, 0.6);
+  box-shadow: 0 4px 18px rgba(236, 195, 92, 0.15);
+}
+
+.sc-cricket-innings-header {
+  background: linear-gradient(135deg, rgba(91, 31, 31, 0.06) 0%, rgba(236, 195, 92, 0.08) 100%);
+  padding: 0.85rem 1.15rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1.5px solid var(--line);
+}
+
+.sc-cricket-inn-team {
+  font-size: 1rem;
+  font-weight: 800;
+  color: var(--maroon);
+}
+
+.sc-cricket-inn-badge {
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  background: rgba(91, 31, 31, 0.1);
+  color: var(--maroon);
+  padding: 0.2rem 0.55rem;
+  border-radius: 100px;
+  margin-left: 0.5rem;
+}
+
+.sc-cricket-inn-badge--live {
+  background: var(--danger);
+  color: #fff;
+  animation: pulse-live 2s infinite;
+}
+
+.sc-cricket-inn-score {
+  display: flex;
+  align-items: baseline;
+  gap: 0.4rem;
+}
+
+.sc-cricket-inn-total {
+  font-family: var(--font-display);
+  font-size: 1.35rem;
+  font-weight: 900;
+  color: var(--maroon);
+  font-feature-settings: "tnum";
+}
+
+.sc-cricket-inn-overs {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--muted);
+}
+
+.sc-cricket-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.86rem;
+}
+
+.sc-cricket-table th,
+.sc-cricket-table td {
+  padding: 0.65rem 0.95rem;
+  border-bottom: 1px solid var(--line);
+}
+
+.sc-cricket-table th {
+  background: rgba(0, 0, 0, 0.02);
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+}
+
+.sc-th-batter,
+.sc-td-batter {
+  text-align: left;
+}
+
+.sc-th-num,
+.sc-td-num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.sc-batter-name {
+  font-weight: 700;
+  color: var(--text);
+}
+
+.sc-batter-no {
+  font-size: 0.72rem;
+  color: var(--muted);
+  margin-left: 0.35rem;
+}
+
+.sc-runs-bold {
+  font-weight: 800;
+  color: var(--maroon);
+  font-size: 0.94rem;
+}
+
+.sc-sr-dim {
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.sc-td-total {
+  text-align: right;
+  font-weight: 700;
+  color: var(--maroon);
+  font-size: 0.92rem;
+}
+
+.sc-empty-row {
+  text-align: center;
+  color: var(--muted);
+  font-style: italic;
+  padding: 1.2rem !important;
 }

@@ -27,6 +27,9 @@
         <div class="sc-side">
           <span class="sc-side__tag">{{ match.team_a.tag }}</span>
           <span class="sc-side__name">{{ match.team_a.name }}</span>
+          {% if match.sport == 'Cricket' and match.cricket_stats and match.cricket_stats.inn1.overs != '0.0 ov' %}
+            <span class="sc-cricket-ov-tag">({{ match.cricket_stats.inn1.overs }})</span>
+          {% endif %}
           <div class="sc-side__scorers" data-scorers-a>
             {% for s in team_a_scorers %}
               <span class="sc-scorer-pill">{{ s.icon or "⚽" }} {{ s.name }}{% if s.clock %} <small>{{ s.clock }}</small>{% endif %}</span>
@@ -37,13 +40,19 @@
           <span data-score-a>{{ match.score_a or 0 }}</span>
           <i>–</i>
           <span data-score-b>{{ match.score_b or 0 }}</span>
+          {% if match.sport == 'Cricket' and match.cricket_stats and match.cricket_stats.equation %}
+            <span class="sc-cricket-card-equation">{{ match.cricket_stats.equation }}</span>
+          {% endif %}
         </div>
         <div class="sc-side sc-side--b">
           <span class="sc-side__tag">{{ match.team_b.tag }}</span>
           <span class="sc-side__name">{{ match.team_b.name }}</span>
+          {% if match.sport == 'Cricket' and match.cricket_stats and match.cricket_stats.inn2.overs != '0.0 ov' %}
+            <span class="sc-cricket-ov-tag sc-cricket-ov-tag--b">({{ match.cricket_stats.inn2.overs }})</span>
+          {% endif %}
           <div class="sc-side__scorers sc-side__scorers--b" data-scorers-b>
             {% for s in team_b_scorers %}
-              <span class="sc-scorer-pill">{{ s.icon or "⚽" }} {{ s.name }}{% if s.clock %} <small>{{ s.clock }}</small>{% endif %}</span>
+              <span class="sc-scorer-pill">{{ s.icon or "⚽" }} {{ s.name }}{% if match.sport == 'Cricket' and match.period == 'Innings 2' %}*{% endif %}{% if s.clock %} <small>{{ s.clock }}</small>{% endif %}</span>
             {% endfor %}
           </div>
         </div>
@@ -75,6 +84,123 @@
         </a>
       </div>
     </section>
+
+    {% if match.sport == 'Cricket' and match.cricket_stats %}
+      {% set cs = match.cricket_stats %}
+      <!-- Official Cricket Scorecard Section (Google / Cricinfo Style) -->
+      <section class="sc-block sc-cricket-scorecard-section">
+        <h2 class="sc-block__title">🏏 Official Batting Scorecard</h2>
+        
+        <div class="sc-cricket-innings-grid">
+          <!-- Innings 1: Team A -->
+          <div class="sc-cricket-innings-card">
+            <div class="sc-cricket-innings-header">
+              <div class="sc-cricket-inn-title">
+                <span class="sc-cricket-inn-team">{{ match.team_a.name }}</span>
+                <span class="sc-cricket-inn-badge">1st Innings</span>
+              </div>
+              <div class="sc-cricket-inn-score">
+                <span class="sc-cricket-inn-total">{{ cs.inn1.runs }}/{{ cs.inn1.wickets }}</span>
+                <span class="sc-cricket-inn-overs">({{ cs.inn1.overs }})</span>
+              </div>
+            </div>
+
+            <table class="sc-cricket-table">
+              <thead>
+                <tr>
+                  <th class="sc-th-batter">Batter</th>
+                  <th class="sc-th-num">R</th>
+                  <th class="sc-th-num">B</th>
+                  <th class="sc-th-num">4s</th>
+                  <th class="sc-th-num">6s</th>
+                  <th class="sc-th-num">SR</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for b in cs.inn1.batters %}
+                  <tr>
+                    <td class="sc-td-batter">
+                      <span class="sc-batter-name">{{ b.name }}</span>
+                      {% if b.jersey_no %}<span class="sc-batter-no">#{{ b.jersey_no }}</span>{% endif %}
+                    </td>
+                    <td class="sc-td-num sc-runs-bold">{{ b.runs }}</td>
+                    <td class="sc-td-num">{{ b.balls }}</td>
+                    <td class="sc-td-num">{{ b.fours }}</td>
+                    <td class="sc-td-num">{{ b.sixes }}</td>
+                    <td class="sc-td-num sc-sr-dim">{{ "%.1f"|format(b.strike_rate) }}</td>
+                  </tr>
+                {% else %}
+                  <tr><td colspan="6" class="sc-empty-row">No batting recorded yet</td></tr>
+                {% endfor %}
+              </tbody>
+              <tfoot>
+                <tr>
+                  <td class="sc-td-batter"><strong>Total</strong></td>
+                  <td colspan="5" class="sc-td-total">
+                    <strong>{{ cs.inn1.runs }}/{{ cs.inn1.wickets }}</strong> ({{ cs.inn1.overs }})
+                  </td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+
+          <!-- Innings 2: Team B -->
+          <div class="sc-cricket-innings-card {% if cs.inn2.is_batting_now %}sc-cricket-innings-card--live{% endif %}">
+            <div class="sc-cricket-innings-header">
+              <div class="sc-cricket-inn-title">
+                <span class="sc-cricket-inn-team">{{ match.team_b.name }}</span>
+                <span class="sc-cricket-inn-badge {% if cs.inn2.is_batting_now %}sc-cricket-inn-badge--live{% endif %}">
+                  2nd Innings {% if cs.inn2.is_batting_now %}· Batting Now{% endif %}
+                </span>
+              </div>
+              <div class="sc-cricket-inn-score">
+                <span class="sc-cricket-inn-total">{{ cs.inn2.runs }}/{{ cs.inn2.wickets }}</span>
+                <span class="sc-cricket-inn-overs">({{ cs.inn2.overs }})</span>
+              </div>
+            </div>
+
+            <table class="sc-cricket-table">
+              <thead>
+                <tr>
+                  <th class="sc-th-batter">Batter</th>
+                  <th class="sc-th-num">R</th>
+                  <th class="sc-th-num">B</th>
+                  <th class="sc-th-num">4s</th>
+                  <th class="sc-th-num">6s</th>
+                  <th class="sc-th-num">SR</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for b in cs.inn2.batters %}
+                  <tr>
+                    <td class="sc-td-batter">
+                      <span class="sc-batter-name">{{ b.name }}{% if cs.inn2.is_batting_now %}*{% endif %}</span>
+                      {% if b.jersey_no %}<span class="sc-batter-no">#{{ b.jersey_no }}</span>{% endif %}
+                    </td>
+                    <td class="sc-td-num sc-runs-bold">{{ b.runs }}</td>
+                    <td class="sc-td-num">{{ b.balls }}</td>
+                    <td class="sc-td-num">{{ b.fours }}</td>
+                    <td class="sc-td-num">{{ b.sixes }}</td>
+                    <td class="sc-td-num sc-sr-dim">{{ "%.1f"|format(b.strike_rate) }}</td>
+                  </tr>
+                {% else %}
+                  <tr><td colspan="6" class="sc-empty-row">Innings not started yet</td></tr>
+                {% endfor %}
+              </tbody>
+              <tfoot>
+                <tr>
+                  <td class="sc-td-batter"><strong>Total</strong></td>
+                  <td colspan="5" class="sc-td-total">
+                    <strong>{{ cs.inn2.runs }}/{{ cs.inn2.wickets }}</strong> ({{ cs.inn2.overs }})
+                    {% if cs.target %} · Target: {{ cs.target }}{% endif %}
+                  </td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        </div>
+      </section>
+    {% endif %}
 
     <!-- Real-time Live Celebratory Goal/Point Animation Toast -->
     <div class="sc-celebration-toast" data-celebration-toast hidden>

@@ -136,7 +136,11 @@ class ScMatch(db.Model):
         """List of grouped scoring contributions for side 'a' or 'b'.
         Groups multiple goals/points by the same player:
         e.g. Chetan 1', Chetan 2' -> [{'name': 'Chetan', 'clock': "1', 2'", 'points': 2}]
+        For Cricket:
+        Displays official player runs (e.g. '32 runs') and provides batting statistics.
         """
+        import re
+
         target_team_id = self.team_a_id if side == "a" else self.team_b_id
         scored = [
             e for e in self.events
@@ -151,38 +155,142 @@ class ScMatch(db.Model):
             if who not in grouped:
                 grouped[who] = {
                     "name": who,
+                    "jersey_no": e.player.jersey_no if e.player else None,
                     "clocks": [],
                     "points": 0,
+                    "balls": 0,
+                    "fours": 0,
+                    "sixes": 0,
                     "kind": e.kind,
                     "icon": self.sport_icon,
                 }
                 order.append(who)
+
+            pts = e.points or 1
+            grouped[who]["points"] += pts
+            grouped[who]["balls"] += 1
+            if pts == 4:
+                grouped[who]["fours"] += 1
+            elif pts == 6:
+                grouped[who]["sixes"] += 1
+
             if e.clock:
                 clk = e.clock.strip()
-                if clk.isdigit():
+                if self.sport == "Football" and clk.isdigit():
                     clk = f"{clk}'"
                 grouped[who]["clocks"].append(clk)
-            grouped[who]["points"] += (e.points or 1)
 
         res = []
         for who in order:
             data = grouped[who]
-            clocks = data["clocks"]
-            if clocks:
-                clocks_text = ", ".join(clocks)
-            elif data["points"] > 1:
-                clocks_text = f"×{data['points']}"
+            if self.sport == "Cricket":
+                clocks_text = f"{data['points']} runs"
             else:
-                clocks_text = ""
+                clocks = data["clocks"]
+                if clocks:
+                    clocks_text = ", ".join(clocks)
+                elif data["points"] > 1:
+                    clocks_text = f"×{data['points']}"
+                else:
+                    clocks_text = ""
+
+            sr = round((data["points"] / data["balls"]) * 100, 1) if data["balls"] > 0 else 0.0
+
             res.append({
                 "name": data["name"],
+                "jersey_no": data["jersey_no"],
                 "clock": clocks_text,
                 "clocks_text": clocks_text,
                 "points": data["points"],
+                "balls": data["balls"],
+                "fours": data["fours"],
+                "sixes": data["sixes"],
+                "strike_rate": sr,
                 "kind": data["kind"],
                 "icon": data["icon"],
             })
         return res
+
+    @property
+    def cricket_stats(self):
+        """Official Google/Cricinfo style statistics breakdown for Cricket matches."""
+        if self.sport != "Cricket":
+            return None
+
+        import re
+
+        def summarize(side):
+            team = self.team_a if side == "a" else self.team_b
+            target_team_id = self.team_a_id if side == "a" else self.team_b_id
+            events = [
+                e for e in self.events
+                if not e.voided and e.team_id == target_team_id
+            ]
+            events.sort(key=lambda x: x.id)
+
+            wickets = sum(1 for e in events if e.kind == "Wicket")
+            total_runs = sum(e.points or 0 for e in events)
+
+            latest_ov = ""
+            for e in reversed(events):
+                if e.clock:
+                    clk = e.clock.strip()
+                    m = re.search(r'(\d+(?:\.\d+)?)', clk)
+                    if m:
+                        latest_ov = f"{m.group(1)} ov"
+                        break
+                    elif clk:
+                        latest_ov = clk
+                        break
+
+            batters = self.scorers_for_side(side)
+            is_batting_now = (self.status == "live" and (
+                (self.period in ("Innings 1", "H1", "P1") and side == "a") or
+                (self.period in ("Innings 2", "H2", "P2") and side == "b")
+            ))
+
+            for b in batters:
+                b["is_not_out"] = is_batting_now
+
+            return {
+                "team": team,
+                "runs": total_runs,
+                "wickets": wickets,
+                "overs": latest_ov or "0.0 ov",
+                "batters": batters,
+                "is_batting_now": is_batting_now,
+                "display": f"{total_runs}/{wickets}" if wickets > 0 else f"{total_runs}",
+            }
+
+        inn1 = summarize("a")
+        inn2 = summarize("b")
+
+        equation = ""
+        target = inn1["runs"] + 1
+
+        if self.period == "Innings 2" or inn2["runs"] > 0 or self.status == "final":
+            needed = target - inn2["runs"]
+            if self.status == "final":
+                if inn2["runs"] >= target:
+                    equation = f"{self.team_b.name} won by {10 - inn2['wickets']} wickets"
+                elif inn1["runs"] > inn2["runs"]:
+                    equation = f"{self.team_a.name} won by {inn1['runs'] - inn2['runs']} runs"
+                else:
+                    equation = "Match tied"
+            else:
+                if needed > 0:
+                    equation = f"{self.team_b.name} need {needed} runs to win"
+                elif needed == 0:
+                    equation = "Scores level"
+                else:
+                    equation = f"{self.team_b.name} won by {10 - inn2['wickets']} wickets"
+
+        return {
+            "inn1": inn1,
+            "inn2": inn2,
+            "target": target,
+            "equation": equation,
+        }
 
     @property
     def scorers_a(self):
