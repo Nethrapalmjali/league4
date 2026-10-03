@@ -67,37 +67,84 @@
 
   <footer class="site-footer" id="contact">
     <div class="site-footer__inner">
-      <div class="site-footer__logo">
-        <span class="brand__name-a">{{ brand.wordmark.split(' ')[0] }}</span><span class="brand__name-b"> {{ brand.wordmark.split(' ')[1:]|join(' ') }}</span>
-        <span class="site-footer__season">{{ brand.season }}</span>
+      <div class="site-footer__grid">
+        <!-- Brand & University Column -->
+        <div class="site-footer__col site-footer__col--brand">
+          <div class="site-footer__logo">
+            <span class="brand__name-a">{{ brand.wordmark.split(' ')[0] }}</span><span class="brand__name-b"> {{ brand.wordmark.split(' ')[1:]|join(' ') }}</span>
+            <span class="site-footer__season">{{ brand.season }}</span>
+          </div>
+          <p class="site-footer__tag">{{ brand.tagline }}</p>
+          <div class="site-footer__univ-badge">
+            <span class="site-footer__univ-name">{{ brand.university }}</span>
+            <span class="site-footer__dept">Department of Physical Education &amp; Sports</span>
+          </div>
+        </div>
+
+        <!-- Tournament Links -->
+        <div class="site-footer__col">
+          <h4 class="site-footer__heading">Tournament Links</h4>
+          <ul class="site-footer__nav-list">
+            <li><a href="{{ url_for('index') }}#register">Player registration</a></li>
+            <li><a href="{{ url_for('auction_squads') }}">Auction &amp; Squads</a></li>
+            <li><a href="{{ url_for('team_owner_registration') }}">Team owner registration</a></li>
+            <li><a href="{{ url_for('terms') }}">Terms &amp; rules</a></li>
+          </ul>
+        </div>
+
+        <!-- Helplines & Contact (one below the other) -->
+        <div class="site-footer__col">
+          <h4 class="site-footer__heading">Helpline &amp; Support</h4>
+          <ul class="site-footer__nav-list site-footer__nav-list--contact">
+            {% for phone in brand.support_phones %}
+              <li>
+                <a class="site-footer__contact-item" href="tel:+91{{ phone }}">
+                  <span class="site-footer__contact-icon">{{ ico.icon('phone', 15) }}</span>
+                  <span class="site-footer__contact-val">+91 {{ phone[:5] }} {{ phone[5:] if phone|length == 10 else phone }}</span>
+                </a>
+              </li>
+            {% endfor %}
+            {% if brand.whatsapp_url %}
+              <li>
+                <a class="site-footer__contact-item site-footer__contact-item--wa" href="{{ brand.whatsapp_url }}" target="_blank" rel="noopener">
+                  <span class="site-footer__contact-icon site-footer__contact-icon--wa">{{ ico.icon('whatsapp', 16) }}</span>
+                  <span class="site-footer__contact-val">WhatsApp {{ brand.whatsapp_number }}</span>
+                </a>
+              </li>
+            {% endif %}
+            {% if brand.support_email %}
+              <li>
+                <a class="site-footer__contact-item" href="mailto:{{ brand.support_email }}">
+                  <span class="site-footer__contact-icon">{{ ico.icon('mail', 15) }}</span>
+                  <span class="site-footer__contact-val">{{ brand.support_email }}</span>
+                </a>
+              </li>
+            {% endif %}
+          </ul>
+        </div>
+
+        <!-- Portals & Officials -->
+        <div class="site-footer__col">
+          <h4 class="site-footer__heading">Portals &amp; Officials</h4>
+          <ul class="site-footer__nav-list">
+            <li><a href="{{ url_for('scorecard.index') }}">Live Match Center</a></li>
+            <li><a href="{{ url_for('scorecard.scorer_login') }}">Scorer sign in</a></li>
+            <li><a href="{{ url_for('admin_login') }}">Committee Admin</a></li>
+          </ul>
+        </div>
       </div>
-      <p class="site-footer__tag">{{ brand.tagline }}</p>
-      <div class="site-footer__links">
-        <a href="{{ url_for('index') }}#register">Player registration</a>
-        <a href="{{ url_for('auction_squads') }}">Auction &amp; Squads</a>
-        <a href="{{ url_for('team_owner_registration') }}">Team owner registration</a>
-        <a href="{{ url_for('terms') }}">Terms &amp; rules</a>
-        {% for phone in brand.support_phones %}
-          <a class="icon-text" href="tel:+91{{ phone }}">{{ ico.icon('phone', 16) }}{{ phone }}</a>
-        {% endfor %}
-        {% if brand.support_email %}
-          <a class="icon-text" href="mailto:{{ brand.support_email }}">{{ ico.icon('mail', 16) }}{{ brand.support_email }}</a>
-        {% endif %}
-        {% if brand.whatsapp_url %}
-          <a class="icon-text" href="{{ brand.whatsapp_url }}" target="_blank" rel="noopener">{{ ico.icon('whatsapp', 16) }}WhatsApp {{ brand.whatsapp_number }}</a>
-        {% endif %}
-        <a href="{{ url_for('scorecard.scorer_login') }}">Scorer sign in</a>
-        <a href="{{ url_for('admin_login') }}">Admin</a>
-      </div>
+
+      <!-- Footer Bottom -->
       <div class="site-footer__bottom">
-        &copy; {{ now_year }} {{ brand.university }}. All rights reserved. · {{ brand.tagline }}
+        <p class="site-footer__copy">&copy; {{ now_year }} {{ brand.university }}. All rights reserved.</p>
+        <p class="site-footer__motto">{{ brand.tagline }}</p>
       </div>
     </div>
   </footer>
   {% if brand.whatsapp_url %}
     <a class="wa-fab" href="{{ brand.whatsapp_url }}" target="_blank" rel="noopener"
        aria-label="Any doubts? Message us on WhatsApp">
-      {{ ico.icon('whatsapp', 25) }}
+      {{ ico.icon('whatsapp', 28, class='wa-fab__icon') }}
       <span class="wa-fab__label">Any doubts? <strong>WhatsApp us</strong></span>
     </a>
   {% endif %}
