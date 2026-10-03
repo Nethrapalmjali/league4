@@ -282,7 +282,8 @@ class ScMatch(db.Model):
                 b["is_not_out"] = is_batting_now
 
             return {
-                "team": team,
+                "team": team.name if team else "",
+                "team_tag": team.tag if team else "",
                 "runs": total_runs,
                 "wickets": wickets,
                 "legal_balls": legal_balls,
