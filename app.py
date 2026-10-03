@@ -265,16 +265,16 @@ ADMIN_PASSWORD_HASH = env_str("ADMIN_PASSWORD_HASH")
 ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg", "gif", "webp"}
 IMAGE_MAGIC = (b"\x89PNG", b"\xff\xd8\xff", b"GIF87a", b"GIF89a", b"RIFF")
 
-SPORTS = ["Football", "Cricket", "Kabaddi", "Badminton"]
+SPORTS = ["Football", "Basketball", "Kabaddi", "Badminton"]
 SPORT_CODES = {
     "Football": "FB",
-    "Cricket": "CR",
+    "Basketball": "BB",
     "Kabaddi": "KB",
     "Badminton": "BD",
 }
 POSITIONS = {
     "Football": ["Goalkeeper", "Defender", "Midfielder", "Forward"],
-    "Cricket": ["Batsman", "Bowler", "All-Rounder", "Wicket Keeper"],
+    "Basketball": ["Point Guard", "Shooting Guard", "Small Forward", "Power Forward", "Center"],
     "Kabaddi": ["Raider", "Defender", "All-Rounder"],
     "Badminton": ["Singles", "Doubles"],
 }
@@ -283,8 +283,8 @@ MENS_ONLY_SPORTS = set()
 OWNER_SPORT_OPTIONS = [
     "Football(Men)",
     "Football(Women)",
-    "Cricket(Men)",
-    "Cricket(Women)",
+    "Basketball(Men)",
+    "Basketball(Women)",
     "Kabaddi(Men)",
     "Kabaddi(Women)",
     "Badminton(Men)",

@@ -40,7 +40,9 @@
           <span data-score-a>{{ match.score_a or 0 }}</span>
           <i>–</i>
           <span data-score-b>{{ match.score_b or 0 }}</span>
-          {% if match.sport == 'Cricket' and match.cricket_stats and match.cricket_stats.equation %}
+          {% if match.sport == 'Basketball' and match.basketball_stats and match.basketball_stats.lead_text %}
+            <span class="sc-cricket-card-equation">{{ match.basketball_stats.lead_text }}</span>
+          {% elif match.sport == 'Cricket' and match.cricket_stats and match.cricket_stats.equation %}
             <span class="sc-cricket-card-equation">{{ match.cricket_stats.equation }}</span>
           {% elif match.sport == 'Badminton' and match.badminton_stats and match.badminton_stats.sets_summary %}
             <span class="sc-cricket-card-equation">Sets: {{ match.badminton_stats.sets_summary }}</span>
@@ -88,6 +90,90 @@
         </a>
       </div>
     </section>
+
+    {% if match.sport == 'Basketball' and match.basketball_stats %}
+      {% set bs = match.basketball_stats %}
+      <section class="sc-block sc-sport-breakdown-card">
+        <div class="sc-sport-breakdown-head">
+          <span class="sc-sport-breakdown-title">🏀 Basketball Box Score (Quarter by Quarter)</span>
+          <span class="sc-cricket-inn-badge">{{ bs.lead_text }}</span>
+        </div>
+        <table class="sc-stat-comparison-table">
+          <thead>
+            <tr>
+              <th class="sc-stat-label-col">Quarter</th>
+              <th class="sc-stat-num-col">{{ match.team_a.name }}</th>
+              <th class="sc-stat-num-col">{{ match.team_b.name }}</th>
+              <th class="sc-stat-label-col">Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for q in bs.quarters %}
+              <tr>
+                <td class="sc-stat-label-col"><strong>{{ q.quarter }}</strong></td>
+                <td class="sc-stat-num-col">{{ q.a }}</td>
+                <td class="sc-stat-num-col">{{ q.b }}</td>
+                <td class="sc-stat-label-col">
+                  {% if match.period == q.quarter and match.status == 'live' %}
+                    <span class="sc-cricket-inn-badge sc-cricket-inn-badge--live">Playing</span>
+                  {% elif q.a > 0 or q.b > 0 %}
+                    <span style="color:var(--muted);">Completed</span>
+                  {% else %}
+                    <span style="color:var(--muted);">—</span>
+                  {% endif %}
+                </td>
+              </tr>
+            {% endfor %}
+            <tr style="background: rgba(0,0,0,0.03); font-weight:800;">
+              <td class="sc-stat-label-col"><strong>Total Points</strong></td>
+              <td class="sc-stat-num-col" style="font-size:1.25rem; color:var(--maroon);">{{ match.score_a or 0 }}</td>
+              <td class="sc-stat-num-col" style="font-size:1.25rem; color:var(--maroon);">{{ match.score_b or 0 }}</td>
+              <td class="sc-stat-label-col">{% if match.status == 'final' %}Final{% else %}Live{% endif %}</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div style="margin-top: 1.5rem;">
+          <h3 style="font-size:1.05rem; font-weight:700; margin-bottom:0.75rem; color:var(--maroon);">📊 Team Shooting &amp; Discipline</h3>
+          <table class="sc-stat-comparison-table">
+            <thead>
+              <tr>
+                <th class="sc-stat-num-col">{{ match.team_a.name }}</th>
+                <th class="sc-stat-label-col">Metric</th>
+                <th class="sc-stat-num-col">{{ match.team_b.name }}</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="sc-stat-num-col">{{ bs.a.fg2 }}</td>
+                <td class="sc-stat-label-col">2-Pointers Made</td>
+                <td class="sc-stat-num-col">{{ bs.b.fg2 }}</td>
+              </tr>
+              <tr>
+                <td class="sc-stat-num-col">{{ bs.a.fg3 }}</td>
+                <td class="sc-stat-label-col">3-Pointers Made</td>
+                <td class="sc-stat-num-col">{{ bs.b.fg3 }}</td>
+              </tr>
+              <tr>
+                <td class="sc-stat-num-col">{{ bs.a.ft }}</td>
+                <td class="sc-stat-label-col">Free Throws Made</td>
+                <td class="sc-stat-num-col">{{ bs.b.ft }}</td>
+              </tr>
+              <tr>
+                <td class="sc-stat-num-col">{{ bs.a.fouls }}</td>
+                <td class="sc-stat-label-col">Personal / Tech Fouls</td>
+                <td class="sc-stat-num-col">{{ bs.b.fouls }}</td>
+              </tr>
+              <tr>
+                <td class="sc-stat-num-col">{{ bs.a.timeouts }}</td>
+                <td class="sc-stat-label-col">Timeouts Called</td>
+                <td class="sc-stat-num-col">{{ bs.b.timeouts }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    {% endif %}
 
     {% if match.sport == 'Cricket' and match.cricket_stats %}
       {% set cs = match.cricket_stats %}

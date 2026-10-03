@@ -20,19 +20,15 @@ SPORT_RULES = {
             {"key": "sub", "label": "Substitution", "points": 0},
         ],
     },
-    "Cricket": {
-        "periods": ["Innings 1", "Innings 2"],
+    "Basketball": {
+        "periods": ["Q1", "Q2", "Q3", "Q4", "OT"],
         "actions": [
-            {"key": "dot", "label": "Dot Ball", "points": 0},
-            {"key": "run1", "label": "1 Run", "points": 1},
-            {"key": "run2", "label": "2 Runs", "points": 2},
-            {"key": "run3", "label": "3 Runs", "points": 3},
-            {"key": "run4", "label": "4 Runs", "points": 4},
-            {"key": "run6", "label": "6 Runs", "points": 6},
-            {"key": "wicket", "label": "Wicket", "points": 0},
-            {"key": "wide", "label": "Wide", "points": 1},
-            {"key": "noball", "label": "No Ball", "points": 1},
-            {"key": "bye", "label": "Bye / Leg-bye", "points": 1},
+            {"key": "ft", "label": "Free Throw", "points": 1},
+            {"key": "fg2", "label": "2-Pointer", "points": 2},
+            {"key": "fg3", "label": "3-Pointer", "points": 3},
+            {"key": "foul", "label": "Personal Foul", "points": 0},
+            {"key": "tech_foul", "label": "Technical Foul", "points": 0},
+            {"key": "timeout", "label": "Timeout", "points": 0},
         ],
     },
     "Kabaddi": {

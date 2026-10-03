@@ -31,7 +31,16 @@
   </header>
 
   <!-- Sport-Adaptive Info Bar -->
-  {% if match.sport == 'Cricket' %}
+  {% if match.sport == 'Basketball' %}
+    <div class="sc-basketball-console-bar" data-basketball-bar>
+      <div class="sc-basketball-lead" data-basketball-lead>
+        🏀 {{ match.basketball_stats.lead_text if match.basketball_stats else 'Match in progress' }}
+      </div>
+      <div class="sc-basketball-substats">
+        <span>Quarter: {{ match.period or 'Q1' }} · Free Throw (1pt) · 2-Pointer (2pt) · 3-Pointer (3pt) · Personal / Tech Foul</span>
+      </div>
+    </div>
+  {% elif match.sport == 'Cricket' %}
     <div class="sc-cricket-console-bar" data-cricket-bar>
       <div class="sc-cricket-console-summary">
         <span class="sc-cricket-badge-inn">🏏 {{ match.period or 'Innings 1' }}</span>
@@ -70,7 +79,7 @@
     </div>
   {% endif %}
 
-  <!-- Live Match Timer & Clock Controls (Football & Kabaddi) -->
+  <!-- Live Match Timer & Clock Controls (Football, Basketball & Kabaddi) -->
   <div class="sc-timer-bar" data-timer-bar {% if match.sport == 'Cricket' or match.sport == 'Badminton' %}style="display:none;"{% endif %}>
     <div class="sc-timer__info">
       <span class="sc-timer__icon">⏱️</span>
@@ -116,7 +125,11 @@
     <div class="sc-console__side" data-side-score-card="a">
       <span class="sc-console__tag">{{ match.team_a.tag }}</span>
       <span class="sc-console__num" data-score-a>{{ match.score_a or 0 }}</span>
-      {% if match.sport == 'Cricket' and match.cricket_stats %}
+      {% if match.sport == 'Basketball' and match.basketball_stats %}
+        <span class="sc-console__subscore" data-subscore-a>
+          {{ match.basketball_stats.a.total }} pts
+        </span>
+      {% elif match.sport == 'Cricket' and match.cricket_stats %}
         <span class="sc-console__subscore" data-subscore-a>
           ({{ match.cricket_stats.inn1.wickets }} wkts, {{ match.cricket_stats.inn1.overs }})
         </span>
@@ -129,7 +142,11 @@
     <div class="sc-console__side sc-console__side--b" data-side-score-card="b">
       <span class="sc-console__tag">{{ match.team_b.tag }}</span>
       <span class="sc-console__num" data-score-b>{{ match.score_b or 0 }}</span>
-      {% if match.sport == 'Cricket' and match.cricket_stats %}
+      {% if match.sport == 'Basketball' and match.basketball_stats %}
+        <span class="sc-console__subscore" data-subscore-b>
+          {{ match.basketball_stats.b.total }} pts
+        </span>
+      {% elif match.sport == 'Cricket' and match.cricket_stats %}
         <span class="sc-console__subscore" data-subscore-b>
           ({{ match.cricket_stats.inn2.wickets }} wkts, {{ match.cricket_stats.inn2.overs }})
         </span>
@@ -165,7 +182,9 @@
               <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
               <circle cx="12" cy="7" r="4"></circle>
             </svg>
-            {% if match.sport == 'Cricket' %}
+            {% if match.sport == 'Basketball' %}
+              Shooter / Fouler (Player)
+            {% elif match.sport == 'Cricket' %}
               Batter on Strike (Player)
             {% elif match.sport == 'Kabaddi' %}
               Raider / Defender (Player)
@@ -203,7 +222,8 @@
       <label class="sc-console__clock">
         <div class="sc-clock__label-row">
           <span data-clock-label>
-            {% if match.sport == 'Cricket' %}Delivery / Over
+            {% if match.sport == 'Basketball' %}Quarter / Min
+            {% elif match.sport == 'Cricket' %}Delivery / Over
             {% elif match.sport == 'Badminton' %}Game Set
             {% elif match.sport == 'Kabaddi' %}Match Minute
             {% else %}Event Minute{% endif %}
@@ -212,7 +232,7 @@
         </div>
         <div class="sc-clock__input-row">
           <input type="text" data-clock inputmode="numeric" 
-                 placeholder="{% if match.sport == 'Cricket' %}0.1 ov{% elif match.sport == 'Badminton' %}Game 1{% else %}1'{% endif %}" 
+                 placeholder="{% if match.sport == 'Basketball' %}Q1 4'{% elif match.sport == 'Cricket' %}0.1 ov{% elif match.sport == 'Badminton' %}Game 1{% else %}1'{% endif %}" 
                  maxlength="10">
           <button type="button" class="btn btn--sm sc-btn-snap" data-snap-live title="Re-sync with live match clock" hidden>
             ↺ Snap
@@ -220,7 +240,8 @@
         </div>
       </label>
       <span class="sc-clock__hint" data-clock-hint>
-        {% if match.sport == 'Cricket' %}Auto-calculates over delivery on each ball.
+        {% if match.sport == 'Basketball' %}Auto-tags quarter. Tap clock to sync.
+        {% elif match.sport == 'Cricket' %}Auto-calculates over delivery on each ball.
         {% elif match.sport == 'Badminton' %}Auto-tracks game points and sets.
         {% elif match.sport == 'Kabaddi' %}Auto-fetches raid/tackle timestamp.
         {% else %}Auto-fetches minute. Click to edit anytime!{% endif %}
@@ -228,7 +249,8 @@
     </div>
 
     <button type="button" class="btn btn--ghost" data-undo title="Undo last point or event">
-      {% if match.sport == 'Cricket' %}Undo Last Ball
+      {% if match.sport == 'Basketball' %}Undo Last Action
+      {% elif match.sport == 'Cricket' %}Undo Last Ball
       {% elif match.sport == 'Badminton' %}Undo Last Point
       {% elif match.sport == 'Kabaddi' %}Undo Last Action
       {% else %}Undo Last Score{% endif %}

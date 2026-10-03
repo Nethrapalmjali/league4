@@ -56,12 +56,12 @@
   </div>
 
   <div class="card-grid">
-    {% for sport in ['Football', 'Cricket', 'Kabaddi', 'Badminton'] %}
+    {% for sport in ['Football', 'Basketball', 'Kabaddi', 'Badminton'] %}
     <div class="sport-card">
       <div class="sport-card__media">
         <span style="font-size: 3rem;">
           {% if sport == 'Football' %}⚽
-          {% elif sport == 'Cricket' %}🏏
+          {% elif sport == 'Basketball' %}🏀
           {% elif sport == 'Kabaddi' %}🤼
           {% elif sport == 'Badminton' %}🏸
           {% endif %}
@@ -72,8 +72,8 @@
         <p class="sport-card__desc">
           {% if sport == 'Football' %}
           Men's and Women's categories. The beautiful game on the big field.
-          {% elif sport == 'Cricket' %}
-          Men's and Women's categories. Power, swing, and tactical boundary action.
+          {% elif sport == 'Basketball' %}
+          Men's and Women's categories. Fast breaks, buzzer beaters, and high-flying court action.
           {% elif sport == 'Kabaddi' %}
           Men's and Women's categories. Strength, raids, and mat strategy.
           {% elif sport == 'Badminton' %}

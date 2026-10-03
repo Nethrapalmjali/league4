@@ -54,7 +54,9 @@ def _console_payload(match):
         ],
     }
 
-    if match.sport == "Cricket":
+    if match.sport == "Basketball":
+        payload["basketball_stats"] = match.basketball_stats
+    elif match.sport == "Cricket":
         payload["cricket_stats"] = match.cricket_stats
     elif match.sport == "Badminton":
         payload["badminton_stats"] = match.badminton_stats
@@ -167,7 +169,9 @@ def add_event(match_id):
 
     clock_raw = (request.form.get("clock") or "").strip()
     if not clock_raw:
-        if match.sport == "Cricket":
+        if match.sport == "Basketball":
+            clock_raw = match.period or "Q1"
+        elif match.sport == "Cricket":
             cs = match.cricket_stats
             side_batting = "a" if match.period == "Innings 1" else "b"
             curr_inn = cs["inn1"] if side_batting == "a" else cs["inn2"]

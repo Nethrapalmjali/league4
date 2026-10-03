@@ -272,6 +272,28 @@
   /* ---------------- Smart Period Assistant & Auto-Suggestions ---------------- */
 
   var PERIOD_GUIDES = {
+    basketball: {
+      "Q1": {
+        badge: "1st Quarter (Q1)",
+        text: "🏀 <strong>1st Quarter in progress.</strong> Track Free Throws (1pt), 2-Pointers (2pt), 3-Pointers (3pt), and fouls. Advance to Q2 when buzzer sounds."
+      },
+      "Q2": {
+        badge: "2nd Quarter (Q2)",
+        text: "🏀 <strong>2nd Quarter in progress.</strong> Half-time follows Q2. Advance to Q3 when 2nd quarter concludes."
+      },
+      "Q3": {
+        badge: "3rd Quarter (Q3)",
+        text: "🏀 <strong>3rd Quarter underway.</strong> Advance to Q4 for the final quarter."
+      },
+      "Q4": {
+        badge: "4th Quarter (Q4)",
+        text: "🏀 <strong>4th Quarter (Final Quarter).</strong> Tap <strong>End match</strong> when the final buzzer sounds (or Advance to OT if tied)."
+      },
+      "OT": {
+        badge: "Overtime (OT)",
+        text: "🏀 <strong>Overtime underway!</strong> Scores level after regulation. Tap <strong>End match</strong> when OT finishes."
+      }
+    },
     football: {
       H1: {
         badge: "1st Half (H1)",
@@ -464,6 +486,21 @@
 
   function updateSportSpecificUI(data) {
     var sport = (data.sport || currentSport || "").toLowerCase();
+
+    // Basketball UI
+    if (sport === "basketball" && data.basketball_stats) {
+      var bk = data.basketball_stats;
+      var basketballLeadEl = document.querySelector("[data-basketball-lead]");
+      if (basketballLeadEl) {
+        basketballLeadEl.textContent = "🏀 " + (bk.lead_text || "Match in progress");
+      }
+      if (subscoreA) subscoreA.textContent = (bk.a ? bk.a.total : data.score_a) + " pts";
+      if (subscoreB) subscoreB.textContent = (bk.b ? bk.b.total : data.score_b) + " pts";
+      if (clockEl && !isManualMinute && isRunning) {
+        var minText = timerBadge ? timerBadge.textContent : "";
+        clockEl.value = (data.period || "Q1") + (minText ? (" " + minText) : "");
+      }
+    }
 
     // 1. Cricket UI
     if (sport === "cricket" && data.cricket_stats) {

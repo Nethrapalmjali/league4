@@ -138,6 +138,7 @@ class ScMatch(db.Model):
     def sport_icon(self):
         return {
             "Football": "⚽",
+            "Basketball": "🏀",
             "Cricket": "🏏",
             "Kabaddi": "🤼",
             "Badminton": "🏸",
@@ -165,6 +166,9 @@ class ScMatch(db.Model):
                     "balls": 0,
                     "fours": 0,
                     "sixes": 0,
+                    "threes": 0,
+                    "twos": 0,
+                    "fts": 0,
                     "kind": e.kind,
                     "icon": self.sport_icon,
                     "raids": 0,
@@ -179,6 +183,12 @@ class ScMatch(db.Model):
                 grouped[who]["fours"] += 1
             elif pts == 6:
                 grouped[who]["sixes"] += 1
+            elif pts == 3 or "3-Pointer" in (e.kind or ""):
+                grouped[who]["threes"] += 1
+            elif pts == 2 or "2-Pointer" in (e.kind or ""):
+                grouped[who]["twos"] += 1
+            elif pts == 1 and ("Free Throw" in (e.kind or "") or "FT" in (e.kind or "")):
+                grouped[who]["fts"] += 1
 
             if any(k in e.kind for k in ["Touch", "Bonus", "Raid"]):
                 grouped[who]["raids"] += pts
@@ -196,6 +206,14 @@ class ScMatch(db.Model):
             data = grouped[who]
             if self.sport == "Cricket":
                 clocks_text = f"{data['points']} runs"
+            elif self.sport == "Basketball":
+                pts_parts = []
+                if data["threes"] > 0:
+                    pts_parts.append(f"{data['threes']}x 3PT")
+                if data["fts"] > 0:
+                    pts_parts.append(f"{data['fts']} FT")
+                breakdown = f" ({', '.join(pts_parts)})" if pts_parts else ""
+                clocks_text = f"{data['points']} pts{breakdown}"
             elif self.sport == "Kabaddi":
                 pts_parts = []
                 if data["raids"] > 0:
@@ -226,11 +244,135 @@ class ScMatch(db.Model):
                 "balls": data["balls"],
                 "fours": data["fours"],
                 "sixes": data["sixes"],
+                "threes": data["threes"],
+                "twos": data["twos"],
+                "fts": data["fts"],
                 "strike_rate": sr,
                 "kind": data["kind"],
                 "icon": data["icon"],
             })
         return res
+
+    @property
+    def basketball_stats(self):
+        """Official NBA/FIBA style Quarter-by-Quarter and Team Box Stats."""
+        if self.sport != "Basketball":
+            return None
+
+        quarters = ["Q1", "Q2", "Q3", "Q4"]
+        has_ot = any("OT" in (e.clock or "") or self.period == "OT" for e in self.events if not e.voided)
+        if has_ot:
+            quarters.append("OT")
+
+        q_scores = {q: {"a": 0, "b": 0} for q in quarters}
+        team_stats = {
+            "a": {"total": 0, "fg2": 0, "fg3": 0, "ft": 0, "fouls": 0, "timeouts": 0},
+            "b": {"total": 0, "fg2": 0, "fg3": 0, "ft": 0, "fouls": 0, "timeouts": 0},
+        }
+
+        players_a = {}
+        players_b = {}
+
+        for e in sorted(self.events, key=lambda x: x.id):
+            if e.voided:
+                continue
+            side = self.side_of(e.team_id)
+            if not side:
+                continue
+
+            q = None
+            if e.clock:
+                clk_u = e.clock.upper()
+                for cand in ["OT", "Q4", "Q3", "Q2", "Q1"]:
+                    if cand in clk_u:
+                        q = cand
+                        break
+            if not q:
+                if self.period in q_scores:
+                    q = self.period
+                else:
+                    q = "Q1"
+
+            if q not in q_scores:
+                q_scores[q] = {"a": 0, "b": 0}
+                if q not in quarters:
+                    quarters.append(q)
+
+            pts = e.points or 0
+            q_scores[q][side] += pts
+            team_stats[side]["total"] += pts
+
+            kind_str = e.kind or ""
+            if pts == 3 or "3-Pointer" in kind_str or "3pt" in kind_str.lower():
+                team_stats[side]["fg3"] += 1
+            elif pts == 2 or "2-Pointer" in kind_str:
+                team_stats[side]["fg2"] += 1
+            elif pts == 1 or "Free Throw" in kind_str:
+                team_stats[side]["ft"] += 1
+
+            if "Foul" in kind_str:
+                team_stats[side]["fouls"] += 1
+            elif "Timeout" in kind_str:
+                team_stats[side]["timeouts"] += 1
+
+            if e.player:
+                p_dict = players_a if side == "a" else players_b
+                p_name = e.player.name
+                if p_name not in p_dict:
+                    p_dict[p_name] = {
+                        "name": p_name,
+                        "jersey_no": e.player.jersey_no,
+                        "points": 0,
+                        "fg2": 0,
+                        "fg3": 0,
+                        "ft": 0,
+                        "fouls": 0,
+                    }
+                p_dict[p_name]["points"] += pts
+                if pts == 3 or "3-Pointer" in kind_str:
+                    p_dict[p_name]["fg3"] += 1
+                elif pts == 2 or "2-Pointer" in kind_str:
+                    p_dict[p_name]["fg2"] += 1
+                elif pts == 1 or "Free Throw" in kind_str:
+                    p_dict[p_name]["ft"] += 1
+                if "Foul" in kind_str:
+                    p_dict[p_name]["fouls"] += 1
+
+        q_rows = []
+        for q in quarters:
+            q_rows.append({
+                "quarter": q,
+                "a": q_scores[q]["a"],
+                "b": q_scores[q]["b"],
+            })
+
+        diff = team_stats["a"]["total"] - team_stats["b"]["total"]
+        if self.status == "final":
+            if diff > 0:
+                lead_text = f"{self.team_a.name} won by {diff} pts"
+            elif diff < 0:
+                lead_text = f"{self.team_b.name} won by {-diff} pts"
+            else:
+                lead_text = "Match Tied"
+        else:
+            if diff > 0:
+                lead_text = f"{self.team_a.name} leads by {diff} pts"
+            elif diff < 0:
+                lead_text = f"{self.team_b.name} leads by {-diff} pts"
+            else:
+                lead_text = "Scores Level"
+
+        top_scorers_a = sorted(players_a.values(), key=lambda x: x["points"], reverse=True)
+        top_scorers_b = sorted(players_b.values(), key=lambda x: x["points"], reverse=True)
+
+        return {
+            "quarters": q_rows,
+            "lead_text": lead_text,
+            "a": team_stats["a"],
+            "b": team_stats["b"],
+            "players_a": top_scorers_a,
+            "players_b": top_scorers_b,
+        }
 
     @property
     def cricket_stats(self):
