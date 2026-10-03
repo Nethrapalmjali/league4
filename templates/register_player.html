@@ -11,8 +11,8 @@
   <div class="section-title">
     <div class="sport-icon-badge">
       {% if sport == 'Football' %}⚽
+      {% elif sport == 'Cricket' %}🏏
       {% elif sport == 'Kabaddi' %}🤼
-      {% elif sport == 'Basketball' %}🏀
       {% elif sport == 'Badminton' %}🏸
       {% else %}🏆
       {% endif %}
@@ -82,15 +82,11 @@
       <div class="field">
         <label for="gender">Category <span class="req">*</span></label>
         <select id="gender" name="gender" required>
-          {% if sport == 'Football' %}
-          <option value="Male" selected>Men</option>
-          {% else %}
           <option value="">Select category</option>
           <option value="Male" {{ 'selected' if form.gender=='Male' }}>Men</option>
           <option value="Female" {{ 'selected' if form.gender=='Female' }}>Women</option>
-          {% endif %}
         </select>
-        <span class="hint">{% if sport == 'Football' %}Football runs as a men's event this season.{% else %}Event category selection.{% endif %}</span>
+        <span class="hint">Tournament event category.</span>
       </div>
 
       <div class="field">

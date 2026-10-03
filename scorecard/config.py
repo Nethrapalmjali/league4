@@ -14,53 +14,42 @@ SPORT_RULES = {
         "periods": ["H1", "H2"],
         "actions": [
             {"key": "goal", "label": "Goal", "points": 1},
+            {"key": "penalty", "label": "Penalty Goal", "points": 1},
             {"key": "yellow", "label": "Yellow card", "points": 0},
             {"key": "red", "label": "Red card", "points": 0},
             {"key": "sub", "label": "Substitution", "points": 0},
         ],
     },
+    "Cricket": {
+        "periods": ["Innings 1", "Innings 2"],
+        "actions": [
+            {"key": "dot", "label": "Dot Ball", "points": 0},
+            {"key": "run1", "label": "1 Run", "points": 1},
+            {"key": "run2", "label": "2 Runs", "points": 2},
+            {"key": "run3", "label": "3 Runs", "points": 3},
+            {"key": "run4", "label": "4 Runs", "points": 4},
+            {"key": "run6", "label": "6 Runs", "points": 6},
+            {"key": "wicket", "label": "Wicket", "points": 0},
+            {"key": "wide", "label": "Wide", "points": 1},
+            {"key": "noball", "label": "No Ball", "points": 1},
+            {"key": "bye", "label": "Bye / Leg-bye", "points": 1},
+        ],
+    },
     "Kabaddi": {
         "periods": ["H1", "H2"],
         "actions": [
-            {"key": "raid", "label": "Raid", "points": 1},
-            {"key": "tackle", "label": "Tackle", "points": 1},
-            {"key": "bonus", "label": "Bonus", "points": 1},
-            {"key": "allout", "label": "All out", "points": 2},
-        ],
-    },
-    "Basketball": {
-        "periods": ["Q1", "Q2", "Q3", "Q4"],
-        "actions": [
-            {"key": "ft", "label": "Free throw", "points": 1},
-            {"key": "fg2", "label": "2 points", "points": 2},
-            {"key": "fg3", "label": "3 points", "points": 3},
-            {"key": "foul", "label": "Foul", "points": 0},
+            {"key": "touch", "label": "Touch Point", "points": 1},
+            {"key": "bonus", "label": "Bonus Point", "points": 1},
+            {"key": "touch_bonus", "label": "Touch + Bonus", "points": 2},
+            {"key": "super_raid", "label": "Super Raid", "points": 3},
+            {"key": "tackle", "label": "Tackle Point", "points": 1},
+            {"key": "super_tackle", "label": "Super Tackle", "points": 2},
+            {"key": "allout", "label": "All Out", "points": 2},
+            {"key": "empty", "label": "Empty Raid", "points": 0},
         ],
     },
     "Badminton": {
         "periods": ["Game 1", "Game 2", "Game 3"],
-        "actions": [
-            {"key": "point", "label": "Point", "points": 1},
-        ],
-    },
-    "Volleyball": {
-        "periods": ["Set 1", "Set 2", "Set 3", "Set 4", "Set 5"],
-        "actions": [
-            {"key": "point", "label": "Point", "points": 1},
-        ],
-    },
-    "Cricket": {
-        "periods": ["Innings 1", "Innings 2"],
-        "actions": [
-            {"key": "run1", "label": "1 Run", "points": 1},
-            {"key": "run4", "label": "4 Runs", "points": 4},
-            {"key": "run6", "label": "6 Runs", "points": 6},
-            {"key": "wicket", "label": "Wicket", "points": 0},
-            {"key": "extra", "label": "Extra", "points": 1},
-        ],
-    },
-    "Table Tennis": {
-        "periods": ["Game 1", "Game 2", "Game 3", "Game 4", "Game 5"],
         "actions": [
             {"key": "point", "label": "Point", "points": 1},
         ],

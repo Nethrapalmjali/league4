@@ -32,7 +32,7 @@ def _console_payload(match):
     prev_period = periods[curr_idx - 1] if curr_idx > 0 else None
     next_period = periods[curr_idx + 1] if curr_idx < len(periods) - 1 else None
 
-    return {
+    payload = {
         "score_a": match.score_a or 0,
         "score_b": match.score_b or 0,
         "period": match.period,
@@ -53,6 +53,15 @@ def _console_payload(match):
             for event in events
         ],
     }
+
+    if match.sport == "Cricket":
+        payload["cricket_stats"] = match.cricket_stats
+    elif match.sport == "Badminton":
+        payload["badminton_stats"] = match.badminton_stats
+    elif match.sport == "Kabaddi":
+        payload["kabaddi_stats"] = match.kabaddi_stats
+
+    return payload
 
 
 @scorecard_bp.route("/scorer/login", methods=["GET", "POST"])
@@ -156,11 +165,23 @@ def add_event(match_id):
         player = ScPlayer.query.filter_by(id=int(player_id), team_id=team_id).first()
         player_id = player.id if player else None
 
+    clock_raw = (request.form.get("clock") or "").strip()
+    if not clock_raw:
+        if match.sport == "Cricket":
+            cs = match.cricket_stats
+            side_batting = "a" if match.period == "Innings 1" else "b"
+            curr_inn = cs["inn1"] if side_batting == "a" else cs["inn2"]
+            clock_raw = curr_inn.get("next_ball", "0.1 ov")
+        elif match.sport == "Badminton":
+            clock_raw = match.period or "Game 1"
+        elif match.sport == "Kabaddi":
+            clock_raw = match.period or "H1"
+
     event = ScEvent(
         match_id=match.id,
         team_id=team_id,
         player_id=player_id,
-        clock=(request.form.get("clock") or "").strip()[:8] or None,
+        clock=clock_raw[:8] if clock_raw else None,
         kind=action["label"],
         points=action["points"],
     )
@@ -173,6 +194,16 @@ def add_event(match_id):
 
     db.session.flush()
     match.recalculate()
+
+    # Automatic match/game progression for Badminton
+    if match.sport == "Badminton":
+        bs = match.badminton_stats
+        if bs:
+            if bs.get("match_winner"):
+                match.winner_team_id = match.team_a_id if bs["match_winner"] == "a" else match.team_b_id
+            elif bs.get("active_game") and bs["active_game"] != match.period:
+                match.period = bs["active_game"]
+
     db.session.commit()
     return jsonify(_console_payload(match))
 

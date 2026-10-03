@@ -1658,3 +1658,266 @@ a.sc-row:hover {
   font-style: italic;
   padding: 1.2rem !important;
 }
+
+/* -------------------------------------------------- Sport-Specific Console Bars */
+.sc-cricket-console-bar,
+.sc-badminton-console-bar,
+.sc-kabaddi-console-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.8rem;
+  flex-wrap: wrap;
+  padding: 0.65rem 1rem;
+  border-radius: var(--radius);
+  border: 1.5px solid rgba(236, 195, 92, 0.45);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+}
+
+.sc-cricket-console-bar {
+  background: linear-gradient(135deg, rgba(30, 20, 10, 0.85) 0%, rgba(91, 31, 31, 0.85) 100%);
+}
+
+.sc-cricket-console-summary {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.sc-cricket-badge-inn {
+  font-weight: 800;
+  font-size: 0.82rem;
+  color: var(--gold-light);
+  background: rgba(236, 195, 92, 0.18);
+  padding: 0.22rem 0.6rem;
+  border-radius: 100px;
+}
+
+.sc-cricket-next-ball {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #fff;
+}
+
+.sc-cricket-equation-tag {
+  font-size: 0.78rem;
+  font-weight: 800;
+  color: #ecc35c;
+  background: rgba(0, 0, 0, 0.4);
+  padding: 0.22rem 0.65rem;
+  border-radius: 100px;
+  border: 1px solid rgba(236, 195, 92, 0.3);
+}
+
+.sc-cricket-role-badge {
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  padding: 0.2rem 0.55rem;
+  border-radius: 100px;
+  margin-left: 0.5rem;
+  text-transform: uppercase;
+}
+
+.sc-cricket-role-badge--batting {
+  background: #e65100;
+  color: #fff;
+  box-shadow: 0 0 10px rgba(230, 81, 0, 0.6);
+  animation: pulse-live 2s infinite;
+}
+
+.sc-cricket-role-badge--bowling {
+  background: rgba(255, 255, 255, 0.12);
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.sc-badminton-console-bar {
+  background: linear-gradient(135deg, rgba(13, 71, 161, 0.8) 0%, rgba(0, 77, 64, 0.8) 100%);
+}
+
+.sc-badminton-games-tally {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 800;
+  font-size: 0.95rem;
+}
+
+.sc-badminton-tally-score {
+  color: #ecc35c;
+  font-family: var(--font-display);
+  font-size: 1.15rem;
+}
+
+.sc-badminton-sets-summary {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.85);
+  background: rgba(0, 0, 0, 0.3);
+  padding: 0.2rem 0.65rem;
+  border-radius: 100px;
+}
+
+.sc-kabaddi-console-bar {
+  background: linear-gradient(135deg, rgba(74, 20, 140, 0.8) 0%, rgba(183, 28, 28, 0.8) 100%);
+}
+
+.sc-kabaddi-lead {
+  font-weight: 800;
+  font-size: 0.92rem;
+  color: #ecc35c;
+}
+
+.sc-kabaddi-substats {
+  font-size: 0.74rem;
+  color: rgba(255, 255, 255, 0.75);
+  font-weight: 600;
+}
+
+.sc-console__subscore {
+  display: block;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--gold-light);
+  margin-top: 0.2rem;
+}
+
+/* ------------------------------------------- Sport-Specific Action Buttons */
+/* Cricket Action Buttons */
+.sc-action--dot {
+  background: rgba(255, 255, 255, 0.08) !important;
+  color: rgba(255, 255, 255, 0.8) !important;
+}
+
+.sc-action--run4 {
+  background: linear-gradient(135deg, #1b5e20, #2e7d32) !important;
+  color: #ffffff !important;
+  border-color: #4caf50 !important;
+  font-weight: 900 !important;
+}
+
+.sc-action--run6 {
+  background: linear-gradient(135deg, #4a148c, #6a1b9a) !important;
+  color: #ecc35c !important;
+  border-color: #ab47bc !important;
+  font-weight: 900 !important;
+}
+
+.sc-action--wicket {
+  background: linear-gradient(135deg, #b71c1c, #d32f2f) !important;
+  color: #ffffff !important;
+  border-color: #ff5252 !important;
+  font-weight: 900 !important;
+}
+
+/* Kabaddi Action Buttons */
+.sc-action--touch,
+.sc-action--bonus {
+  background: linear-gradient(135deg, #e65100, #f57c00) !important;
+  color: #ffffff !important;
+  border-color: #ff9800 !important;
+}
+
+.sc-action--super_raid,
+.sc-action--touch_bonus {
+  background: linear-gradient(135deg, #bf360c, #d84315) !important;
+  color: #ffeb3b !important;
+  border-color: #ff5722 !important;
+  font-weight: 900 !important;
+}
+
+.sc-action--tackle,
+.sc-action--super_tackle {
+  background: linear-gradient(135deg, #0d47a1, #1976d2) !important;
+  color: #ffffff !important;
+  border-color: #2196f3 !important;
+}
+
+.sc-action--allout {
+  background: linear-gradient(135deg, #880e4f, #ad1457) !important;
+  color: #ffffff !important;
+  border-color: #e91e63 !important;
+  font-weight: 900 !important;
+}
+
+/* Badminton Action Buttons */
+.sc-pad__actions--badminton {
+  grid-template-columns: 1fr !important;
+}
+
+.sc-pad__actions--badminton .sc-action--point {
+  min-height: 4.8rem !important;
+  font-size: 1.35rem !important;
+  font-weight: 900 !important;
+  letter-spacing: 1px;
+  background: linear-gradient(135deg, #2e7d32, #43a047) !important;
+  color: #ffffff !important;
+  border: 2px solid #81c784 !important;
+  border-radius: var(--radius) !important;
+  box-shadow: 0 4px 14px rgba(46, 125, 50, 0.45);
+}
+
+.sc-pad__actions--badminton .sc-action--point:active:not(:disabled) {
+  transform: scale(0.96);
+}
+
+/* ------------------------------------------- Public Match Sport Breakdown Cards */
+.sc-sport-breakdown-card {
+  background: var(--white);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  overflow: hidden;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.04);
+  margin-top: 1.25rem;
+}
+
+.sc-sport-breakdown-head {
+  background: linear-gradient(135deg, rgba(91, 31, 31, 0.06) 0%, rgba(236, 195, 92, 0.08) 100%);
+  padding: 0.85rem 1.15rem;
+  border-bottom: 1.5px solid var(--line);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.sc-sport-breakdown-title {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: var(--maroon);
+}
+
+.sc-stat-comparison-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.sc-stat-comparison-table th,
+.sc-stat-comparison-table td {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--line);
+  text-align: center;
+}
+
+.sc-stat-comparison-table th {
+  background: rgba(0, 0, 0, 0.02);
+  font-size: 0.78rem;
+  font-weight: 800;
+  color: var(--muted);
+  text-transform: uppercase;
+}
+
+.sc-stat-label-col {
+  font-weight: 700;
+  color: var(--muted);
+  width: 35%;
+}
+
+.sc-stat-num-col {
+  font-weight: 800;
+  font-size: 1.05rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--maroon);
+  width: 32.5%;
+}
+

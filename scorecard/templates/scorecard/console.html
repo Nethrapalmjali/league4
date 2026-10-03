@@ -30,8 +30,48 @@
     <span class="sc-console__period" data-period>{{ match.period or 'Not started' }}</span>
   </header>
 
-  <!-- Live Match Timer & Clock Controls -->
-  <div class="sc-timer-bar" data-timer-bar>
+  <!-- Sport-Adaptive Info Bar -->
+  {% if match.sport == 'Cricket' %}
+    <div class="sc-cricket-console-bar" data-cricket-bar>
+      <div class="sc-cricket-console-summary">
+        <span class="sc-cricket-badge-inn">🏏 {{ match.period or 'Innings 1' }}</span>
+        <span class="sc-cricket-next-ball" data-cricket-next-ball>
+          Next Ball: {{ match.cricket_stats.inn1.next_ball if (match.period == 'Innings 1' or not match.period) else match.cricket_stats.inn2.next_ball }}
+        </span>
+      </div>
+      <div class="sc-cricket-equation-tag" data-cricket-equation>
+        {{ match.cricket_stats.equation if match.cricket_stats and match.cricket_stats.equation else '1st Innings in progress' }}
+      </div>
+    </div>
+  {% elif match.sport == 'Badminton' %}
+    <div class="sc-badminton-console-bar" data-badminton-bar>
+      <div class="sc-badminton-games-tally">
+        <span class="sc-badminton-tally-label">🏸 Games (Best of 3):</span>
+        <span class="sc-badminton-tally-score" data-badminton-games>
+          {{ match.team_a.tag }} ({{ match.badminton_stats.games_a if match.badminton_stats else 0 }}) – ({{ match.badminton_stats.games_b if match.badminton_stats else 0 }}) {{ match.team_b.tag }}
+        </span>
+      </div>
+      <div class="sc-badminton-sets-summary" data-badminton-sets>
+        {% if match.badminton_stats and match.badminton_stats.sets_summary %}
+          Sets: {{ match.badminton_stats.sets_summary }}
+        {% else %}
+          Game 1 in progress (First to 21, win by 2)
+        {% endif %}
+      </div>
+    </div>
+  {% elif match.sport == 'Kabaddi' %}
+    <div class="sc-kabaddi-console-bar" data-kabaddi-bar>
+      <div class="sc-kabaddi-lead" data-kabaddi-lead>
+        🤼 {{ match.kabaddi_stats.lead_text if match.kabaddi_stats else 'Match in progress' }}
+      </div>
+      <div class="sc-kabaddi-substats">
+        <span>Touch · Bonus · Super Raid · Tackle · Super Tackle · All-Out</span>
+      </div>
+    </div>
+  {% endif %}
+
+  <!-- Live Match Timer & Clock Controls (Football & Kabaddi) -->
+  <div class="sc-timer-bar" data-timer-bar {% if match.sport == 'Cricket' or match.sport == 'Badminton' %}style="display:none;"{% endif %}>
     <div class="sc-timer__info">
       <span class="sc-timer__icon">⏱️</span>
       <div class="sc-timer__clock-wrap">
@@ -57,38 +97,67 @@
   <!-- Smart Period Assistant & Auto-Suggestion -->
   <div class="sc-period-guide" data-period-guide>
     <div class="sc-period-guide__main">
-      <div class="sc-period-guide__badge" data-period-badge>First Half</div>
+      <div class="sc-period-guide__badge" data-period-badge>{{ match.period or 'Period 1' }}</div>
       <div class="sc-period-guide__text" data-period-text>
-        First Half in progress. When the half-time whistle blows, tap <strong>Advance to H2</strong>.
+        Period in progress.
       </div>
     </div>
     <div class="sc-period-guide__actions">
       <button type="button" class="btn btn--sm sc-btn-period-undo" data-period-undo title="Undo period change if clicked by mistake" hidden>
-        ↶ Undo to <span data-prev-period-tag>H1</span>
+        ↶ Undo to <span data-prev-period-tag>P1</span>
       </button>
       <button type="button" class="btn btn--sm sc-btn-period-next" data-period-next>
-        Advance to <span data-next-period-tag>H2</span> →
+        Advance to <span data-next-period-tag>P2</span> →
       </button>
     </div>
   </div>
 
   <div class="sc-console__score">
-    <div class="sc-console__side">
+    <div class="sc-console__side" data-side-score-card="a">
       <span class="sc-console__tag">{{ match.team_a.tag }}</span>
       <span class="sc-console__num" data-score-a>{{ match.score_a or 0 }}</span>
+      {% if match.sport == 'Cricket' and match.cricket_stats %}
+        <span class="sc-console__subscore" data-subscore-a>
+          ({{ match.cricket_stats.inn1.wickets }} wkts, {{ match.cricket_stats.inn1.overs }})
+        </span>
+      {% elif match.sport == 'Badminton' and match.badminton_stats %}
+        <span class="sc-console__subscore" data-subscore-a>
+          {{ match.badminton_stats.games_a }} Game{{ 's' if match.badminton_stats.games_a != 1 else '' }} won
+        </span>
+      {% endif %}
     </div>
-    <div class="sc-console__side sc-console__side--b">
+    <div class="sc-console__side sc-console__side--b" data-side-score-card="b">
       <span class="sc-console__tag">{{ match.team_b.tag }}</span>
       <span class="sc-console__num" data-score-b>{{ match.score_b or 0 }}</span>
+      {% if match.sport == 'Cricket' and match.cricket_stats %}
+        <span class="sc-console__subscore" data-subscore-b>
+          ({{ match.cricket_stats.inn2.wickets }} wkts, {{ match.cricket_stats.inn2.overs }})
+        </span>
+      {% elif match.sport == 'Badminton' and match.badminton_stats %}
+        <span class="sc-console__subscore" data-subscore-b>
+          {{ match.badminton_stats.games_b }} Game{{ 's' if match.badminton_stats.games_b != 1 else '' }} won
+        </span>
+      {% endif %}
     </div>
   </div>
 
   <p class="sc-console__error" data-error hidden></p>
 
-  <div class="sc-console__pads">
+  <div class="sc-console__pads" data-sport="{{ match.sport }}">
     {% for side, team in [('a', match.team_a), ('b', match.team_b)] %}
-      <section class="sc-pad">
-        <h2 class="sc-pad__name">{{ team.name }}</h2>
+      <section class="sc-pad sc-pad--{{ side }}" data-pad-side="{{ side }}">
+        <div class="sc-pad__header">
+          <h2 class="sc-pad__name">{{ team.name }}</h2>
+          {% if match.sport == 'Cricket' %}
+            <span class="sc-cricket-role-badge" data-role-badge="{{ side }}">
+              {% if (side == 'a' and (match.period == 'Innings 1' or not match.period)) or (side == 'b' and match.period == 'Innings 2') %}
+                🏏 BATTING NOW
+              {% else %}
+                ⚾ BOWLING
+              {% endif %}
+            </span>
+          {% endif %}
+        </div>
 
         <label class="sc-pad__field">
           <span>
@@ -96,10 +165,18 @@
               <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
               <circle cx="12" cy="7" r="4"></circle>
             </svg>
-            Scored by (Player)
+            {% if match.sport == 'Cricket' %}
+              Batter on Strike (Player)
+            {% elif match.sport == 'Kabaddi' %}
+              Raider / Defender (Player)
+            {% elif match.sport == 'Badminton' %}
+              Player
+            {% else %}
+              Scored by (Player)
+            {% endif %}
           </span>
           <select data-player="{{ side }}" class="sc-player-select">
-            <option value="">— Select Scoring Player (Optional) —</option>
+            <option value="">— Select Player (Optional) —</option>
             {% for player in players[side] %}
               <option value="{{ player.id }}">
                 {{ player.name }}{% if player.jersey_no %} (Jersey #{{ player.jersey_no }}){% endif %}
@@ -108,11 +185,11 @@
           </select>
         </label>
 
-        <div class="sc-pad__actions">
+        <div class="sc-pad__actions sc-pad__actions--{{ match.sport|lower|replace(' ', '-') }}">
           {% for action in rules.actions %}
-            <button type="button" class="sc-action{% if action.points %} sc-action--scores{% endif %}"
+            <button type="button" class="sc-action sc-action--{{ action.key }}{% if action.points %} sc-action--scores{% endif %}"
                     data-side="{{ side }}" data-action="{{ action.key }}">
-              {{ action.label }}
+              <span class="sc-action__text">{{ action.label }}</span>
               {% if action.points %}<i>+{{ action.points }}</i>{% endif %}
             </button>
           {% endfor %}
@@ -125,22 +202,39 @@
     <div class="sc-console__clock-container">
       <label class="sc-console__clock">
         <div class="sc-clock__label-row">
-          <span>Event Minute</span>
-          <span class="sc-clock__status-badge" data-clock-badge>Live Sync</span>
+          <span data-clock-label>
+            {% if match.sport == 'Cricket' %}Delivery / Over
+            {% elif match.sport == 'Badminton' %}Game Set
+            {% elif match.sport == 'Kabaddi' %}Match Minute
+            {% else %}Event Minute{% endif %}
+          </span>
+          <span class="sc-clock__status-badge" data-clock-badge>Auto</span>
         </div>
         <div class="sc-clock__input-row">
-          <input type="text" data-clock inputmode="numeric" placeholder="1'" maxlength="8">
+          <input type="text" data-clock inputmode="numeric" 
+                 placeholder="{% if match.sport == 'Cricket' %}0.1 ov{% elif match.sport == 'Badminton' %}Game 1{% else %}1'{% endif %}" 
+                 maxlength="10">
           <button type="button" class="btn btn--sm sc-btn-snap" data-snap-live title="Re-sync with live match clock" hidden>
-            ↺ Snap to Live
+            ↺ Snap
           </button>
         </div>
       </label>
-      <span class="sc-clock__hint">Auto-fetches minute. Click to edit anytime for mistakes/delays!</span>
+      <span class="sc-clock__hint" data-clock-hint>
+        {% if match.sport == 'Cricket' %}Auto-calculates over delivery on each ball.
+        {% elif match.sport == 'Badminton' %}Auto-tracks game points and sets.
+        {% elif match.sport == 'Kabaddi' %}Auto-fetches raid/tackle timestamp.
+        {% else %}Auto-fetches minute. Click to edit anytime!{% endif %}
+      </span>
     </div>
 
-    <button type="button" class="btn btn--ghost" data-undo title="Undo last point or event">Undo last score</button>
+    <button type="button" class="btn btn--ghost" data-undo title="Undo last point or event">
+      {% if match.sport == 'Cricket' %}Undo Last Ball
+      {% elif match.sport == 'Badminton' %}Undo Last Point
+      {% elif match.sport == 'Kabaddi' %}Undo Last Action
+      {% else %}Undo Last Score{% endif %}
+    </button>
     <button type="button" class="btn btn--ghost sc-btn-period-undo-bar" data-period-undo-bar title="Undo period change" hidden>↶ Undo Period</button>
-    <button type="button" class="btn btn--secondary sc-btn-period-next-bar" data-next-period>Advance to <span data-next-period-bar-tag>H2</span> →</button>
+    <button type="button" class="btn btn--secondary sc-btn-period-next-bar" data-next-period>Advance to <span data-next-period-bar-tag>P2</span> →</button>
     {% if match.status != 'final' %}
       <button type="button" class="btn btn--primary" data-finish>End match</button>
     {% else %}

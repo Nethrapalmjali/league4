@@ -107,7 +107,22 @@ class ScMatch(db.Model):
         return None
 
     def recalculate(self):
-        """Re-derive both scores from the events that have not been voided."""
+        """Re-derive scores from active events.
+        For Badminton: score_a and score_b represent Games won (or current game rally points if Game 1 in progress).
+        For Football, Cricket, Kabaddi: sum of event points.
+        """
+        if self.sport == "Badminton":
+            bs = self.badminton_stats
+            if bs:
+                if bs["games_a"] > 0 or bs["games_b"] > 0 or self.status == "final":
+                    self.score_a = bs["games_a"]
+                    self.score_b = bs["games_b"]
+                else:
+                    self.score_a = bs["active_pts_a"]
+                    self.score_b = bs["active_pts_b"]
+                self.updated_at = datetime.utcnow()
+                return
+
         totals = {"a": 0, "b": 0}
         for event in self.events:
             if event.voided:
@@ -124,23 +139,12 @@ class ScMatch(db.Model):
         return {
             "Football": "⚽",
             "Cricket": "🏏",
-            "Badminton": "🏸",
-            "Volleyball": "🏐",
-            "Basketball": "🏀",
             "Kabaddi": "🤼",
-            "Table Tennis": "🏓",
-            "Tennis": "🎾",
-        }.get(self.sport, "⚽")
+            "Badminton": "🏸",
+        }.get(self.sport, "🏆")
 
     def scorers_for_side(self, side):
-        """List of grouped scoring contributions for side 'a' or 'b'.
-        Groups multiple goals/points by the same player:
-        e.g. Chetan 1', Chetan 2' -> [{'name': 'Chetan', 'clock': "1', 2'", 'points': 2}]
-        For Cricket:
-        Displays official player runs (e.g. '32 runs') and provides batting statistics.
-        """
-        import re
-
+        """List of grouped scoring contributions for side 'a' or 'b'."""
         target_team_id = self.team_a_id if side == "a" else self.team_b_id
         scored = [
             e for e in self.events
@@ -163,6 +167,8 @@ class ScMatch(db.Model):
                     "sixes": 0,
                     "kind": e.kind,
                     "icon": self.sport_icon,
+                    "raids": 0,
+                    "tackles": 0,
                 }
                 order.append(who)
 
@@ -173,6 +179,11 @@ class ScMatch(db.Model):
                 grouped[who]["fours"] += 1
             elif pts == 6:
                 grouped[who]["sixes"] += 1
+
+            if any(k in e.kind for k in ["Touch", "Bonus", "Raid"]):
+                grouped[who]["raids"] += pts
+            elif "Tackle" in e.kind:
+                grouped[who]["tackles"] += pts
 
             if e.clock:
                 clk = e.clock.strip()
@@ -185,6 +196,16 @@ class ScMatch(db.Model):
             data = grouped[who]
             if self.sport == "Cricket":
                 clocks_text = f"{data['points']} runs"
+            elif self.sport == "Kabaddi":
+                pts_parts = []
+                if data["raids"] > 0:
+                    pts_parts.append(f"{data['raids']}R")
+                if data["tackles"] > 0:
+                    pts_parts.append(f"{data['tackles']}T")
+                breakdown = f" ({', '.join(pts_parts)})" if pts_parts else ""
+                clocks_text = f"{data['points']} pts{breakdown}"
+            elif self.sport == "Badminton":
+                clocks_text = f"{data['points']} pts"
             else:
                 clocks = data["clocks"]
                 if clocks:
@@ -231,6 +252,14 @@ class ScMatch(db.Model):
             wickets = sum(1 for e in events if e.kind == "Wicket")
             total_runs = sum(e.points or 0 for e in events)
 
+            # Count legal deliveries
+            legal_balls = sum(
+                1 for e in events
+                if e.kind not in ("Wide", "No Ball")
+            )
+            overs_calc = f"{legal_balls // 6}.{legal_balls % 6} ov"
+            next_ball_calc = f"{legal_balls // 6}.{(legal_balls % 6) + 1} ov"
+
             latest_ov = ""
             for e in reversed(events):
                 if e.clock:
@@ -256,7 +285,10 @@ class ScMatch(db.Model):
                 "team": team,
                 "runs": total_runs,
                 "wickets": wickets,
-                "overs": latest_ov or "0.0 ov",
+                "legal_balls": legal_balls,
+                "overs": latest_ov or overs_calc,
+                "overs_calc": overs_calc,
+                "next_ball": next_ball_calc,
                 "batters": batters,
                 "is_batting_now": is_batting_now,
                 "display": f"{total_runs}/{wickets}" if wickets > 0 else f"{total_runs}",
@@ -293,6 +325,161 @@ class ScMatch(db.Model):
         }
 
     @property
+    def badminton_stats(self):
+        """Official Badminton BWF-style match and game tracker."""
+        if self.sport != "Badminton":
+            return None
+
+        games_data = {
+            "Game 1": {"a": 0, "b": 0},
+            "Game 2": {"a": 0, "b": 0},
+            "Game 3": {"a": 0, "b": 0},
+        }
+
+        current_g = "Game 1"
+        for e in sorted(self.events, key=lambda x: x.id):
+            if e.voided or (e.points or 0) <= 0:
+                continue
+            side = self.side_of(e.team_id)
+            if not side:
+                continue
+
+            g_key = None
+            if e.clock:
+                for k in ("Game 1", "Game 2", "Game 3", "G1", "G2", "G3"):
+                    if k.lower() in e.clock.lower():
+                        g_key = "Game 1" if "1" in k else ("Game 2" if "2" in k else "Game 3")
+                        break
+            if not g_key:
+                g_key = current_g
+
+            games_data[g_key][side] += e.points or 1
+
+            pts_a = games_data[g_key]["a"]
+            pts_b = games_data[g_key]["b"]
+            won_by_a = (pts_a >= 21 and pts_a - pts_b >= 2) or (pts_a == 30)
+            won_by_b = (pts_b >= 21 and pts_b - pts_a >= 2) or (pts_b == 30)
+            if won_by_a or won_by_b:
+                if g_key == "Game 1" and current_g == "Game 1":
+                    current_g = "Game 2"
+                elif g_key == "Game 2" and current_g == "Game 2":
+                    current_g = "Game 3"
+
+        games_list = []
+        games_won_a = 0
+        games_won_b = 0
+        active_game = "Game 1"
+        active_pts_a = 0
+        active_pts_b = 0
+
+        for g_name in ["Game 1", "Game 2", "Game 3"]:
+            a = games_data[g_name]["a"]
+            b = games_data[g_name]["b"]
+            is_won_a = (a >= 21 and a - b >= 2) or (a == 30)
+            is_won_b = (b >= 21 and b - a >= 2) or (b == 30)
+            is_done = is_won_a or is_won_b
+            winner = "a" if is_won_a else ("b" if is_won_b else None)
+
+            if is_done:
+                if winner == "a":
+                    games_won_a += 1
+                else:
+                    games_won_b += 1
+            elif not games_list or all(x["is_done"] for x in games_list):
+                active_game = g_name
+                active_pts_a = a
+                active_pts_b = b
+
+            games_list.append({
+                "game": g_name,
+                "a": a,
+                "b": b,
+                "score_text": f"{a}–{b}" if (a > 0 or b > 0 or is_done) else "—",
+                "is_done": is_done,
+                "winner": winner,
+            })
+
+        match_winner = None
+        if games_won_a >= 2:
+            match_winner = "a"
+        elif games_won_b >= 2:
+            match_winner = "b"
+
+        game_point_a = False
+        game_point_b = False
+        if not match_winner:
+            if active_pts_a >= 20 and active_pts_a > active_pts_b:
+                game_point_a = True
+            elif active_pts_b >= 20 and active_pts_b > active_pts_a:
+                game_point_b = True
+
+        completed_scores = [f"{g['a']}–{g['b']}" for g in games_list if g["is_done"] or (g["a"] > 0 or g["b"] > 0)]
+        sets_summary = ", ".join(completed_scores) if completed_scores else ""
+
+        return {
+            "games_a": games_won_a,
+            "games_b": games_won_b,
+            "games_list": games_list,
+            "active_game": active_game,
+            "active_pts_a": active_pts_a,
+            "active_pts_b": active_pts_b,
+            "match_winner": match_winner,
+            "game_point_a": game_point_a,
+            "game_point_b": game_point_b,
+            "sets_summary": sets_summary,
+            "display": f"{games_won_a}–{games_won_b}" if (games_won_a > 0 or games_won_b > 0 or self.status == 'final') else f"{active_pts_a}–{active_pts_b}",
+        }
+
+    @property
+    def kabaddi_stats(self):
+        """Official Pro Kabaddi style raid, tackle, bonus and all-out breakdown."""
+        if self.sport != "Kabaddi":
+            return None
+
+        def stats_for(side):
+            target_team_id = self.team_a_id if side == "a" else self.team_b_id
+            events = [e for e in self.events if not e.voided and e.team_id == target_team_id]
+
+            touch = sum(1 for e in events if "Touch" in e.kind and "Bonus" not in e.kind)
+            bonus = sum(1 for e in events if "Bonus" in e.kind and "Touch" not in e.kind)
+            touch_bonus = sum(1 for e in events if "Touch + Bonus" in e.kind)
+            super_raids = sum(1 for e in events if "Super Raid" in e.kind)
+
+            raid_pts = sum(e.points or 0 for e in events if any(k in e.kind for k in ["Touch", "Bonus", "Raid"]))
+            tackle_pts = sum(e.points or 0 for e in events if "Tackle" in e.kind)
+            allout_pts = sum(e.points or 0 for e in events if "All Out" in e.kind)
+            super_tackles = sum(1 for e in events if "Super Tackle" in e.kind)
+
+            return {
+                "touch": touch + touch_bonus,
+                "bonus": bonus + touch_bonus,
+                "super_raids": super_raids,
+                "raid_points": raid_pts,
+                "tackle_points": tackle_pts,
+                "super_tackles": super_tackles,
+                "allout_points": allout_pts,
+                "total_points": raid_pts + tackle_pts + allout_pts,
+            }
+
+        s_a = stats_for("a")
+        s_b = stats_for("b")
+
+        lead_text = ""
+        diff = (self.score_a or 0) - (self.score_b or 0)
+        if diff > 0:
+            lead_text = f"{self.team_a.name} lead by {diff} point{'s' if diff > 1 else ''}"
+        elif diff < 0:
+            lead_text = f"{self.team_b.name} lead by {abs(diff)} point{'s' if abs(diff) > 1 else ''}"
+        else:
+            lead_text = "Scores level"
+
+        return {
+            "a": s_a,
+            "b": s_b,
+            "lead_text": lead_text,
+        }
+
+    @property
     def scorers_a(self):
         return self.scorers_for_side("a")
 
@@ -302,7 +489,7 @@ class ScMatch(db.Model):
 
     @property
     def scorers_summary(self):
-        """Compact summary of scorers (e.g. 'Chetan 1\', 2\', Ravi 32\'')."""
+        """Compact summary of scorers."""
         all_scorers = self.scorers_for_side("a") + self.scorers_for_side("b")
         if not all_scorers:
             return ""
@@ -331,14 +518,17 @@ class ScMatch(db.Model):
             return None
 
         ranked = sorted(player_points.values(), key=lambda x: -x["points"])
-        # Prefer winning team's top scorer if match is completed with a winner
         if self.winner_team_id:
             winner_players = [p for p in ranked if p["team"] and p["team"].id == self.winner_team_id]
             best = winner_players[0] if winner_players else ranked[0]
         else:
             best = ranked[0]
 
-        metric = "Goals" if self.sport == "Football" else ("Raid Points" if self.sport == "Kabaddi" else "Points")
+        metric = "Goals" if self.sport == "Football" else (
+            "Runs" if self.sport == "Cricket" else (
+                "Raid Points" if self.sport == "Kabaddi" else "Points"
+            )
+        )
         if best["points"] == 1 and metric.endswith("s"):
             metric = metric[:-1]
         best["metric_label"] = metric

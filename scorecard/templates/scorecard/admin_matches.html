@@ -37,6 +37,13 @@
             </select>
           </label>
           <label>
+            <span>Category</span>
+            <select name="gender">
+              <option value="Men">Men</option>
+              <option value="Women">Women</option>
+            </select>
+          </label>
+          <label>
             <span>Team A</span>
             <select name="team_a_id" required>
               {% for team in teams %}<option value="{{ team.id }}">{{ team.name }} ({{ team.sport }})</option>{% endfor %}

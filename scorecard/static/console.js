@@ -283,70 +283,6 @@
         text: "⚽ <strong>2nd Half in progress (45'–90'+).</strong> When the full-time whistle blows, tap <strong>End match</strong>."
       }
     },
-    kabaddi: {
-      H1: {
-        badge: "1st Half (H1)",
-        text: "🤼 <strong>1st Half in progress (20 mins).</strong> At the half-time break, tap <strong>Advance to H2 →</strong>."
-      },
-      H2: {
-        badge: "2nd Half (H2)",
-        text: "🤼 <strong>2nd Half underway.</strong> At the final whistle/buzzer, tap <strong>End match</strong>."
-      }
-    },
-    basketball: {
-      Q1: {
-        badge: "1st Quarter (Q1)",
-        text: "🏀 <strong>1st Quarter underway.</strong> Tap <strong>Advance to Q2 →</strong> at the quarter horn."
-      },
-      Q2: {
-        badge: "2nd Quarter (Q2)",
-        text: "🏀 <strong>2nd Quarter underway.</strong> Half-time break follows Q2. Tap <strong>Advance to Q3 →</strong>."
-      },
-      Q3: {
-        badge: "3rd Quarter (Q3)",
-        text: "🏀 <strong>3rd Quarter underway.</strong> Tap <strong>Advance to Q4 →</strong> at the quarter horn."
-      },
-      Q4: {
-        badge: "4th Quarter (Q4)",
-        text: "🏀 <strong>4th Quarter (Final).</strong> At the final buzzer, tap <strong>End match</strong>."
-      }
-    },
-    badminton: {
-      "Game 1": {
-        badge: "Game 1",
-        text: "🏸 <strong>Game 1 in progress (First to 21, win by 2).</strong> Tap <strong>Advance to Game 2 →</strong> after game point."
-      },
-      "Game 2": {
-        badge: "Game 2",
-        text: "🏸 <strong>Game 2 underway.</strong> If tied 1-1, tap <strong>Advance to Game 3 →</strong> for the decider."
-      },
-      "Game 3": {
-        badge: "Game 3 (Decider)",
-        text: "🏸 <strong>Deciding Game underway!</strong> Tap <strong>End match</strong> when match point is won."
-      }
-    },
-    volleyball: {
-      "Set 1": {
-        badge: "Set 1",
-        text: "🏐 <strong>Set 1 underway (First to 25, win by 2).</strong> Tap <strong>Advance to Set 2 →</strong> after set point."
-      },
-      "Set 2": {
-        badge: "Set 2",
-        text: "🏐 <strong>Set 2 underway.</strong> Tap <strong>Advance to Set 3 →</strong> after set point."
-      },
-      "Set 3": {
-        badge: "Set 3",
-        text: "🏐 <strong>Set 3 underway.</strong> Tap <strong>Advance to Set 4 →</strong> if needed, or <strong>End match</strong>."
-      },
-      "Set 4": {
-        badge: "Set 4",
-        text: "🏐 <strong>Set 4 underway.</strong> Tap <strong>Advance to Set 5 →</strong> (Deciding tie-break to 15) if tied 2-2."
-      },
-      "Set 5": {
-        badge: "Set 5 (Tie-break)",
-        text: "🏐 <strong>Set 5 Tie-breaker to 15!</strong> Tap <strong>End match</strong> when match point is won."
-      }
-    },
     cricket: {
       "Innings 1": {
         badge: "1st Innings",
@@ -357,12 +293,29 @@
         text: "🏏 <strong>2nd Innings underway (Target Chase).</strong> When target is chased or overs complete, tap <strong>End match</strong>."
       }
     },
-    "table tennis": {
-      "Game 1": { badge: "Game 1", text: "🏓 <strong>Game 1 underway (First to 11, win by 2).</strong> Tap <strong>Advance to Game 2 →</strong> after game point." },
-      "Game 2": { badge: "Game 2", text: "🏓 <strong>Game 2 underway.</strong> Tap <strong>Advance to Game 3 →</strong> after game point." },
-      "Game 3": { badge: "Game 3", text: "🏓 <strong>Game 3 underway.</strong> Tap <strong>Advance to Game 4 →</strong> if needed." },
-      "Game 4": { badge: "Game 4", text: "🏓 <strong>Game 4 underway.</strong> Tap <strong>Advance to Game 5 →</strong> for decider." },
-      "Game 5": { badge: "Game 5 (Decider)", text: "🏓 <strong>Deciding Game 5 underway!</strong> Tap <strong>End match</strong> when match point is won." }
+    kabaddi: {
+      H1: {
+        badge: "1st Half (20m)",
+        text: "🤼 <strong>1st Half underway (20 mins).</strong> Track touches, bonuses, tackles, and all-outs. Advance to H2 at half-time."
+      },
+      H2: {
+        badge: "2nd Half (20m)",
+        text: "🤼 <strong>2nd Half underway.</strong> Tap <strong>End match</strong> at the final whistle."
+      }
+    },
+    badminton: {
+      "Game 1": {
+        badge: "Game 1 (To 21)",
+        text: "🏸 <strong>Game 1 in progress (First to 21, win by 2).</strong> Tap <strong>+1 Point</strong> for rallies."
+      },
+      "Game 2": {
+        badge: "Game 2",
+        text: "🏸 <strong>Game 2 in progress.</strong> Tap <strong>+1 Point</strong> on rallies. Auto-advances or ends match on 2-0."
+      },
+      "Game 3": {
+        badge: "Game 3 (Decider)",
+        text: "🏸 <strong>Deciding Game 3 underway!</strong> Tap <strong>End match</strong> when match point is won."
+      }
     }
   };
 
@@ -499,11 +452,96 @@
 
   /* ---------------- Redraw & Scoring Event Actions ---------------- */
 
+  var cricketNextBallEl = document.querySelector("[data-cricket-next-ball]");
+  var cricketEquationEl = document.querySelector("[data-cricket-equation]");
+  var badmintonGamesEl = document.querySelector("[data-badminton-games]");
+  var badmintonSetsEl = document.querySelector("[data-badminton-sets]");
+  var kabaddiLeadEl = document.querySelector("[data-kabaddi-lead]");
+  var subscoreA = document.querySelector("[data-subscore-a]");
+  var subscoreB = document.querySelector("[data-subscore-b]");
+  var roleBadgeA = document.querySelector('[data-role-badge="a"]');
+  var roleBadgeB = document.querySelector('[data-role-badge="b"]');
+
+  function updateSportSpecificUI(data) {
+    var sport = (data.sport || currentSport || "").toLowerCase();
+
+    // 1. Cricket UI
+    if (sport === "cricket" && data.cricket_stats) {
+      var cs = data.cricket_stats;
+      var isInn1 = (data.period === "Innings 1" || !data.period);
+      var currentInn = isInn1 ? cs.inn1 : cs.inn2;
+      var nextB = currentInn ? currentInn.next_ball : "0.1 ov";
+
+      if (cricketNextBallEl) cricketNextBallEl.textContent = "Next Ball: " + nextB;
+      if (cricketEquationEl) cricketEquationEl.textContent = cs.equation || (isInn1 ? "1st Innings in progress" : "Target Chase");
+
+      if (subscoreA && cs.inn1) subscoreA.textContent = "(" + cs.inn1.wickets + " wkts, " + cs.inn1.overs + ")";
+      if (subscoreB && cs.inn2) subscoreB.textContent = "(" + cs.inn2.wickets + " wkts, " + cs.inn2.overs + ")";
+
+      if (roleBadgeA && roleBadgeB) {
+        if (isInn1) {
+          roleBadgeA.textContent = "🏏 BATTING NOW";
+          roleBadgeA.className = "sc-cricket-role-badge sc-cricket-role-badge--batting";
+          roleBadgeB.textContent = "⚾ BOWLING";
+          roleBadgeB.className = "sc-cricket-role-badge sc-cricket-role-badge--bowling";
+        } else {
+          roleBadgeA.textContent = "⚾ BOWLING";
+          roleBadgeA.className = "sc-cricket-role-badge sc-cricket-role-badge--bowling";
+          roleBadgeB.textContent = "🏏 BATTING NOW";
+          roleBadgeB.className = "sc-cricket-role-badge sc-cricket-role-badge--batting";
+        }
+      }
+
+      if (clockEl && !isManualMinute) {
+        clockEl.value = nextB;
+      }
+    }
+
+    // 2. Badminton UI
+    if (sport === "badminton" && data.badminton_stats) {
+      var bs = data.badminton_stats;
+      if (badmintonGamesEl) {
+        badmintonGamesEl.textContent = "Games: " + bs.games_a + " – " + bs.games_b;
+      }
+      if (badmintonSetsEl) {
+        badmintonSetsEl.textContent = bs.sets_summary ? ("Sets: " + bs.sets_summary) : (bs.active_game + " in progress");
+      }
+      if (subscoreA) subscoreA.textContent = bs.games_a + " Game" + (bs.games_a !== 1 ? "s" : "") + " won";
+      if (subscoreB) subscoreB.textContent = bs.games_b + " Game" + (bs.games_b !== 1 ? "s" : "") + " won";
+
+      if (bs.match_winner) {
+        showError("🏆 Match Won by Team " + bs.match_winner.toUpperCase() + "! (" + bs.games_a + "–" + bs.games_b + ") Tap 'End match' to finalize.");
+      } else if (bs.game_point_a) {
+        if (periodBadge) periodBadge.textContent = "⚠️ Game Point Team A";
+      } else if (bs.game_point_b) {
+        if (periodBadge) periodBadge.textContent = "⚠️ Game Point Team B";
+      }
+
+      if (clockEl && !isManualMinute) {
+        clockEl.value = data.period || bs.active_game || "Game 1";
+      }
+    }
+
+    // 3. Kabaddi UI
+    if (sport === "kabaddi" && data.kabaddi_stats) {
+      var ks = data.kabaddi_stats;
+      if (kabaddiLeadEl) {
+        kabaddiLeadEl.textContent = "🤼 " + (ks.lead_text || "Match in progress");
+      }
+      if (clockEl && !isManualMinute && isRunning) {
+        clockEl.value = timerBadge ? timerBadge.textContent : "1'";
+      }
+    }
+  }
+
   function redraw(data) {
     showError("");
     if (scoreA) scoreA.textContent = data.score_a;
     if (scoreB) scoreB.textContent = data.score_b;
     if (periodEl) periodEl.textContent = data.period || "Not started";
+
+    // Update sport-specific widgets
+    updateSportSpecificUI(data);
 
     // Update smart period assistant
     updatePeriodAssistant(

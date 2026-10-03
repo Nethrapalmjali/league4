@@ -42,6 +42,10 @@
           <span data-score-b>{{ match.score_b or 0 }}</span>
           {% if match.sport == 'Cricket' and match.cricket_stats and match.cricket_stats.equation %}
             <span class="sc-cricket-card-equation">{{ match.cricket_stats.equation }}</span>
+          {% elif match.sport == 'Badminton' and match.badminton_stats and match.badminton_stats.sets_summary %}
+            <span class="sc-cricket-card-equation">Sets: {{ match.badminton_stats.sets_summary }}</span>
+          {% elif match.sport == 'Kabaddi' and match.kabaddi_stats and match.kabaddi_stats.lead_text %}
+            <span class="sc-cricket-card-equation">{{ match.kabaddi_stats.lead_text }}</span>
           {% endif %}
         </div>
         <div class="sc-side sc-side--b">
@@ -199,6 +203,117 @@
             </table>
           </div>
         </div>
+      </section>
+    {% endif %}
+
+    {% if match.sport == 'Kabaddi' and match.kabaddi_stats %}
+      {% set ks = match.kabaddi_stats %}
+      <section class="sc-block sc-sport-breakdown-card">
+        <div class="sc-sport-breakdown-head">
+          <span class="sc-sport-breakdown-title">🤼 Pro Kabaddi Match Stats</span>
+          <span class="sc-cricket-inn-badge">{{ ks.lead_text }}</span>
+        </div>
+        <table class="sc-stat-comparison-table">
+          <thead>
+            <tr>
+              <th class="sc-stat-num-col">{{ match.team_a.name }}</th>
+              <th class="sc-stat-label-col">Metric</th>
+              <th class="sc-stat-num-col">{{ match.team_b.name }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="sc-stat-num-col">{{ ks.a.total_points }}</td>
+              <td class="sc-stat-label-col">Total Points</td>
+              <td class="sc-stat-num-col">{{ ks.b.total_points }}</td>
+            </tr>
+            <tr>
+              <td class="sc-stat-num-col">{{ ks.a.raid_points }}</td>
+              <td class="sc-stat-label-col">Raid Points</td>
+              <td class="sc-stat-num-col">{{ ks.b.raid_points }}</td>
+            </tr>
+            <tr>
+              <td class="sc-stat-num-col">{{ ks.a.touch }}</td>
+              <td class="sc-stat-label-col">Touch Points</td>
+              <td class="sc-stat-num-col">{{ ks.b.touch }}</td>
+            </tr>
+            <tr>
+              <td class="sc-stat-num-col">{{ ks.a.bonus }}</td>
+              <td class="sc-stat-label-col">Bonus Points</td>
+              <td class="sc-stat-num-col">{{ ks.b.bonus }}</td>
+            </tr>
+            <tr>
+              <td class="sc-stat-num-col">{{ ks.a.super_raids }}</td>
+              <td class="sc-stat-label-col">Super Raids</td>
+              <td class="sc-stat-num-col">{{ ks.b.super_raids }}</td>
+            </tr>
+            <tr>
+              <td class="sc-stat-num-col">{{ ks.a.tackle_points }}</td>
+              <td class="sc-stat-label-col">Tackle Points</td>
+              <td class="sc-stat-num-col">{{ ks.b.tackle_points }}</td>
+            </tr>
+            <tr>
+              <td class="sc-stat-num-col">{{ ks.a.super_tackles }}</td>
+              <td class="sc-stat-label-col">Super Tackles</td>
+              <td class="sc-stat-num-col">{{ ks.b.super_tackles }}</td>
+            </tr>
+            <tr>
+              <td class="sc-stat-num-col">{{ ks.a.allout_points }}</td>
+              <td class="sc-stat-label-col">All-Out Points</td>
+              <td class="sc-stat-num-col">{{ ks.b.allout_points }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+    {% endif %}
+
+    {% if match.sport == 'Badminton' and match.badminton_stats %}
+      {% set bs = match.badminton_stats %}
+      <section class="sc-block sc-sport-breakdown-card">
+        <div class="sc-sport-breakdown-head">
+          <span class="sc-sport-breakdown-title">🏸 Badminton Games &amp; Sets</span>
+          <span class="sc-cricket-inn-badge">
+            {% if bs.match_winner %}
+              Match won by {{ match.team_a.name if bs.match_winner == 'a' else match.team_b.name }}
+            {% else %}
+              {{ bs.active_game }} underway
+            {% endif %}
+          </span>
+        </div>
+        <table class="sc-stat-comparison-table">
+          <thead>
+            <tr>
+              <th class="sc-stat-label-col">Game / Set</th>
+              <th class="sc-stat-num-col">{{ match.team_a.name }}</th>
+              <th class="sc-stat-num-col">{{ match.team_b.name }}</th>
+              <th class="sc-stat-label-col">Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for g in bs.games_list %}
+              <tr>
+                <td class="sc-stat-label-col"><strong>{{ g.game }}</strong></td>
+                <td class="sc-stat-num-col">{{ g.a }}</td>
+                <td class="sc-stat-num-col">{{ g.b }}</td>
+                <td class="sc-stat-label-col">
+                  {% if g.is_done %}
+                    <span style="color:#1b8751; font-weight:800;">Won by {{ match.team_a.tag if g.winner == 'a' else match.team_b.tag }}</span>
+                  {% elif g.game == bs.active_game and (g.a > 0 or g.b > 0) %}
+                    <span class="sc-cricket-inn-badge sc-cricket-inn-badge--live">Playing</span>
+                  {% else %}
+                    <span style="color:var(--muted);">—</span>
+                  {% endif %}
+                </td>
+              </tr>
+            {% endfor %}
+            <tr style="background: rgba(0,0,0,0.03); font-weight:800;">
+              <td class="sc-stat-label-col"><strong>Games Won</strong></td>
+              <td class="sc-stat-num-col" style="font-size:1.25rem; color:var(--maroon);">{{ bs.games_a }}</td>
+              <td class="sc-stat-num-col" style="font-size:1.25rem; color:var(--maroon);">{{ bs.games_b }}</td>
+              <td class="sc-stat-label-col">Best of 3</td>
+            </tr>
+          </tbody>
+        </table>
       </section>
     {% endif %}
 

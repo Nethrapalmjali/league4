@@ -56,13 +56,13 @@
   </div>
 
   <div class="card-grid">
-    {% for sport in ['Football', 'Kabaddi', 'Basketball', 'Badminton'] %}
+    {% for sport in ['Football', 'Cricket', 'Kabaddi', 'Badminton'] %}
     <div class="sport-card">
       <div class="sport-card__media">
         <span style="font-size: 3rem;">
           {% if sport == 'Football' %}⚽
+          {% elif sport == 'Cricket' %}🏏
           {% elif sport == 'Kabaddi' %}🤼
-          {% elif sport == 'Basketball' %}🏀
           {% elif sport == 'Badminton' %}🏸
           {% endif %}
         </span>
@@ -71,13 +71,13 @@
         <h3 class="sport-card__title">{{ sport }}</h3>
         <p class="sport-card__desc">
           {% if sport == 'Football' %}
-          Men's tournament. The beautiful game on the big field.
+          Men's and Women's categories. The beautiful game on the big field.
+          {% elif sport == 'Cricket' %}
+          Men's and Women's categories. Power, swing, and tactical boundary action.
           {% elif sport == 'Kabaddi' %}
-          Men's and Women's categories. Strength, strategy, and breath.
-          {% elif sport == 'Basketball' %}
-          Men's and Women's categories. Fast-paced court action.
+          Men's and Women's categories. Strength, raids, and mat strategy.
           {% elif sport == 'Badminton' %}
-          Men's and Women's categories. Precision and speed.
+          Men's and Women's categories. Rapid rallies, precision, and speed.
           {% endif %}
         </p>
         <a href="{{ url_for('register_player', sport=sport.lower()) }}" class="btn btn--dark btn--block">Register
