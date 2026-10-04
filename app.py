@@ -825,11 +825,16 @@ def register_player(sport):
         elif duplicate_contact:
             errors.append(f"Mobile number '{form['contact']}' is already registered for {sport} (Entry ID: {duplicate_contact.reg_code}). You are already registered.")
 
-        photo_path, photo_error = save_upload(
-            request.files.get("photo"), "UPLOAD_FOLDER", "player_photos", form["name"] or "player"
-        )
-        if photo_error:
-            errors.append(photo_error)
+        photo_file = request.files.get("photo")
+        if not photo_file or not photo_file.filename:
+            errors.append("Player photo is required. Please upload a clear photo of yourself.")
+            photo_path = None
+        else:
+            photo_path, photo_error = save_upload(
+                photo_file, "UPLOAD_FOLDER", "player_photos", form["name"] or "player"
+            )
+            if photo_error:
+                errors.append(photo_error)
 
         if errors:
             for message in errors:
