@@ -488,7 +488,24 @@ def media_url(path):
     return url_for("static", filename=path)
 
 
+def parse_highlights(text):
+    """Clean and split player achievements into formatted list of points."""
+    if not text:
+        return []
+    raw_str = str(text).strip()
+    if not raw_str or raw_str.lower() in {"none", "n/a", "nil", "verified registrant"}:
+        return []
+    parts = re.split(r"[\r\n]+|[;•]+|(?<=[a-zA-Z0-9\)])\.\s+", raw_str)
+    results = []
+    for item in parts:
+        cleaned = item.strip().strip(".-*• \t")
+        if cleaned and len(cleaned) >= 2:
+            results.append(cleaned)
+    return results or ([raw_str] if len(raw_str) > 2 else [])
+
+
 app.jinja_env.filters["media_url"] = media_url
+app.jinja_env.filters["parse_highlights"] = parse_highlights
 
 
 @app.context_processor
@@ -500,6 +517,7 @@ def inject_globals():
         "mens_only_sports": MENS_ONLY_SPORTS,
         "now_year": datetime.now().year,
         "media_url": media_url,
+        "parse_highlights": parse_highlights,
     }
 
 

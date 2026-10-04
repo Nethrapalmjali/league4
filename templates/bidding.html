@@ -420,18 +420,21 @@
     margin-bottom: 1.25rem;
   }
 
-  /* 3-Column Stats Grid from Stitch */
-  .stats-trio {
+  /* Player Card Refined Stats & Highlights */
+  .player-stats-row {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 0.85rem;
-    margin-top: 1rem;
-    padding-top: 1rem;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.75rem;
+    margin-top: 0.75rem;
+    padding-top: 0.75rem;
     border-top: 1px solid var(--surface-container);
   }
   .stat-trio-box {
+    background: var(--surface-container-low);
+    padding: 0.5rem 0.75rem;
+    border-radius: 0 6px 6px 0;
+    border: 1px solid var(--outline-variant);
     border-left: 3px solid var(--heritage-gold);
-    padding-left: 0.65rem;
   }
   .stat-trio-box .stat-sub {
     font-size: 0.68rem;
@@ -442,10 +445,77 @@
     margin-bottom: 0.2rem;
   }
   .stat-trio-box .stat-val {
-    font-size: 0.92rem;
-    font-weight: 700;
-    color: var(--on-surface);
+    font-size: 0.95rem;
+    font-weight: 800;
+    color: var(--deep-maroon);
     line-height: 1.2;
+  }
+
+  /* Dedicated Highlights & Achievements Section */
+  .player-highlights-card {
+    margin-top: 0.75rem;
+    background: #fffdf9;
+    border: 1px solid rgba(227, 181, 89, 0.4);
+    border-left: 4px solid var(--heritage-gold);
+    border-radius: 8px;
+    padding: 0.65rem 0.9rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+  }
+  .highlights-card-header {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    margin-bottom: 0.4rem;
+  }
+  .highlights-header-label {
+    font-size: 0.68rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: var(--deep-maroon);
+  }
+  .highlights-chips-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    max-height: 140px;
+    overflow-y: auto;
+    padding-right: 4px;
+  }
+  .highlights-chips-list::-webkit-scrollbar {
+    width: 4px;
+  }
+  .highlights-chips-list::-webkit-scrollbar-thumb {
+    background: rgba(227, 181, 89, 0.6);
+    border-radius: 4px;
+  }
+  .highlight-bullet-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.45rem;
+    font-size: 0.85rem;
+    line-height: 1.35;
+    color: #2b1717;
+    background: rgba(245, 237, 220, 0.4);
+    padding: 0.35rem 0.6rem;
+    border-radius: 5px;
+    border-left: 2px solid var(--heritage-gold);
+  }
+  .hl-trophy {
+    font-size: 0.85rem;
+    line-height: 1.2;
+    flex-shrink: 0;
+  }
+  .hl-content-text {
+    font-weight: 600;
+    color: #33151b;
+  }
+  .highlight-bullet-empty {
+    color: var(--on-surface-variant);
+    font-style: italic;
+    background: transparent;
+    border-left: none;
+    padding: 0.15rem 0;
   }
 
   /* Stitch Bidding Console (Deep Maroon Card) */
@@ -1159,21 +1229,41 @@
                   </div>
                 </div>
 
-                <!-- 3-Column Attributes Grid from Stitch -->
-                <div class="stats-trio">
+                <!-- Attributes Grid from Stitch -->
+                <div class="player-stats-row">
                   <div class="stat-trio-box">
                     <div class="stat-sub">Role / Position</div>
                     <div class="stat-val">{{ player.position or 'Player' }}</div>
                   </div>
                   <div class="stat-trio-box">
-                    <div class="stat-sub">Experience</div>
+                    <div class="stat-sub">Experience Level</div>
                     <div class="stat-val">{{ player.experience or 'College League' }}</div>
                   </div>
-                  <div class="stat-trio-box">
-                    <div class="stat-sub">Highlights</div>
-                    <div class="stat-val" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="{{ player.achievements or 'Verified Registrant' }}">
-                      {{ player.achievements or 'Verified Registrant' }}
-                    </div>
+                </div>
+
+                <!-- Dedicated Key Highlights & Achievements Card -->
+                <div class="player-highlights-card">
+                  <div class="highlights-card-header">
+                    <span class="material-symbols-outlined" style="font-size:16px; color:var(--deep-maroon);">emoji_events</span>
+                    <span class="highlights-header-label">Proven Highlights & Tournament Record</span>
+                  </div>
+                  <div class="highlights-card-body">
+                    {% set hl_list = player.achievements|parse_highlights %}
+                    {% if hl_list %}
+                      <div class="highlights-chips-list">
+                        {% for item in hl_list %}
+                          <div class="highlight-bullet-item">
+                            <span class="hl-trophy">🏆</span>
+                            <span class="hl-content-text">{{ item }}</span>
+                          </div>
+                        {% endfor %}
+                      </div>
+                    {% else %}
+                      <div class="highlight-bullet-item highlight-bullet-empty">
+                        <span class="hl-trophy">⭐</span>
+                        <span class="hl-content-text">Registered GML Season 4 Participant · Ready for Auction Draft</span>
+                      </div>
+                    {% endif %}
                   </div>
                 </div>
               </div>
