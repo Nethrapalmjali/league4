@@ -36,10 +36,10 @@
       </div>
 
       <div class="field">
-        <label for="usn">USN <span class="req">*</span></label>
-        <input type="text" id="usn" name="usn" required maxlength="20" class="input-upper" value="{{ form.usn or '' }}"
-          placeholder="e.g. 1GM22CS001">
-        <span class="hint">Owner / Representative USN.</span>
+        <label for="employee_id">Employee ID <span class="req">*</span></label>
+        <input type="text" id="employee_id" name="employee_id" required maxlength="50" class="input-upper" value="{{ form.usn or form.employee_id or '' }}"
+          placeholder="e.g. EMP1024">
+        <span class="hint">Owner / Representative Employee ID.</span>
       </div>
 
       <div class="field">

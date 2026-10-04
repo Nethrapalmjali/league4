@@ -1,0 +1,105 @@
+{% extends "admin_base.html" %}
+
+{% block title %}Edit Team Owner · {{ owner.team_name }}{% endblock %}
+
+{% block content %}
+<div class="content-header">
+  <div style="display:flex; align-items:center; gap:0.75rem;">
+    <a href="{{ url_for('admin_dashboard') }}" class="btn btn--ghost btn--sm">← Back to Dashboard</a>
+    <h1 style="margin:0; font-size:1.5rem;">Edit Franchise: {{ owner.team_name }}</h1>
+  </div>
+</div>
+
+<div class="card" style="max-width: 800px; margin: 1.5rem 0;">
+  <div class="card__head">
+    <div class="card__title">Franchise &amp; Owner Information</div>
+  </div>
+  <div class="card__body">
+    <form method="POST" enctype="multipart/form-data">
+      <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+
+      <div style="display:grid; grid-template-columns: 1fr 1fr; gap:1.25rem;">
+        <div class="field">
+          <label for="name">Owner Full Name <span class="req">*</span></label>
+          <input type="text" id="name" name="name" required class="input" value="{{ owner.name }}">
+        </div>
+
+        <div class="field">
+          <label for="team_name">Team Name <span class="req">*</span></label>
+          <input type="text" id="team_name" name="team_name" required class="input" value="{{ owner.team_name }}">
+        </div>
+
+        <div class="field">
+          <label for="employee_id">Employee ID</label>
+          <input type="text" id="employee_id" name="employee_id" class="input input-upper" value="{{ owner.usn or '' }}" placeholder="e.g. EMP1024">
+        </div>
+
+        <div class="field">
+          <label for="designation">Designation</label>
+          <input type="text" id="designation" name="designation" class="input" value="{{ owner.designation or '' }}">
+        </div>
+
+        <div class="field">
+          <label for="email">Email</label>
+          <input type="email" id="email" name="email" class="input" value="{{ owner.email or '' }}">
+        </div>
+
+        <div class="field">
+          <label for="contact">Mobile Contact</label>
+          <input type="tel" id="contact" name="contact" class="input" value="{{ owner.contact or '' }}">
+        </div>
+
+        <div class="field">
+          <label for="budget">Purse Budget (₹)</label>
+          <input type="number" id="budget" name="budget" class="input" value="{{ owner.budget or 0 }}">
+        </div>
+
+        <div class="field">
+          <label for="manager_name">Manager Name</label>
+          <input type="text" id="manager_name" name="manager_name" class="input" value="{{ owner.manager_name or '' }}">
+        </div>
+
+        <div class="field">
+          <label for="manager_contact_number">Manager Mobile</label>
+          <input type="tel" id="manager_contact_number" name="manager_contact_number" class="input" value="{{ owner.manager_contact_number or '' }}">
+        </div>
+      </div>
+
+      <div class="field" style="margin-top:1.5rem;">
+        <label style="font-weight:700; margin-bottom:0.5rem; display:block;">Participating Sports <span class="req">*</span></label>
+        <div style="display:flex; flex-wrap:wrap; gap:1rem;">
+          {% for opt in sport_options %}
+            <label style="display:flex; align-items:center; gap:0.4rem; font-size:0.9rem; cursor:pointer;">
+              <input type="checkbox" name="sports" value="{{ opt }}" {% if opt in sport_options and (opt.split('(')[0].strip().lower() in owned or opt.lower() in owned) %}checked{% endif %}>
+              <span>{{ opt }}</span>
+            </label>
+          {% endfor %}
+        </div>
+      </div>
+
+      <div style="display:grid; grid-template-columns: 1fr 1fr; gap:1.25rem; margin-top:1.5rem;">
+        <div class="field">
+          <label for="team_logo">Update Team Logo</label>
+          <input type="file" id="team_logo" name="team_logo" accept="image/*">
+          {% if owner.team_logo %}
+            <div style="margin-top:0.5rem;"><img src="{{ media_url(owner.team_logo) }}" style="width:48px; height:48px; border-radius:6px; object-fit:contain; border:1px solid #ddd;"></div>
+          {% endif %}
+        </div>
+
+        <div class="field">
+          <label for="team_owner_photo">Update Owner Photo</label>
+          <input type="file" id="team_owner_photo" name="team_owner_photo" accept="image/*">
+          {% if owner.team_owner_photo %}
+            <div style="margin-top:0.5rem;"><img src="{{ media_url(owner.team_owner_photo) }}" style="width:48px; height:48px; border-radius:50%; object-fit:cover; border:1px solid #ddd;"></div>
+          {% endif %}
+        </div>
+      </div>
+
+      <div style="display:flex; justify-content:flex-end; gap:0.75rem; margin-top:2rem;">
+        <a href="{{ url_for('admin_dashboard') }}" class="btn btn--ghost">Cancel</a>
+        <button type="submit" class="btn btn--primary">Save Changes</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

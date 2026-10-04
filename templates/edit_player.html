@@ -1,0 +1,110 @@
+{% extends "admin_base.html" %}
+
+{% block title %}Edit Player · {{ player.name }}{% endblock %}
+
+{% block content %}
+<div class="content-header">
+  <div style="display:flex; align-items:center; gap:0.75rem;">
+    <a href="{{ url_for('admin_dashboard') }}" class="btn btn--ghost btn--sm">← Back to Dashboard</a>
+    <h1 style="margin:0; font-size:1.5rem;">Edit Player: {{ player.name }}</h1>
+  </div>
+</div>
+
+<div class="card" style="max-width: 800px; margin: 1.5rem 0;">
+  <div class="card__head">
+    <div class="card__title">Player Registration Details ({{ player.reg_code }})</div>
+  </div>
+  <div class="card__body">
+    <form method="POST" enctype="multipart/form-data">
+      <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+
+      <div style="display:grid; grid-template-columns: 1fr 1fr; gap:1.25rem;">
+        <div class="field">
+          <label for="name">Full Name <span class="req">*</span></label>
+          <input type="text" id="name" name="name" required class="input" value="{{ player.name }}">
+        </div>
+
+        <div class="field">
+          <label for="sport">Sport <span class="req">*</span></label>
+          <select id="sport" name="sport" required class="input">
+            {% for s in sports %}
+              <option value="{{ s }}" {% if player.sport == s %}selected{% endif %}>{{ s }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="field">
+          <label for="position">Position</label>
+          <select id="position" name="position" class="input">
+            {% for pos in positions %}
+              <option value="{{ pos }}" {% if player.position == pos %}selected{% endif %}>{{ pos }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="field">
+          <label for="gender">Category <span class="req">*</span></label>
+          <select id="gender" name="gender" required class="input">
+            <option value="Male" {% if player.gender == 'Male' %}selected{% endif %}>Men</option>
+            {% if player.sport not in mens_only_sports %}
+              <option value="Female" {% if player.gender == 'Female' %}selected{% endif %}>Women</option>
+            {% endif %}
+          </select>
+        </div>
+
+        <div class="field">
+          <label for="usn">USN</label>
+          <input type="text" id="usn" name="usn" class="input input-upper" value="{{ player.usn or '' }}">
+        </div>
+
+        <div class="field">
+          <label for="branch">Branch / Department</label>
+          <input type="text" id="branch" name="branch" class="input" value="{{ player.branch or '' }}">
+        </div>
+
+        <div class="field">
+          <label for="college_name">College</label>
+          <input type="text" id="college_name" name="college_name" class="input" value="{{ player.college_name or '' }}">
+        </div>
+
+        <div class="field">
+          <label for="email">Email</label>
+          <input type="email" id="email" name="email" class="input" value="{{ player.email or '' }}">
+        </div>
+
+        <div class="field">
+          <label for="contact">Mobile Contact</label>
+          <input type="tel" id="contact" name="contact" class="input" value="{{ player.contact or '' }}">
+        </div>
+
+        <div class="field">
+          <label for="experience">Experience Level</label>
+          <select id="experience" name="experience" class="input">
+            {% for lvl in ['Beginner', 'Intermediate', 'Pro'] %}
+              <option value="{{ lvl }}" {% if player.experience == lvl %}selected{% endif %}>{{ lvl }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+
+      <div class="field" style="margin-top:1.25rem;">
+        <label for="achievements">Achievements</label>
+        <textarea id="achievements" name="achievements" class="input" rows="3">{{ player.achievements or '' }}</textarea>
+      </div>
+
+      <div class="field" style="margin-top:1.25rem;">
+        <label for="photo">Update Player Photo</label>
+        <input type="file" id="photo" name="photo" accept="image/*">
+        {% if player.photo %}
+          <div style="margin-top:0.5rem;"><img src="{{ media_url(player.photo) }}" style="width:50px; height:50px; border-radius:50%; object-fit:cover; border:1px solid #ddd;"></div>
+        {% endif %}
+      </div>
+
+      <div style="display:flex; justify-content:flex-end; gap:0.75rem; margin-top:2rem;">
+        <a href="{{ url_for('admin_dashboard') }}" class="btn btn--ghost">Cancel</a>
+        <button type="submit" class="btn btn--primary">Save Changes</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

@@ -8,7 +8,7 @@ FRANCHISE ENTRY PASS: {{ reg_code }}
 TEAM NAME:        {{ owner.team_name }}
 OWNER:            {{ owner.name }}
 DESIGNATION:      {{ owner.designation }}
-USN:              {{ owner.usn }}
+EMPLOYEE ID:      {{ owner.usn }}
 SPORTS:           {{ owner.sports }}
 AUCTION PURSE:    ₹ {{ "{:,}".format(owner.budget or 1000000) }}
 EMAIL:            {{ owner.email }}

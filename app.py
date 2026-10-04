@@ -278,15 +278,13 @@ POSITIONS = {
     "Kabaddi": ["Raider", "Defender", "All-Rounder"],
     "Badminton": ["Singles", "Doubles"],
 }
-# All four sports run both Men and Women categories
-MENS_ONLY_SPORTS = set()
+# Football and Kabaddi run only Men's category this season (Women's categories removed)
+MENS_ONLY_SPORTS = {"Football", "Kabaddi"}
 OWNER_SPORT_OPTIONS = [
     "Football(Men)",
-    "Football(Women)",
     "Basketball(Men)",
     "Basketball(Women)",
     "Kabaddi(Men)",
-    "Kabaddi(Women)",
     "Badminton(Men)",
     "Badminton(Women)",
 ]
@@ -335,11 +333,19 @@ class TeamOwner(db.Model):
     team_logo = db.Column(db.String(500))
     designation = db.Column(db.String(100))
     email = db.Column(db.String(120))
-    usn = db.Column(db.String(20))
+    usn = db.Column(db.String(50))  # stores Employee ID (retained column name for database compatibility)
     manager_name = db.Column(db.String(100))
     manager_contact_number = db.Column(db.String(20))
     team_owner_photo = db.Column(db.String(500))
     registered_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    @property
+    def employee_id(self):
+        return self.usn
+
+    @employee_id.setter
+    def employee_id(self, val):
+        self.usn = val
 
     @property
     def reg_code(self):
@@ -491,6 +497,7 @@ def inject_globals():
         "csrf_token": csrf_token,
         "brand": get_brand(),
         "sports": SPORTS,
+        "mens_only_sports": MENS_ONLY_SPORTS,
         "now_year": datetime.now().year,
         "media_url": media_url,
     }
@@ -814,7 +821,11 @@ def register_player(sport):
             for message in errors:
                 flash(message, "error")
             return render_template(
-                "register_player.html", sport=sport, positions=positions, form=form
+                "register_player.html",
+                sport=sport,
+                positions=positions,
+                form=form,
+                mens_only=sport in MENS_ONLY_SPORTS,
             )
 
         player = Player(sport=sport, photo=photo_path, **form)
@@ -826,7 +837,11 @@ def register_player(sport):
             app.logger.exception("Player registration failed")
             flash(f"We could not save your registration: {exc}", "error")
             return render_template(
-                "register_player.html", sport=sport, positions=positions, form=form
+                "register_player.html",
+                sport=sport,
+                positions=positions,
+                form=form,
+                mens_only=sport in MENS_ONLY_SPORTS,
             )
 
         queued = email_player_registered(player)
@@ -837,7 +852,15 @@ def register_player(sport):
         )
         return redirect(url_for("registration_success", kind="player", code=player.reg_code))
 
-    return render_template("register_player.html", sport=sport, positions=positions, form=form)
+    if not form and sport in MENS_ONLY_SPORTS:
+        form = {"gender": "Male"}
+    return render_template(
+        "register_player.html",
+        sport=sport,
+        positions=positions,
+        form=form,
+        mens_only=sport in MENS_ONLY_SPORTS,
+    )
 
 
 @app.route("/team_owner_registration", methods=["GET", "POST"])
@@ -846,10 +869,11 @@ def team_owner_registration():
     selected_sports = []
 
     if request.method == "POST":
+        usn_val = clean(request.form.get("employee_id") or request.form.get("usn"), 50).upper()
         form = {
             "name": clean(request.form.get("name"), 100),
             "team_name": clean(request.form.get("team_name"), 100),
-            "usn": clean(request.form.get("usn"), 20).upper(),
+            "usn": usn_val,
             "email": clean(request.form.get("email"), 120).lower(),
             "designation": clean(request.form.get("designation"), 100),
             "contact": normalise_phone(request.form.get("contact")),
@@ -864,7 +888,7 @@ def team_owner_registration():
         if not form["team_name"]:
             errors.append("Team name is required.")
         if not form["usn"]:
-            errors.append("USN is required.")
+            errors.append("Employee ID is required.")
         if not EMAIL_RE.match(form["email"]):
             errors.append("Please enter a valid email address — your confirmation is sent there.")
         if not PHONE_RE.match(form["contact"]):
@@ -1471,7 +1495,7 @@ def admin_edit_team_owner(id):
             owner.sports = ",".join(s.split("(")[0].strip() for s in selected)
             owner.budget = request.form.get("budget", type=int) or 0
             owner.contact = normalise_phone(request.form.get("contact")) or None
-            owner.usn = clean(request.form.get("usn"), 20).upper() or None
+            owner.usn = clean(request.form.get("employee_id") or request.form.get("usn"), 50).upper() or None
             owner.designation = clean(request.form.get("designation"), 100) or None
             owner.email = clean(request.form.get("email"), 120).lower() or None
             owner.manager_name = clean(request.form.get("manager_name"), 100) or None
@@ -1540,7 +1564,7 @@ def owner_rows(owners):
             "Franchise ID": o.reg_code,
             "Team Name": o.team_name,
             "Owner": o.name,
-            "USN": o.usn or "N/A",
+            "Employee ID": o.usn or "N/A",
             "Email": o.email or "N/A",
             "Contact": o.contact or "N/A",
             "Designation": o.designation or "N/A",

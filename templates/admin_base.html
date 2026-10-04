@@ -29,7 +29,7 @@
       <a href="{{ url_for('bidding', sport=s.lower(), gender='male') }}" class="nav-item {{ 'is-active' if (sport and sport.lower() == s.lower() and gender and gender.lower() == 'male') else '' }}">
         Bid {{ s }} (M)
       </a>
-      {% if s != 'Football' %}
+      {% if s not in mens_only_sports %}
       <a href="{{ url_for('bidding', sport=s.lower(), gender='female') }}" class="nav-item {{ 'is-active' if (sport and sport.lower() == s.lower() and gender and gender.lower() == 'female') else '' }}">
         Bid {{ s }} (W)
       </a>

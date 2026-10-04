@@ -149,7 +149,7 @@
       <a class="nav-item icon-text" href="{{ url_for('bidding', sport=sport|lower, gender='male') }}">
         {{ ico.icon('gavel', 15) }} Bid {{ sport }} (M)
       </a>
-      {% if sport != 'Football' %}
+      {% if sport not in mens_only_sports %}
       <a class="nav-item icon-text" href="{{ url_for('bidding', sport=sport|lower, gender='female') }}">
         {{ ico.icon('gavel', 15) }} Bid {{ sport }} (W)
       </a>
@@ -282,7 +282,7 @@
         <div style="display:flex; flex-wrap:wrap; gap:0.6rem;">
           {% for sport in sports %}
             <a href="{{ url_for('bidding', sport=sport|lower, gender='male') }}" class="btn btn--maroon btn--sm">{{ sport }} (Men)</a>
-            {% if sport != 'Football' %}
+            {% if sport not in mens_only_sports %}
               <a href="{{ url_for('bidding', sport=sport|lower, gender='female') }}" class="btn btn--ghost btn--sm">{{ sport }} (Women)</a>
             {% endif %}
           {% endfor %}
@@ -325,7 +325,7 @@
                   <th>Franchise ID</th>
                   <th>Team</th>
                   <th>Owner name</th>
-                  <th>USN</th>
+                  <th>Employee ID</th>
                   <th>Email</th>
                   <th>Contact</th>
                   <th>Designation</th>
