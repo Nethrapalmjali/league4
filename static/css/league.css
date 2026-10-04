@@ -755,6 +755,42 @@ a {
   box-shadow: 0 8px 22px rgba(226, 180, 88, 0.32);
 }
 
+.dev-github-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  margin-top: 0.8rem;
+  padding: 0.38rem 0.85rem;
+  border-radius: 999px;
+  background: rgba(91, 31, 31, 0.05);
+  border: 1px solid rgba(91, 31, 31, 0.16);
+  color: var(--maroon);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  text-decoration: none;
+  transition: all 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.dev-github-link:hover {
+  background: var(--maroon);
+  color: #fffdfa;
+  border-color: var(--maroon);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(91, 31, 31, 0.25);
+}
+
+.dev-github-icon {
+  flex-shrink: 0;
+  transition: transform 0.22s ease;
+}
+
+.dev-github-link:hover .dev-github-icon {
+  transform: scale(1.15);
+}
+
 .person__badge {
   position: absolute;
   top: 0.8rem;
