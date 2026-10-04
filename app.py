@@ -805,11 +805,25 @@ def register_player(sport):
         if not form["college_name"]:
             errors.append("College name is required.")
 
-        duplicate = Player.query.filter(
+        # Prevent dual/duplicate entries across USN, Email, and Mobile number
+        duplicate_usn = Player.query.filter(
             db.func.upper(Player.usn) == form["usn"], Player.sport == sport
-        ).first()
-        if form["usn"] and duplicate:
-            errors.append(f"USN {form['usn']} is already registered for {sport}.")
+        ).first() if form["usn"] else None
+
+        duplicate_email = Player.query.filter(
+            db.func.lower(Player.email) == form["email"], Player.sport == sport
+        ).first() if form["email"] else None
+
+        duplicate_contact = Player.query.filter(
+            Player.contact == form["contact"], Player.sport == sport
+        ).first() if form["contact"] else None
+
+        if duplicate_usn:
+            errors.append(f"USN '{form['usn']}' is already registered for {sport} (Entry ID: {duplicate_usn.reg_code}).")
+        elif duplicate_email:
+            errors.append(f"Email '{form['email']}' is already registered for {sport} (Entry ID: {duplicate_email.reg_code}). You do not need to register again.")
+        elif duplicate_contact:
+            errors.append(f"Mobile number '{form['contact']}' is already registered for {sport} (Entry ID: {duplicate_contact.reg_code}). You are already registered.")
 
         photo_path, photo_error = save_upload(
             request.files.get("photo"), "UPLOAD_FOLDER", "player_photos", form["name"] or "player"
