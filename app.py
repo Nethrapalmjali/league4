@@ -348,6 +348,9 @@ class Player(db.Model):
     sold_to = db.Column(db.String(100))
     registered_at = db.Column(db.DateTime, default=datetime.utcnow)
 
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
     @property
     def reg_code(self):
         return f"{BRAND['short'].replace(' ', '')}-{SPORT_CODES.get(self.sport, 'GM')}-{self.id:04d}"
@@ -368,6 +371,9 @@ class TeamOwner(db.Model):
     manager_contact_number = db.Column(db.String(20))
     team_owner_photo = db.Column(db.String(500))
     registered_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
 
     @property
     def employee_id(self):
