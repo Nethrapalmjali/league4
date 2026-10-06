@@ -28,7 +28,7 @@ def normalise_database_url(url):
 # IMPORTANT:
 # DATABASE_URL must be configured in Render Environment Variables.
 # Do NOT put the real database password inside this source file.
-DATABASE_URL = env_str("DATABASE_URL")
+
 
 if not DATABASE_URL:
     raise RuntimeError(
