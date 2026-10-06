@@ -131,7 +131,10 @@ if not _secret_key:
 
 def resolve_database_uri():
     """Determine database URI with automatic, resilient fallback to SQLite."""
-    raw_url = env_str("DATABASE_URL")
+    default_supabase = (
+        "postgresql://postgres.bqoszyelbcxrqojvutva:Rachana%401237@aws-0-ap-southeast-2.pooler.supabase.com:5432/postgres?sslmode=require"
+    )
+    raw_url = env_str("DATABASE_URL", default_supabase)
     if raw_url:
         normalized = normalise_database_url(raw_url)
         if normalized.startswith("postgresql"):

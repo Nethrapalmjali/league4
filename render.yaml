@@ -19,7 +19,7 @@ services:
       - key: KEEP_ALIVE_ENABLED
         value: "true"
       - key: DATABASE_URL
-        sync: false
+        value: postgresql://postgres.bqoszyelbcxrqojvutva:Rachana%401237@aws-0-ap-southeast-2.pooler.supabase.com:5432/postgres?sslmode=require
       - key: SUPABASE_URL
         value: https://bqoszyelbcxrqojvutva.supabase.co
       - key: SUPABASE_KEY
