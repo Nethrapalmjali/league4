@@ -141,6 +141,8 @@ app.config.update(
     SESSION_COOKIE_SAMESITE="Lax",
     SESSION_COOKIE_SECURE=env_bool("SESSION_COOKIE_SECURE", False),
     PERMANENT_SESSION_LIFETIME=timedelta(hours=8),
+    DEBUG=True,
+    PROPAGATE_EXCEPTIONS=True,
 )
 
 if SERVERLESS:
@@ -1687,12 +1689,12 @@ def too_large(_error):
                            message=f"Photos and logos must be under {limit} MB. Please compress and try again."), 413
 
 
-@app.errorhandler(500)
-def server_error(error):
-    app.logger.exception("Unhandled error: %s", error)
-    db.session.rollback()
-    return render_template("error.html", code=500, title="Something broke",
-                           message="Our fault, not yours. Please try again in a moment."), 500
+# @app.errorhandler(500)
+# def server_error(error):
+#     app.logger.exception("Unhandled error: %s", error)
+#     db.session.rollback()
+#     return render_template("error.html", code=500, title="Something broke",
+#                            message="Our fault, not yours. Please try again in a moment."), 500
 
 
 # --------------------------------------------------------------------------- #
