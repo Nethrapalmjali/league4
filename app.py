@@ -1,4 +1,4 @@
-"""GM League Season 4 ΓÇö Event Management System.
+"""GM League Season 4 - Event Management System.
 
 Flask application powering player registration, franchise (team owner)
 registration, the live auction, the admin console and the SMTP email
@@ -224,7 +224,7 @@ BRAND = {
     "short": env_str("LEAGUE_SHORT", "GML S4"),
     "season": env_str("LEAGUE_SEASON", "Season 4"),
     "university": env_str("LEAGUE_UNIVERSITY", "GM University"),
-    "tagline": env_str("LEAGUE_TAGLINE", "Season 4 ΓÇö Where Legends Are Born"),
+    "tagline": env_str("LEAGUE_TAGLINE", "Season 4 - Where Legends Are Born"),
     "site_url": env_str("SITE_URL", "https://gmlweb.onrender.com"),
     "support_phone": env_str("SUPPORT_PHONE", "9066777171"),
     "support_phone_alt": env_str("SUPPORT_PHONE_ALT", "7483412359"),
@@ -234,18 +234,18 @@ BRAND = {
     "whatsapp_community_url": env_str("WHATSAPP_COMMUNITY_URL", "https://chat.whatsapp.com/B5lehw1CZpO9xww2fQ4V5h"),
     # Good-luck message signed off at the end of every automated email.
     "director_name": env_str("DIRECTOR_NAME", "Ajjaiah G B"),
-    "director_title": env_str("DIRECTOR_TITLE", "Director ΓÇö PE"),
+    "director_title": env_str("DIRECTOR_TITLE", "Director - PE"),
     "director_message": env_str(
         "DIRECTOR_MESSAGE",
         "Play hard, play fair, and enjoy every minute of it. "
-        "The whole Physical Education department is behind you this season ΓÇö go make it count.",
+        "The whole Physical Education department is behind you this season - go make it count.",
     ),
 }
 
 # The header wordmark: the league name without the season suffix ("GM League"),
 # so the season can sit beside it as its own badge.
 BRAND["wordmark"] = env_str("LEAGUE_WORDMARK") or (
-    BRAND["name"].replace(BRAND["season"], "").strip(" -ΓÇöΓÇô┬╖") or BRAND["name"]
+    BRAND["name"].replace(BRAND["season"], "").strip(" -") or BRAND["name"]
 )
 
 

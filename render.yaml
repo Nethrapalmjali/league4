@@ -15,11 +15,11 @@ services:
       - key: ADMIN_PASSWORD
         value: Mkan@6767
       - key: PING_INTERVAL
-        value: "15"
+        value: "5"
       - key: KEEP_ALIVE_ENABLED
         value: "true"
       - key: DATABASE_URL
-        value: postgresql://postgres.bqoszyelbcxrqojvutva:Rachana%401237@aws-0-ap-southeast-2.pooler.supabase.com:5432/postgres?sslmode=require
+        sync: false
       - key: SUPABASE_URL
         value: https://bqoszyelbcxrqojvutva.supabase.co
       - key: SUPABASE_KEY
@@ -47,3 +47,15 @@ services:
       - key: RENDER_EXTERNAL_URL
         value: https://gmlweb.onrender.com
 
+
+  - type: worker
+    name: pinger
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: python pinger.py https://gmlweb.onrender.com
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.10
+      - key: PING_INTERVAL
+        value: "5"

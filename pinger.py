@@ -18,7 +18,7 @@ import urllib.error
 import urllib.request
 from datetime import datetime
 
-DEFAULT_INTERVAL = 15  # seconds
+DEFAULT_INTERVAL = 5  # seconds
 
 
 def get_target_url():
