@@ -154,7 +154,7 @@ if SERVERLESS:
         SESSION_COOKIE_SECURE=True,  # the deployment is HTTPS-only
     )
 
-    if app.config["SQLALCHEMY_DATABASE_URI"].startswith("postgresql://"):
+    if app.config["SQLALCHEMY_DATABASE_URI"].startswith("postgresql"):
         # A frozen instance cannot keep a connection warm, and handing a pooled
         # connection to the next invocation gives a dead socket. Let the
         # Supabase pooler do the pooling and open a fresh connection per
