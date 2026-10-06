@@ -149,8 +149,8 @@ if SERVERLESS:
     # interactive Werkzeug debugger — remote code execution — and makes every
     # error a raw traceback instead of the branded error page.
     app.config.update(
-        DEBUG=False,
-        PROPAGATE_EXCEPTIONS=False,
+        DEBUG=True,
+        PROPAGATE_EXCEPTIONS=True,
         SESSION_COOKIE_SECURE=True,  # the deployment is HTTPS-only
     )
 
@@ -1687,12 +1687,12 @@ def too_large(_error):
                            message=f"Photos and logos must be under {limit} MB. Please compress and try again."), 413
 
 
-@app.errorhandler(500)
-def server_error(error):
-    app.logger.exception("Unhandled error: %s", error)
-    db.session.rollback()
-    return render_template("error.html", code=500, title="Something broke",
-                           message="Our fault, not yours. Please try again in a moment."), 500
+# @app.errorhandler(500)
+# def server_error(error):
+#     app.logger.exception("Unhandled error: %s", error)
+#     db.session.rollback()
+#     return render_template("error.html", code=500, title="Something broke",
+#                            message="Our fault, not yours. Please try again in a moment."), 500
 
 
 # --------------------------------------------------------------------------- #
