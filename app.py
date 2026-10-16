@@ -429,7 +429,7 @@ def _prepare_upload_folders():
     for folder in ("UPLOAD_FOLDER", "TEAM_LOGO_FOLDER", "OWNER_PHOTO_FOLDER"):
         try:
             os.makedirs(app.config[folder], exist_ok=True)
-        except OSError as exc:  # read-only bundle on Vercel ΓÇö uploads degrade, see save_upload
+        except OSError as exc:  # read-only bundle on Vercel - uploads degrade, see save_upload
             app.logger.warning("Upload folder %s unavailable: %s", folder, exc)
 
 
@@ -440,7 +440,7 @@ def init_database():
     """Bring the schema up to date once per process, without ever raising.
 
     This used to run at import time. On Vercel that made the whole module
-    un-importable whenever the database was unreachable ΓÇö SQLAlchemy raised
+    un-importable whenever the database was unreachable - SQLAlchemy raised
     while ``api/index.py`` was still executing ``from app import app``, so the
     function crashed with FUNCTION_INVOCATION_FAILED before a single request
     was handled and no traceback ever reached a browser. Doing it on the first
@@ -455,7 +455,7 @@ def init_database():
         with app.app_context():
             db.create_all()
             ensure_schema()
-    except Exception as exc:  # noqa: BLE001 ΓÇö startup must never take the app down
+    except Exception as exc:  # noqa: BLE001 - startup must never take the app down
         app.logger.exception("Database initialisation failed: %s", exc)
 
 
@@ -722,7 +722,7 @@ def has_logo():
 def email_player_registered(player):
     return mailer.send_template(
         to=player.email,
-        subject=f"You're registered ΓÇö {player.sport} ┬╖ {BRAND['name']}",
+        subject=f"You're registered - {player.sport} | {BRAND['name']}",
         template="player_registered",
         context={
             "player": player,
@@ -738,7 +738,7 @@ def email_player_registered(player):
 def email_owner_registered(owner):
     return mailer.send_template(
         to=owner.email,
-        subject=f"{owner.team_name} is registered ΓÇö {BRAND['name']}",
+        subject=f"{owner.team_name} is registered - {BRAND['name']}",
         template="owner_registered",
         context={"owner": owner, "reg_code": owner.reg_code, "brand": get_brand(), "logo_cid": has_logo()},
     )
@@ -762,7 +762,7 @@ def email_player_sold(player, owner, amount):
     )
     mailer.send_template(
         to=owner.email,
-        subject=f"Signed: {player.name} for {rupees(amount)} ΓÇö {owner.team_name}",
+        subject=f"Signed: {player.name} for {rupees(amount)} - {owner.team_name}",
         template="owner_signing",
         context={
             "player": player,
@@ -851,7 +851,7 @@ def register_player(sport):
         if not form["usn"]:
             errors.append("USN is required.")
         if not EMAIL_RE.match(form["email"]):
-            errors.append("Please enter a valid email address ΓÇö your confirmation is sent there.")
+            errors.append("Please enter a valid email address - your confirmation is sent there.")
         if not PHONE_RE.match(form["contact"]):
             errors.append("Contact must be a valid 10-digit mobile number.")
         if form["position"] not in positions:
@@ -971,7 +971,7 @@ def team_owner_registration():
         if not form["usn"]:
             errors.append("Employee ID is required.")
         if not EMAIL_RE.match(form["email"]):
-            errors.append("Please enter a valid email address ΓÇö your confirmation is sent there.")
+            errors.append("Please enter a valid email address - your confirmation is sent there.")
         if not PHONE_RE.match(form["contact"]):
             errors.append("Contact must be a valid 10-digit mobile number.")
         if form["manager_contact_number"] and not PHONE_RE.match(form["manager_contact_number"]):
@@ -1380,7 +1380,7 @@ def admin_mail_test():
     status = mailer.status()
     ok, detail = mailer.send_now(
         to=recipient,
-        subject=f"SMTP test ΓÇö {BRAND['name']} event management system",
+        subject=f"SMTP test - {BRAND['name']} event management system",
         template="test_mail",
         context={
             "brand": get_brand(),
@@ -1393,7 +1393,7 @@ def admin_mail_test():
         },
     )
     flash(
-        f"Test mail to {recipient}: {detail}" if ok else f"Test mail failed ΓÇö {detail}",
+        f"Test mail to {recipient}: {detail}" if ok else f"Test mail failed - {detail}",
         "success" if ok else "error",
     )
     return redirect(url_for("admin_dashboard"))
@@ -1661,7 +1661,7 @@ def owner_rows(owners):
 
 def excel_response(sheets, filename):
     """``sheets`` is a list of ``(sheet_name, list-of-dict-rows)``."""
-    import xlsxwriter  # lazy import ΓÇö keeps cold start fast
+    import xlsxwriter  # lazy import - keeps cold start fast
 
     output = BytesIO()
     workbook = xlsxwriter.Workbook(output, {"in_memory": True})
