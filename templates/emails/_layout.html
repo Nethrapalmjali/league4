@@ -3,10 +3,10 @@
 
   Email-client rules obeyed here on purpose:
     * table-based layout only (no flex/grid, Outlook ignores them)
-    * every style inlined (Gmail strips <style> in some clients)
+    * every style inlined (Gmail strips style tags in some clients)
     * 600px max width, fluid below that
     * gradients declared with a solid background-color fallback for Outlook
-    * the emblem is an inline cid: attachment so image blockers don't gut it
+    * the emblem uses a direct HTTPS URL so email clients load it immediately
 #}
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en">
