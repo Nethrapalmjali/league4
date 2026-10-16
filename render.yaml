@@ -26,6 +26,12 @@ services:
         value: sb_publishable_zujftvHxzH1EuxAXwc9RRA_62_6kRUC
       - key: SUPABASE_BUCKET
         value: gml-media
+      - key: RESEND_API_KEY
+        sync: false
+      - key: RESEND_FROM
+        sync: false
+      - key: BREVO_API_KEY
+        sync: false
       - key: MAIL_ENABLED
         value: "true"
       - key: MAIL_SERVER

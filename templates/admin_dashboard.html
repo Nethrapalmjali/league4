@@ -421,18 +421,16 @@
                 <span class="badge badge--info">{{ mail_status.mode }}</span>
               {% endif %}
             </dd>
+            <dt>Provider</dt><dd>{{ mail_status.provider or 'SMTP' }}</dd>
             <dt>Server</dt><dd>{{ mail_status.server }}</dd>
             <dt>Security</dt><dd>{{ mail_status.security }}</dd>
             <dt>Account</dt><dd>{{ mail_status.username }}</dd>
             <dt>From</dt><dd>{{ mail_status.sender }}</dd>
           </dl>
 
-          {% if 'outbox' in mail_status.mode %}
-            <div class="callout" style="margin-top:1.1rem;">
-              <strong>No credentials yet.</strong> Mail is being written to the
-              <code>outbox/</code> folder as <code>.eml</code> files instead of being sent.
-              Fill <code>MAIL_USERNAME</code> and <code>MAIL_PASSWORD</code> in <code>.env</code>
-              and restart to go live.
+          {% if mail_status.last_error %}
+            <div class="callout" style="margin-top:1.1rem; color:#842029; background-color:#f8d7da; border-color:#f5c2c7; padding:0.75rem 1rem; border-radius:6px; font-size:0.86rem;">
+              <strong>Last delivery error:</strong> {{ mail_status.last_error }}
             </div>
           {% endif %}
         </div>

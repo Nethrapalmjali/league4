@@ -202,6 +202,9 @@ if SERVERLESS:
 app.config.update(
     MAIL_ENABLED=env_bool("MAIL_ENABLED", True),
     MAIL_SUPPRESS_SEND=env_bool("MAIL_SUPPRESS_SEND", False),
+    RESEND_API_KEY=env_str("RESEND_API_KEY"),
+    RESEND_FROM=env_str("RESEND_FROM"),
+    BREVO_API_KEY=env_str("BREVO_API_KEY"),
     MAIL_SERVER=env_str("MAIL_SERVER", "smtp.gmail.com"),
     MAIL_PORT=env_int("MAIL_PORT", 587),
     MAIL_USE_TLS=env_bool("MAIL_USE_TLS", True),
@@ -217,6 +220,7 @@ app.config.update(
     MAIL_WORKERS=env_int("MAIL_WORKERS", 2),
     MAIL_LOGO_PATH=os.path.join(app.root_path, "static", "logos", env_str("MAIL_LOGO_FILE", "gmulogo1.png")),
 )
+
 
 # ---- Branding (drives every page title, header and email) -----------------
 BRAND = {
