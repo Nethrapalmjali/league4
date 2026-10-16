@@ -205,6 +205,7 @@ app.config.update(
     RESEND_API_KEY=env_str("RESEND_API_KEY"),
     RESEND_FROM=env_str("RESEND_FROM"),
     BREVO_API_KEY=env_str("BREVO_API_KEY"),
+    GMAIL_WEBHOOK_URL=env_str("GMAIL_WEBHOOK_URL"),
     MAIL_SERVER=env_str("MAIL_SERVER", "smtp.gmail.com"),
     MAIL_PORT=env_int("MAIL_PORT", 587),
     MAIL_USE_TLS=env_bool("MAIL_USE_TLS", True),

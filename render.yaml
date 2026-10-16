@@ -32,6 +32,8 @@ services:
         sync: false
       - key: BREVO_API_KEY
         sync: false
+      - key: GMAIL_WEBHOOK_URL
+        sync: false
       - key: MAIL_ENABLED
         value: "true"
       - key: MAIL_SERVER

@@ -39,6 +39,8 @@ class Mailer:
         enabled = config.get("MAIL_ENABLED", True)
         if not enabled:
             mode = "disabled"
+        elif config.get("GMAIL_WEBHOOK_URL"):
+            mode = "live (Gmail Webhook)"
         elif config.get("RESEND_API_KEY"):
             mode = "live (Resend API)"
         elif config.get("BREVO_API_KEY"):
@@ -56,7 +58,9 @@ class Mailer:
             security = "TLS"
 
         provider = "SMTP"
-        if config.get("RESEND_API_KEY"):
+        if config.get("GMAIL_WEBHOOK_URL"):
+            provider = "Gmail Webhook"
+        elif config.get("RESEND_API_KEY"):
             provider = "Resend HTTP API"
         elif config.get("BREVO_API_KEY"):
             provider = "Brevo HTTP API"
@@ -158,15 +162,40 @@ class Mailer:
             raise ValueError(f"Invalid recipient email address: '{to}'")
 
         config = self.app.config
+        webhook_url = (config.get("GMAIL_WEBHOOK_URL") or "").strip()
         resend_key = (config.get("RESEND_API_KEY") or "").strip()
         brevo_key = (config.get("BREVO_API_KEY") or "").strip()
 
-        if resend_key:
+        if webhook_url:
+            return self._send_gmail_webhook(clean_to, subject, html_body, txt_body, webhook_url)
+        elif resend_key:
             return self._send_resend(clean_to, subject, html_body, txt_body, resend_key)
         elif brevo_key:
             return self._send_brevo(clean_to, subject, html_body, txt_body, brevo_key)
         else:
             return self._send_smtp(clean_to, subject, html_body, txt_body)
+
+    def _send_gmail_webhook(self, to, subject, html_body, txt_body, webhook_url):
+        payload = {
+            "to": to,
+            "subject": subject,
+            "html": html_body,
+            "text": txt_body,
+        }
+        req = urllib.request.Request(
+            webhook_url,
+            data=json.dumps(payload).encode("utf-8"),
+            headers={
+                "Content-Type": "application/json",
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+            },
+        )
+        try:
+            with urllib.request.urlopen(req, timeout=25) as resp:
+                return f"Sent successfully via Gmail Webhook to {to}"
+        except urllib.error.HTTPError as e:
+            err_body = e.read().decode("utf-8", errors="ignore")
+            raise RuntimeError(f"Gmail Webhook error ({e.code}): {err_body}") from e
 
     def _send_resend(self, to, subject, html_body, txt_body, api_key):
         config = self.app.config
