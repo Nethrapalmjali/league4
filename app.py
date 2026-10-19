@@ -10,6 +10,7 @@ hardcoded here.
 
 from __future__ import annotations
 
+from collections import Counter
 import os
 import re
 import secrets
@@ -1349,24 +1350,96 @@ def admin_logout():
     return redirect(url_for("admin_login"))
 
 
+INSTITUTION_LABELS = {
+    "gmu": "GM University",
+    "gmit": "GMIT",
+    "other": "Others / Foreign",
+}
+
+
+def classify_college(college_name: str | None) -> str:
+    """Classify a player's registered college into 'gmu', 'gmit', or 'other'."""
+    if not college_name:
+        return "other"
+    raw = college_name.strip()
+    c = raw.lower()
+    c_clean = re.sub(r"[^a-z0-9]", "", c)
+
+    # 1. GM University variations
+    if (
+        "gmu" in c_clean
+        or "gmuniversity" in c_clean
+        or "gmunvirsity" in c_clean
+        or "gumuniversity" in c_clean
+        or "umunivarsity" in c_clean
+    ):
+        return "gmu"
+    if "gm" in c_clean and ("univ" in c_clean or "vercity" in c_clean or "unv" in c_clean):
+        return "gmu"
+    if "gmbs" in c_clean:
+        return "gmu"
+
+    # 2. GMIT variations (excluding separate sister institutes like GMIPSR or GM Science)
+    if "pharm" not in c and "science" not in c:
+        if (
+            "gmit" in c_clean
+            or "gminstituteoftech" in c_clean
+            or "gminstitueoftech" in c_clean
+            or c_clean in ("gminstitute", "gminstitue")
+        ):
+            return "gmit"
+        if "gm" in c_clean and "tech" in c_clean:
+            return "gmit"
+    elif "gmit" in c_clean:
+        return "gmit"
+
+    return "other"
+
+
 @app.route("/admin/dashboard")
 @admin_required
 def admin_dashboard():
     players_by_sport = {s: Player.query.filter_by(sport=s).order_by(Player.name).all() for s in SPORTS}
     owners = TeamOwner.query.order_by(TeamOwner.team_name).all()
     sold_players = Player.query.filter_by(sold=True).order_by(Player.bid_amount.desc()).all()
-    all_players = [p for group in players_by_sport.values() for p in group]
+    all_players = Player.query.order_by(Player.name).all()
+
+    for p in all_players:
+        cat = classify_college(p.college_name)
+        p.institution_category = cat
+        p.institution_label = INSTITUTION_LABELS.get(cat, "Others / Foreign")
+
+    inst_counts = {
+        "all": len(all_players),
+        "gmu": sum(1 for p in all_players if p.institution_category == "gmu"),
+        "gmit": sum(1 for p in all_players if p.institution_category == "gmit"),
+        "other": sum(1 for p in all_players if p.institution_category == "other"),
+    }
+
+    other_players = [p for p in all_players if p.institution_category == "other"]
+    other_colleges_summary = Counter(p.college_name.strip() for p in other_players if p.college_name).most_common(14)
+
     return render_template(
         "admin_dashboard.html",
         players_by_sport=players_by_sport,
         owners=owners,
         sold_players=sold_players,
+        all_players=all_players,
         total_players=len(all_players),
+        inst_counts=inst_counts,
+        other_colleges_summary=other_colleges_summary,
         missing_email=sum(1 for p in all_players if not p.email),
         spent=sum(p.bid_amount or 0 for p in sold_players),
         remaining=sum(o.budget or 0 for o in owners),
         mail_status=mailer.status(),
     )
+
+
+@app.route("/admin/institutions")
+@admin_required
+def admin_institutions():
+    return redirect(url_for("admin_dashboard") + "#institutions")
+
 
 
 @app.route("/admin/mail_test", methods=["POST"])
@@ -1620,11 +1693,12 @@ def player_rows(players):
         {
             "Entry ID": p.reg_code,
             "Name": p.name,
+            "Institution": INSTITUTION_LABELS.get(classify_college(p.college_name), "Others / Foreign"),
+            "College": p.college_name or "N/A",
             "USN": p.usn or "N/A",
             "Email": p.email or "N/A",
             "Contact": p.contact or "N/A",
             "Branch": p.branch or "N/A",
-            "College": p.college_name or "N/A",
             "Sport": p.sport,
             "Position": p.position or "N/A",
             "Category": p.gender or "N/A",
@@ -1671,7 +1745,8 @@ def excel_response(sheets, filename):
         # Union of keys in first-seen order: the column layout the row builders
         # above already imply, without needing pandas to infer it.
         columns = list(dict.fromkeys(key for row in rows for key in row))
-        worksheet = workbook.add_worksheet(sheet_name[:31])
+        clean_name = re.sub(r"[\[\]:*?/\\]", "_", sheet_name)[:31]
+        worksheet = workbook.add_worksheet(clean_name)
         worksheet.write_row(0, 0, columns, header_style)
         for row_index, row in enumerate(rows, start=1):
             for column_index, column in enumerate(columns):
@@ -1713,6 +1788,31 @@ def export_all_summaries():
 def export_owners():
     owners = TeamOwner.query.order_by(TeamOwner.team_name).all()
     return excel_response([("Team Owners", owner_rows(owners))], f"{BRAND['short']}_Team_Owners.xlsx")
+
+
+@app.route("/export_institution/<category>")
+@admin_required
+def export_institution(category):
+    category = (category or "").lower()
+    all_players = Player.query.order_by(Player.name).all()
+
+    if category == "all":
+        sheets = [
+            ("GM University", player_rows([p for p in all_players if classify_college(p.college_name) == "gmu"])),
+            ("GMIT", player_rows([p for p in all_players if classify_college(p.college_name) == "gmit"])),
+            ("Others & Foreign", player_rows([p for p in all_players if classify_college(p.college_name) == "other"])),
+        ]
+        return excel_response(sheets, f"{BRAND['short']}_Institutions_Breakdown.xlsx")
+
+    if category not in ("gmu", "gmit", "other"):
+        flash("Invalid institution category.", "error")
+        return redirect(url_for("admin_dashboard") + "#institutions")
+
+    label = INSTITUTION_LABELS[category].replace(" / ", "_").replace(" ", "_")
+    sheet_title = INSTITUTION_LABELS[category].replace("/", "&")
+    filtered = [p for p in all_players if classify_college(p.college_name) == category]
+    return excel_response([(sheet_title, player_rows(filtered))], f"{BRAND['short']}_{label}_Players.xlsx")
+
 
 
 # --------------------------------------------------------------------------- #

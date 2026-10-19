@@ -125,7 +125,34 @@
   <nav class="sidebar__nav">
     <button type="button" class="nav-item is-active" data-target="overview">Overview</button>
 
-    <div class="sidebar__label">Player data</div>
+    <div class="sidebar__label">College Analytics</div>
+    <button type="button" class="nav-item" data-target="institutions" data-inst-filter="all">
+      <span>All Colleges</span>
+      <span class="nav-item__count">{{ total_players }}</span>
+    </button>
+    <button type="button" class="nav-item nav-item--sub" data-target="institutions" data-inst-filter="gmu">
+      <span style="display:flex; align-items:center; gap:0.4rem;">
+        <span class="dot dot--gmu"></span>
+        GM University
+      </span>
+      <span class="nav-item__count badge-pill-gmu">{{ inst_counts.gmu }}</span>
+    </button>
+    <button type="button" class="nav-item nav-item--sub" data-target="institutions" data-inst-filter="gmit">
+      <span style="display:flex; align-items:center; gap:0.4rem;">
+        <span class="dot dot--gmit"></span>
+        GMIT
+      </span>
+      <span class="nav-item__count badge-pill-gmit">{{ inst_counts.gmit }}</span>
+    </button>
+    <button type="button" class="nav-item nav-item--sub" data-target="institutions" data-inst-filter="other">
+      <span style="display:flex; align-items:center; gap:0.4rem;">
+        <span class="dot dot--other"></span>
+        Others / Foreign
+      </span>
+      <span class="nav-item__count badge-pill-other">{{ inst_counts.other }}</span>
+    </button>
+
+    <div class="sidebar__label">Player data by sport</div>
     {% for sport in sports %}
       <button type="button" class="nav-item" data-target="{{ sport|lower }}">
         <span>{{ sport }}</span>
@@ -142,6 +169,7 @@
 
     <div class="sidebar__label">Exports</div>
     <a class="nav-item icon-text" href="{{ url_for('export_all_summaries') }}">{{ ico.icon('download', 16) }} All summaries</a>
+    <a class="nav-item icon-text" href="{{ url_for('export_institution', category='all') }}">{{ ico.icon('download', 16) }} College breakdown</a>
     <a class="nav-item icon-text" href="{{ url_for('export_owners') }}">{{ ico.icon('download', 16) }} Team owners</a>
 
     <div class="sidebar__label">Live auction desk</div>
@@ -223,6 +251,42 @@
       </div>
     </div>
 
+    <!-- Institutional Representation Summary in Overview -->
+    <div class="card" style="margin-bottom:1.5rem; border-left:4px solid var(--gold); background: #fdfbf7;">
+      <div class="card__head" style="background:transparent; border-bottom:1px solid #fae8c8;">
+        <div>
+          <div class="card__title" style="display:flex; align-items:center; gap:0.5rem;">
+            <span>🏛️</span> Institutional Athlete Representation
+          </div>
+          <div style="font-size:0.8rem; color:var(--muted); margin-top:0.2rem;">
+            Counts of registered athletes from GM University, GMIT, and External / Foreign Colleges
+          </div>
+        </div>
+        <button type="button" class="btn btn--gold btn--sm" onclick="window.activateInstFilter && window.activateInstFilter('all');">
+          Open College Analytics &rarr;
+        </button>
+      </div>
+      <div class="card__body" style="padding:1rem 1.25rem;">
+        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:1rem;">
+          <div style="background:#fff; border:1px solid #fae8c8; border-radius:8px; padding:0.9rem 1.1rem; border-top:3px solid #d4af37; cursor:pointer;" onclick="window.activateInstFilter && window.activateInstFilter('gmu');">
+            <div style="font-size:0.7rem; font-weight:800; color:#855800; text-transform:uppercase; letter-spacing:1px;">GM University (GMU)</div>
+            <div style="font-size:1.75rem; font-weight:900; color:#855800; margin:0.2rem 0;">{{ inst_counts.gmu }}</div>
+            <div style="font-size:0.75rem; color:var(--muted);">{{ '%.1f'|format((inst_counts.gmu / total_players * 100) if total_players else 0) }}% · Host University Campus</div>
+          </div>
+          <div style="background:#fff; border:1px solid #e0f2fe; border-radius:8px; padding:0.9rem 1.1rem; border-top:3px solid #0284c7; cursor:pointer;" onclick="window.activateInstFilter && window.activateInstFilter('gmit');">
+            <div style="font-size:0.7rem; font-weight:800; color:#0369a1; text-transform:uppercase; letter-spacing:1px;">GMIT (Technology)</div>
+            <div style="font-size:1.75rem; font-weight:900; color:#0369a1; margin:0.2rem 0;">{{ inst_counts.gmit }}</div>
+            <div style="font-size:0.75rem; color:var(--muted);">{{ '%.1f'|format((inst_counts.gmit / total_players * 100) if total_players else 0) }}% · Engineering &amp; Technology</div>
+          </div>
+          <div style="background:#fff; border:1px solid #f3e8ff; border-radius:8px; padding:0.9rem 1.1rem; border-top:3px solid #7c3aed; cursor:pointer;" onclick="window.activateInstFilter && window.activateInstFilter('other');">
+            <div style="font-size:0.7rem; font-weight:800; color:#6b21a8; text-transform:uppercase; letter-spacing:1px;">Others / Foreign</div>
+            <div style="font-size:1.75rem; font-weight:900; color:#6b21a8; margin:0.2rem 0;">{{ inst_counts.other }}</div>
+            <div style="font-size:0.75rem; color:var(--muted);">{{ '%.1f'|format((inst_counts.other / total_players * 100) if total_players else 0) }}% · External Institutions</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <div class="grid-2">
       <div class="card">
         <div class="card__head"><div class="card__title">Registrations by sport</div></div>
@@ -286,6 +350,269 @@
               <a href="{{ url_for('bidding', sport=sport|lower, gender='female') }}" class="btn btn--ghost btn--sm">{{ sport }} (Women)</a>
             {% endif %}
           {% endfor %}
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================== INSTITUTIONS & COLLEGES ============================== -->
+  <section id="institutions" class="section">
+    <!-- Header banner -->
+    <div class="card" style="margin-bottom: 1.5rem; background: linear-gradient(135deg, #2b0b0e 0%, #4a151b 100%); color: #fff; padding: 1.5rem 1.8rem; border-radius: var(--radius); border: 1px solid rgba(212,175,55,0.3); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+      <div>
+        <div style="display:flex; align-items:center; gap:0.6rem; margin-bottom:0.35rem;">
+          <span style="font-size:1.5rem;">🏛️</span>
+          <h2 style="font-size:1.45rem; font-weight:900; color:var(--gold-light); margin:0;">College &amp; Foreign Player Breakdown</h2>
+        </div>
+        <p style="margin:0; font-size:0.88rem; color:rgba(255,255,255,0.85); max-width:720px;">
+          Comprehensive institutional breakdown of all {{ total_players }} registered athletes. Filter specifically for <strong>GM University</strong>, <strong>GMIT</strong>, or <strong>External / Foreign colleges</strong> with live counts, instant search, and Excel export.
+        </p>
+      </div>
+      <div style="display:flex; gap:0.6rem; flex-wrap:wrap; align-items:center;">
+        <a href="{{ url_for('export_institution', category='all') }}" class="btn btn--gold btn--sm">
+          {{ ico.icon('download', 15) }} Export Breakdown (Excel)
+        </a>
+      </div>
+    </div>
+
+    <!-- Stat Cards Row -->
+    <div class="stat-row" style="margin-bottom: 1.5rem;">
+      <div class="stat-card" style="border-top-color: var(--gold); cursor: pointer;" onclick="filterInstitution('all')" title="Click to view all players">
+        <div class="stat-card__label">Total Registered</div>
+        <div class="stat-card__value">{{ inst_counts.all }}</div>
+        <div class="stat-card__note">100% of all registered athletes</div>
+      </div>
+      <div class="stat-card stat-card--gmu" style="cursor: pointer;" onclick="filterInstitution('gmu')" title="Click to filter GM University players">
+        <div class="stat-card__label" style="color:#855800;">GM University (GMU)</div>
+        <div class="stat-card__value" style="color:#855800;">{{ inst_counts.gmu }}</div>
+        <div class="stat-card__note">{{ '%.1f'|format((inst_counts.gmu / inst_counts.all * 100) if inst_counts.all else 0) }}% · Host University Campus</div>
+      </div>
+      <div class="stat-card stat-card--gmit" style="cursor: pointer;" onclick="filterInstitution('gmit')" title="Click to filter GMIT players">
+        <div class="stat-card__label" style="color:#0369a1;">GMIT (Institute of Tech)</div>
+        <div class="stat-card__value" style="color:#0369a1;">{{ inst_counts.gmit }}</div>
+        <div class="stat-card__note">{{ '%.1f'|format((inst_counts.gmit / inst_counts.all * 100) if inst_counts.all else 0) }}% · Engineering &amp; Technology</div>
+      </div>
+      <div class="stat-card stat-card--other" style="cursor: pointer;" onclick="filterInstitution('other')" title="Click to filter Others &amp; Foreign players">
+        <div class="stat-card__label" style="color:#6b21a8;">Others &amp; Foreign</div>
+        <div class="stat-card__value" style="color:#6b21a8;">{{ inst_counts.other }}</div>
+        <div class="stat-card__note">{{ '%.1f'|format((inst_counts.other / inst_counts.all * 100) if inst_counts.all else 0) }}% · Outside &amp; Foreign Institutions</div>
+      </div>
+    </div>
+
+    <!-- Quick Insights: Proportional Bar & Top External Colleges -->
+    <div class="grid-2" style="margin-bottom: 1.5rem;">
+      <div class="card" style="margin-bottom:0;">
+        <div class="card__head">
+          <div class="card__title">Athlete Distribution Ratio</div>
+          <span style="font-size:0.8rem; color:var(--muted);">Total: {{ inst_counts.all }} athletes</span>
+        </div>
+        <div class="card__body">
+          <div style="height: 18px; border-radius: 9px; overflow: hidden; display: flex; background: #e5e7eb; box-shadow: inset 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 1rem;">
+            <div style="width: {{ (inst_counts.gmu / inst_counts.all * 100) if inst_counts.all else 0 }}%; background: #d4af37;" title="GM University: {{ inst_counts.gmu }} ({{ '%.1f'|format((inst_counts.gmu / inst_counts.all * 100) if inst_counts.all else 0) }}%)"></div>
+            <div style="width: {{ (inst_counts.gmit / inst_counts.all * 100) if inst_counts.all else 0 }}%; background: #0284c7;" title="GMIT: {{ inst_counts.gmit }} ({{ '%.1f'|format((inst_counts.gmit / inst_counts.all * 100) if inst_counts.all else 0) }}%)"></div>
+            <div style="width: {{ (inst_counts.other / inst_counts.all * 100) if inst_counts.all else 0 }}%; background: #7c3aed;" title="Others / Foreign: {{ inst_counts.other }} ({{ '%.1f'|format((inst_counts.other / inst_counts.all * 100) if inst_counts.all else 0) }}%)"></div>
+          </div>
+          <div style="display:flex; justify-content:space-between; flex-wrap:wrap; gap:0.5rem; font-size:0.82rem;">
+            <div style="display:flex; align-items:center; gap:0.4rem;">
+              <span class="dot dot--gmu"></span>
+              <strong>GM University:</strong> {{ inst_counts.gmu }} ({{ '%.1f'|format((inst_counts.gmu / inst_counts.all * 100) if inst_counts.all else 0) }}%)
+            </div>
+            <div style="display:flex; align-items:center; gap:0.4rem;">
+              <span class="dot dot--gmit"></span>
+              <strong>GMIT:</strong> {{ inst_counts.gmit }} ({{ '%.1f'|format((inst_counts.gmit / inst_counts.all * 100) if inst_counts.all else 0) }}%)
+            </div>
+            <div style="display:flex; align-items:center; gap:0.4rem;">
+              <span class="dot dot--other"></span>
+              <strong>Others &amp; Foreign:</strong> {{ inst_counts.other }} ({{ '%.1f'|format((inst_counts.other / inst_counts.all * 100) if inst_counts.all else 0) }}%)
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-bottom:0;">
+        <div class="card__head">
+          <div class="card__title">Top Outside / Foreign Colleges</div>
+          <span style="font-size:0.8rem; color:var(--muted);">Click chip to search</span>
+        </div>
+        <div class="card__body">
+          <div style="display:flex; flex-wrap:wrap; gap:0.45rem;">
+            {% for c_name, c_cnt in other_colleges_summary %}
+              <button type="button" class="btn btn--ghost btn--sm" style="font-size:0.75rem; padding:0.25rem 0.6rem; border-radius:6px; cursor:pointer;" onclick="setCollegeSearch('{{ c_name }}')" title="Filter by {{ c_name }}">
+                {{ c_name }} <span style="background:rgba(0,0,0,0.08); padding:0.1rem 0.35rem; border-radius:4px; font-weight:800; margin-left:0.2rem;">{{ c_cnt }}</span>
+              </button>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Main Filterable Player List Card -->
+    <div class="card">
+      <div class="card__head" style="flex-direction:column; align-items:stretch; gap:1rem;">
+        <!-- Filter Tabs / Pills & Bulk delete -->
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.8rem;">
+          <div class="filter-pills" id="inst-pills">
+            <button type="button" class="filter-pill is-active" data-inst="all" onclick="filterInstitution('all')">
+              <span>All Institutions</span>
+              <span class="pill-count">{{ inst_counts.all }}</span>
+            </button>
+            <button type="button" class="filter-pill" data-inst="gmu" onclick="filterInstitution('gmu')">
+              <span>🏛️ GM University</span>
+              <span class="pill-count" style="background:#fef3c7; color:#92400e;">{{ inst_counts.gmu }}</span>
+            </button>
+            <button type="button" class="filter-pill" data-inst="gmit" onclick="filterInstitution('gmit')">
+              <span>⚙️ GMIT</span>
+              <span class="pill-count" style="background:#e0f2fe; color:#0369a1;">{{ inst_counts.gmit }}</span>
+            </button>
+            <button type="button" class="filter-pill" data-inst="other" onclick="filterInstitution('other')">
+              <span>🌍 Others &amp; Foreign</span>
+              <span class="pill-count" style="background:#f3e8ff; color:#6b21a8;">{{ inst_counts.other }}</span>
+            </button>
+          </div>
+
+          <div style="display:flex; gap:0.5rem; align-items:center; flex-wrap:wrap;">
+            <a id="btn-export-current-inst" href="{{ url_for('export_institution', category='all') }}" class="btn btn--gold btn--sm">
+              {{ ico.icon('download', 14) }} Export All Institutions (Excel)
+            </a>
+            <button type="button" class="btn btn--danger btn--sm" data-bulk="players" data-scope="institutions" disabled>
+              Delete selected (<span data-count="institutions">0</span>)
+            </button>
+          </div>
+        </div>
+
+        <!-- Secondary Toolbar: Search, Sport & Status dropdowns, Count indicator -->
+        <div style="display:flex; gap:0.75rem; flex-wrap:wrap; align-items:center; background:#fff; padding:0.6rem 0.8rem; border-radius:8px; border:1px solid var(--line);">
+          <div style="flex:1; min-width:220px;">
+            <input type="search" id="inst-search-input" class="search" style="width:100%;" placeholder="Search athlete name, college name, USN, branch, position…">
+          </div>
+          <div style="display:flex; align-items:center; gap:0.4rem;">
+            <label for="inst-sport-select" style="font-size:0.78rem; font-weight:700; color:var(--muted); white-space:nowrap;">Sport:</label>
+            <select id="inst-sport-select" style="padding:0.4rem 0.7rem; border-radius:6px; border:1px solid var(--line); font-size:0.82rem; font-weight:600; background:#fff; color:var(--ink);">
+              <option value="all">All Sports</option>
+              {% for s in sports %}
+                <option value="{{ s|lower }}">{{ s }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div style="display:flex; align-items:center; gap:0.4rem;">
+            <label for="inst-status-select" style="font-size:0.78rem; font-weight:700; color:var(--muted); white-space:nowrap;">Status:</label>
+            <select id="inst-status-select" style="padding:0.4rem 0.7rem; border-radius:6px; border:1px solid var(--line); font-size:0.82rem; font-weight:600; background:#fff; color:var(--ink);">
+              <option value="all">All Statuses</option>
+              <option value="open">In Pool</option>
+              <option value="sold">Sold</option>
+            </select>
+          </div>
+          <div style="font-size:0.82rem; font-weight:700; color:var(--muted); margin-left:auto; white-space:nowrap;">
+            Showing <span id="inst-visible-count" style="color:var(--maroon); font-weight:900;">{{ total_players }}</span> of {{ total_players }} players
+          </div>
+        </div>
+      </div>
+
+      <div class="card__body card__body--flush">
+        <div class="table-wrap">
+          <table data-table="institutions" id="inst-table">
+            <thead>
+              <tr>
+                <th style="width:34px;"><input type="checkbox" class="rowcheck" data-selectall="institutions" aria-label="Select all"></th>
+                <th>Photo</th>
+                <th>Entry ID</th>
+                <th>Name</th>
+                <th>Institution</th>
+                <th>College as Registered</th>
+                <th>Sport</th>
+                <th>Category</th>
+                <th>USN</th>
+                <th>Contact</th>
+                <th>Email</th>
+                <th>Branch</th>
+                <th>Position</th>
+                <th>Status</th>
+                <th>Bid</th>
+                <th>Team</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for player in all_players %}
+              <tr data-row 
+                  data-inst="{{ player.institution_category }}" 
+                  data-sport="{{ player.sport|lower }}"
+                  data-status="{{ 'sold' if player.sold else 'open' }}"
+                  data-text="{{ (player.name ~ ' ' ~ (player.college_name or '') ~ ' ' ~ (player.usn or '') ~ ' ' ~ (player.email or '') ~ ' ' ~ (player.branch or '') ~ ' ' ~ (player.sport or '') ~ ' ' ~ (player.sold_to or '') ~ ' ' ~ player.institution_label)|lower }}">
+                <td><input type="checkbox" class="rowcheck" data-scope="institutions" value="{{ player.id }}" aria-label="Select {{ player.name }}"></td>
+                <td>
+                  {% if player.photo %}
+                    <img src="{{ media_url(player.photo) }}" class="thumb" alt="{{ player.name }}" loading="lazy">
+                  {% else %}
+                    <div class="thumb thumb--empty">N/A</div>
+                  {% endif %}
+                </td>
+                <td class="cell-mono">{{ player.reg_code }}</td>
+                <td class="cell-strong">{{ player.name }}</td>
+                <td>
+                  {% if player.institution_category == 'gmu' %}
+                    <span class="badge badge--gmu">🏛️ GM University</span>
+                  {% elif player.institution_category == 'gmit' %}
+                    <span class="badge badge--gmit">⚙️ GMIT</span>
+                  {% else %}
+                    <span class="badge badge--other">🌍 Others / Foreign</span>
+                  {% endif %}
+                </td>
+                <td class="cell-strong" style="max-width:220px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="{{ player.college_name or '—' }}">
+                  {{ player.college_name or '—' }}
+                </td>
+                <td><span class="badge badge--gold">{{ player.sport }}</span></td>
+                <td>{{ 'Women' if player.gender == 'Female' else 'Men' }}</td>
+                <td class="cell-mono">{{ player.usn or '—' }}</td>
+                <td class="cell-mono">{{ player.contact or '—' }}</td>
+                <td class="cell-wrap">
+                  {% if player.email %}
+                    <a href="mailto:{{ player.email }}">{{ player.email }}</a>
+                  {% else %}
+                    <span class="badge badge--warn">missing</span>
+                  {% endif %}
+                </td>
+                <td>{{ player.branch or '—' }}</td>
+                <td>{{ player.position or '—' }}</td>
+                <td>
+                  {% if player.sold %}
+                    <span class="badge badge--sold">Sold</span>
+                  {% else %}
+                    <span class="badge badge--open">In pool</span>
+                  {% endif %}
+                </td>
+                <td class="cell-strong">{{ '₹ {:,}'.format(player.bid_amount) if player.bid_amount else '—' }}</td>
+                <td>{{ player.sold_to or '—' }}</td>
+                <td>
+                  <div class="row-actions">
+                    <a href="{{ url_for('admin_edit_player', id=player.id) }}" class="link-btn link-btn--edit">Edit</a>
+                    {% if player.email %}
+                    <form method="POST" action="{{ url_for('admin_resend_confirmation', kind='player', record_id=player.id) }}">
+                      <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                      <button type="submit" class="link-btn link-btn--mail" title="Re-send confirmation email">Email</button>
+                    </form>
+                    {% endif %}
+                    {% if player.sold %}
+                    <form method="POST" action="{{ url_for('admin_reset_bid', player_id=player.id) }}"
+                          onsubmit="return confirm('Reset the bid for {{ player.name }}? The purse will be refunded to {{ player.sold_to }}.');">
+                      <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                      <button type="submit" class="link-btn link-btn--warn">Reset bid</button>
+                    </form>
+                    {% endif %}
+                    <form method="POST" action="{{ url_for('admin_delete_player', id=player.id) }}"
+                          onsubmit="return confirm('Delete {{ player.name }} permanently?');">
+                      <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                      <button type="submit" class="link-btn link-btn--del">Delete</button>
+                    </form>
+                  </div>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+          <div id="inst-empty-msg" class="empty" style="display:none;">
+            No players match the selected filters.
+          </div>
         </div>
       </div>
     </div>
@@ -498,16 +825,112 @@
 
     function activate(target) {
       sections.forEach(s => s.classList.toggle('is-active', s.id === target));
-      navButtons.forEach(b => b.classList.toggle('is-active', b.dataset.target === target));
+      navButtons.forEach(b => {
+        if (b.dataset.target !== target) {
+          b.classList.remove('is-active');
+        } else if (!b.dataset.instFilter) {
+          b.classList.add('is-active');
+        }
+      });
       if (isMobile()) body.classList.remove('sidebar-open');
       history.replaceState(null, '', '#' + target);
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
-    navButtons.forEach(button => button.addEventListener('click', () => activate(button.dataset.target)));
+    navButtons.forEach(button => {
+      if (!button.dataset.instFilter) {
+        button.addEventListener('click', () => activate(button.dataset.target));
+      }
+    });
+
+    /* ------------------------------------------- institution filtering */
+    let activeInst = 'all';
+    const exportBaseUrl = "{{ url_for('export_institution', category='all') }}".replace('/all', '');
+    const exportBtn = document.getElementById('btn-export-current-inst');
+    const instSearch = document.getElementById('inst-search-input');
+    const instSport = document.getElementById('inst-sport-select');
+    const instStatus = document.getElementById('inst-status-select');
+    const instVisibleLabel = document.getElementById('inst-visible-count');
+    const instEmptyMsg = document.getElementById('inst-empty-msg');
+    const instTable = document.getElementById('inst-table');
+
+    function applyInstFilters() {
+      if (!instTable) return;
+      const term = (instSearch ? instSearch.value : '').trim().toLowerCase();
+      const sport = instSport ? instSport.value : 'all';
+      const status = instStatus ? instStatus.value : 'all';
+      let visible = 0;
+
+      instTable.querySelectorAll('tbody tr[data-row]').forEach(row => {
+        const matchesInst = (activeInst === 'all' || row.dataset.inst === activeInst);
+        const matchesSport = (sport === 'all' || row.dataset.sport === sport);
+        const matchesStatus = (status === 'all' || row.dataset.status === status);
+        const matchesText = (term === '' || (row.dataset.text && row.dataset.text.includes(term)));
+
+        const show = matchesInst && matchesSport && matchesStatus && matchesText;
+        row.classList.toggle('is-hidden', !show);
+        if (show) visible++;
+      });
+
+      if (instVisibleLabel) instVisibleLabel.textContent = visible;
+      if (instEmptyMsg) instEmptyMsg.style.display = (visible === 0) ? 'block' : 'none';
+      if (exportBtn) {
+        exportBtn.href = `${exportBaseUrl}/${activeInst}`;
+        const labelMap = {
+          all: 'All Institutions',
+          gmu: 'GM University',
+          gmit: 'GMIT',
+          other: 'Others & Foreign'
+        };
+        exportBtn.innerHTML = `{{ ico.icon('download', 14) }} Export ${labelMap[activeInst] || 'Institutions'} (Excel)`;
+      }
+      refresh('institutions');
+    }
+
+    window.filterInstitution = function (cat) {
+      activeInst = cat || 'all';
+      document.querySelectorAll('#inst-pills .filter-pill').forEach(pill => {
+        pill.classList.toggle('is-active', pill.dataset.inst === activeInst);
+      });
+      document.querySelectorAll('.nav-item[data-inst-filter]').forEach(btn => {
+        btn.classList.toggle('is-active', btn.dataset.instFilter === activeInst);
+      });
+      applyInstFilters();
+    };
+
+    window.activateInstFilter = function (cat) {
+      activate('institutions');
+      window.filterInstitution(cat);
+    };
+
+    window.setCollegeSearch = function (collegeName) {
+      activate('institutions');
+      window.filterInstitution('other');
+      if (instSearch) {
+        instSearch.value = collegeName;
+        applyInstFilters();
+      }
+    };
+
+    if (instSearch) instSearch.addEventListener('input', applyInstFilters);
+    if (instSport) instSport.addEventListener('change', applyInstFilters);
+    if (instStatus) instStatus.addEventListener('change', applyInstFilters);
+
+    document.querySelectorAll('.nav-item[data-inst-filter]').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        activate('institutions');
+        window.filterInstitution(btn.dataset.instFilter);
+      });
+    });
 
     const initial = location.hash.replace('#', '');
-    if (initial && document.getElementById(initial)) activate(initial);
+    if (initial === 'institutions') {
+      activate('institutions');
+      window.filterInstitution('all');
+    } else if (initial && document.getElementById(initial)) {
+      activate(initial);
+    }
 
     /* ------------------------------------------------------ live search */
     document.querySelectorAll('[data-search]').forEach(input => {
