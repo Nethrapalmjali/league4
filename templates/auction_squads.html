@@ -42,11 +42,11 @@
           <span class="stat__label">Franchises</span>
         </div>
         <div class="stat">
-          <span class="stat__num">₹{{ '{:,}'.format(total_spent) }}</span>
+          <span class="stat__num">{{ total_spent|inr }}</span>
           <span class="stat__label">Total Spend</span>
         </div>
         <div class="stat">
-          <span class="stat__num">₹{{ '{:,}'.format(highest_bid) }}</span>
+          <span class="stat__num">{{ highest_bid|inr }}</span>
           <span class="stat__label">Top Bid</span>
         </div>
       </div>
@@ -102,7 +102,7 @@
               <div style="font-size:0.78rem; color:var(--muted);">{{ p.sport }} · {{ p.sold_to }}</div>
             </div>
             <div style="font-weight:800; color:var(--maroon); font-size:1.05rem; white-space:nowrap;">
-              ₹{{ '{:,}'.format(p.bid_amount or 0) }}
+              {{ (p.bid_amount or 0)|inr }}
             </div>
           </div>
         {% endfor %}
@@ -141,6 +141,11 @@
                 Owner: <strong>{{ owner.name }}</strong>
                 {% if owner.manager_name %} · Manager: {{ owner.manager_name }}{% endif %}
               </div>
+              <div style="display:flex; flex-wrap:wrap; gap:0.35rem; margin-top:0.45rem;">
+                {% for w in owner.wallets %}
+                  <span class="badge badge--gold" style="font-size:0.74rem; padding:0.15rem 0.5rem;">{{ w.label }}: {{ w.balance|inr }}</span>
+                {% endfor %}
+              </div>
             </div>
           </div>
 
@@ -148,7 +153,7 @@
           <div style="display:flex; align-items:center; gap:1.5rem;">
             <div style="text-align:right;">
               <div style="font-size:0.75rem; text-transform:uppercase; letter-spacing:0.05em; color:var(--muted);">Remaining Purse</div>
-              <div style="font-weight:800; font-size:1.15rem; color:var(--maroon);">₹{{ '{:,}'.format(owner.budget or 0) }}</div>
+              <div style="font-weight:800; font-size:1.15rem; color:var(--maroon);">{{ owner.total_balance|inr }}</div>
             </div>
             <div style="text-align:right; border-left:1px solid var(--line); padding-left:1.5rem;">
               <div style="font-size:0.75rem; text-transform:uppercase; letter-spacing:0.05em; color:var(--muted);">Squad Size</div>
@@ -184,7 +189,7 @@
 
                   <div style="display:flex; justify-content:space-between; align-items:center; padding-top:0.5rem; border-top:1px dashed var(--line); margin-top:0.25rem;">
                     <span style="font-size:0.75rem; text-transform:uppercase; letter-spacing:0.04em; color:var(--muted);">Winning Bid</span>
-                    <span style="font-weight:800; font-size:0.98rem; color:var(--maroon);">₹{{ '{:,}'.format(p.bid_amount or 0) }}</span>
+                    <span style="font-weight:800; font-size:0.98rem; color:var(--maroon);">{{ (p.bid_amount or 0)|inr }}</span>
                   </div>
                 </div>
               {% endfor %}

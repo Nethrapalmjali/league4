@@ -317,21 +317,75 @@ POSITIONS = {
     "Kabaddi": ["Raider", "Defender", "All-Rounder"],
     "Badminton": ["Singles", "Doubles"],
 }
-# Football and Kabaddi run only Men's category this season (Women's categories removed)
+# Football and Kabaddi run only Men's category; Basketball and Badminton feature Men's and Women's
 MENS_ONLY_SPORTS = {"Football", "Kabaddi"}
 OWNER_SPORT_OPTIONS = [
-    "Football(Men)",
-    "Basketball(Men)",
-    "Basketball(Women)",
-    "Kabaddi(Men)",
-    "Badminton(Men)",
-    "Badminton(Women)",
+    "Football – Men",
+    "Basketball – Men",
+    "Basketball – Women",
+    "Kabaddi – Men",
+    "Badminton – Men",
+    "Badminton – Women",
 ]
 DEFAULT_BUDGET = env_int("DEFAULT_TEAM_BUDGET", 1000000)
 
 db = SQLAlchemy(app)
 migrate = Migrate(app, db)
 mailer = Mailer(app)
+
+
+def format_inr(number, prefix="₹"):
+    """Format any integer or float into the Indian numbering system (e.g. ₹10,00,000)."""
+    if number is None:
+        return f"{prefix}0" if prefix else "0"
+    try:
+        val = int(round(float(number)))
+    except (ValueError, TypeError):
+        return f"{prefix}0" if prefix else "0"
+
+    is_negative = val < 0
+    s = str(abs(val))
+    if len(s) <= 3:
+        res = s
+    else:
+        last3 = s[-3:]
+        remaining = s[:-3]
+        groups = []
+        while remaining:
+            groups.append(remaining[-2:])
+            remaining = remaining[:-2]
+        groups.reverse()
+        res = ",".join(groups) + "," + last3
+
+    if is_negative:
+        res = "-" + res
+    return f"{prefix}{res}" if prefix else res
+
+
+def rupees(amount):
+    return format_inr(amount, prefix="₹")
+
+
+app.jinja_env.filters["inr"] = lambda v: format_inr(v, prefix="₹")
+app.jinja_env.filters["inr_num"] = lambda v: format_inr(v, prefix="")
+app.jinja_env.globals["rupees"] = rupees
+app.jinja_env.globals["format_inr"] = format_inr
+
+
+def parse_sport_gender(val: str | None) -> tuple[str, str] | tuple[None, None]:
+    """Parse 'Basketball – Men' or 'Basketball(Women)' or 'Basketball' into ('Basketball', 'Men')."""
+    if not val:
+        return None, None
+    val_clean = val.replace("–", "-").replace("—", "-").strip()
+    m = re.match(r"^([a-zA-Z\s]+)(?:[\-\(]\s*(Men|Women|Male|Female)\)?)?$", val_clean, re.IGNORECASE)
+    if m:
+        sport = m.group(1).strip().capitalize()
+        if sport not in SPORTS:
+            return None, None
+        gender_raw = m.group(2)
+        gender = ("Women" if gender_raw.lower() in ("women", "female") else "Men") if gender_raw else "Men"
+        return sport, gender
+    return None, None
 
 
 # --------------------------------------------------------------------------- #
@@ -369,17 +423,25 @@ class TeamOwner(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
     team_name = db.Column(db.String(100), nullable=False, unique=True)
-    sports = db.Column(db.String(200), nullable=False)
+    sports = db.Column(db.String(255), nullable=False)
     budget = db.Column(db.Integer, default=DEFAULT_BUDGET)
     contact = db.Column(db.String(20))
     team_logo = db.Column(db.String(500))
     designation = db.Column(db.String(100))
     email = db.Column(db.String(120))
-    usn = db.Column(db.String(50))  # stores Employee ID (retained column name for database compatibility)
+    usn = db.Column(db.String(50))  # stores Employee ID
     manager_name = db.Column(db.String(100))
     manager_contact_number = db.Column(db.String(20))
     team_owner_photo = db.Column(db.String(500))
     registered_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    wallets = db.relationship(
+        "TeamWallet",
+        backref="owner",
+        cascade="all, delete-orphan",
+        lazy="joined",
+        order_by="TeamWallet.sport, TeamWallet.gender",
+    )
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -396,17 +458,134 @@ class TeamOwner(db.Model):
     def reg_code(self):
         return f"{BRAND['short'].replace(' ', '')}-TM-{self.id:04d}"
 
+    def get_wallet(self, sport, gender):
+        if not sport or not gender:
+            return None
+        norm_sport = sport.strip().capitalize()
+        norm_gender = "Women" if gender.strip().lower() in ("women", "female") else "Men"
+        for w in self.wallets:
+            if w.sport == norm_sport and w.gender == norm_gender:
+                return w
+        return None
+
+    @property
+    def total_allocated_budget(self):
+        if self.wallets:
+            return sum(w.allocated_budget for w in self.wallets)
+        return self.budget or DEFAULT_BUDGET
+
+    @property
+    def total_spent(self):
+        if self.wallets:
+            return sum(w.spent for w in self.wallets)
+        return 0
+
+    @property
+    def total_balance(self):
+        if self.wallets:
+            return sum(w.balance for w in self.wallets)
+        return self.budget or 0
+
+    @property
+    def categories_display(self):
+        """Return a structured list of registered sport-gender categories and wallet details."""
+        if self.wallets:
+            return [
+                {
+                    "label": w.label,
+                    "sport": w.sport,
+                    "gender": w.gender,
+                    "allocated": w.allocated_budget,
+                    "spent": w.spent,
+                    "balance": w.balance,
+                    "allocated_display": format_inr(w.allocated_budget),
+                    "spent_display": format_inr(w.spent),
+                    "balance_display": format_inr(w.balance),
+                }
+                for w in self.wallets
+            ]
+        result = []
+        for s in (self.sports or "").split(","):
+            s = s.strip()
+            if not s:
+                continue
+            sp, gn = parse_sport_gender(s)
+            if sp:
+                lbl = f"{sp} – {gn}"
+                result.append({
+                    "label": lbl,
+                    "sport": sp,
+                    "gender": gn,
+                    "allocated": DEFAULT_BUDGET,
+                    "spent": 0,
+                    "balance": DEFAULT_BUDGET,
+                    "allocated_display": format_inr(DEFAULT_BUDGET),
+                    "spent_display": format_inr(0),
+                    "balance_display": format_inr(DEFAULT_BUDGET),
+                })
+        return result
+
+    def sync_budget_from_wallets(self):
+        if self.wallets:
+            self.budget = sum(w.balance for w in self.wallets)
+
+
+class TeamWallet(db.Model):
+    __tablename__ = "team_wallet"
+    id = db.Column(db.Integer, primary_key=True)
+    team_owner_id = db.Column(db.Integer, db.ForeignKey("team_owner.id", ondelete="CASCADE"), nullable=False)
+    sport = db.Column(db.String(50), nullable=False)
+    gender = db.Column(db.String(20), nullable=False)  # "Men" or "Women"
+    allocated_budget = db.Column(db.Integer, default=DEFAULT_BUDGET, nullable=False)
+    spent = db.Column(db.Integer, default=0, nullable=False)
+    balance = db.Column(db.Integer, default=DEFAULT_BUDGET, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    __table_args__ = (
+        db.UniqueConstraint("team_owner_id", "sport", "gender", name="uq_team_wallet_sport_gender"),
+    )
+
+    @property
+    def label(self):
+        return f"{self.sport} – {self.gender}"
+
+    @property
+    def balance_display(self):
+        return format_inr(self.balance)
+
+    @property
+    def spent_display(self):
+        return format_inr(self.spent)
+
+    @property
+    def allocated_display(self):
+        return format_inr(self.allocated_budget)
+
+
+class WalletTransaction(db.Model):
+    __tablename__ = "wallet_transaction"
+    id = db.Column(db.Integer, primary_key=True)
+    wallet_id = db.Column(db.Integer, db.ForeignKey("team_wallet.id", ondelete="CASCADE"), nullable=False)
+    team_owner_id = db.Column(db.Integer, db.ForeignKey("team_owner.id", ondelete="CASCADE"), nullable=False)
+    player_id = db.Column(db.Integer, db.ForeignKey("player.id", ondelete="SET NULL"), nullable=True)
+    sport = db.Column(db.String(50), nullable=False)
+    gender = db.Column(db.String(20), nullable=False)
+    action = db.Column(db.String(50), nullable=False)  # "INITIAL_ALLOCATION", "BID_PURCHASE", "BID_REFUND", "BUDGET_ADJUSTMENT"
+    amount = db.Column(db.Integer, nullable=False)
+    balance_before = db.Column(db.Integer, nullable=False)
+    balance_after = db.Column(db.Integer, nullable=False)
+    description = db.Column(db.String(255))
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
 
 def ensure_schema():
-    """Add any model column that is missing from an existing SQLite file.
+    """Ensure database tables, columns, and wallet records are up to date."""
+    db.create_all()
 
-    The project ships with a populated ``league.db``; this keeps that data
-    intact when new fields (email, usn, registered_at) are introduced, without
-    forcing anyone to run ``flask db upgrade`` by hand.
-    """
     inspector = sa_inspect(db.engine)
     existing_tables = set(inspector.get_table_names())
-    for model in (Player, TeamOwner):
+    for model in (Player, TeamOwner, TeamWallet, WalletTransaction):
         table = model.__table__
         if table.name not in existing_tables:
             continue
@@ -418,11 +597,75 @@ def ensure_schema():
             app.logger.info("Schema upgrade: adding %s.%s", table.name, column.name)
             with db.engine.begin() as conn:
                 conn.execute(text(f'ALTER TABLE "{table.name}" ADD COLUMN "{column.name}" {ddl}'))
+
     try:
         with db.engine.begin() as conn:
             conn.execute(text('UPDATE player SET unsold = 0 WHERE unsold IS NULL'))
     except Exception:
         pass
+
+    # Migrate / bootstrap wallets for all existing team owners
+    try:
+        owners = TeamOwner.query.all()
+        for owner in owners:
+            if not owner.wallets:
+                sports_tokens = [s.strip() for s in (owner.sports or "").split(",") if s.strip()]
+                seen_counts = {}
+                canonical_categories = []
+                for tok in sports_tokens:
+                    sp, gn = parse_sport_gender(tok)
+                    if not sp:
+                        continue
+                    count = seen_counts.get(sp, 0)
+                    if tok.lower() == sp.lower():
+                        gn = "Men" if count == 0 else "Women"
+                    seen_counts[sp] = count + 1
+
+                    cat_label = f"{sp} – {gn}"
+                    if cat_label not in canonical_categories:
+                        canonical_categories.append(cat_label)
+
+                    w = TeamWallet.query.filter_by(team_owner_id=owner.id, sport=sp, gender=gn).first()
+                    if not w:
+                        w = TeamWallet(
+                            team_owner_id=owner.id,
+                            sport=sp,
+                            gender=gn,
+                            allocated_budget=DEFAULT_BUDGET,
+                            spent=0,
+                            balance=DEFAULT_BUDGET,
+                        )
+                        db.session.add(w)
+                        db.session.flush()
+                        tx = WalletTransaction(
+                            wallet_id=w.id,
+                            team_owner_id=owner.id,
+                            sport=sp,
+                            gender=gn,
+                            action="INITIAL_ALLOCATION",
+                            amount=DEFAULT_BUDGET,
+                            balance_before=0,
+                            balance_after=DEFAULT_BUDGET,
+                            description=f"Initial budget allocation for {cat_label}",
+                        )
+                        db.session.add(tx)
+
+                # Deduct any sold players already signed to this franchise
+                sold_players = Player.query.filter_by(sold_to=owner.team_name, sold=True).all()
+                for p in sold_players:
+                    p_gender = "Women" if p.gender == "Female" else "Men"
+                    w = TeamWallet.query.filter_by(team_owner_id=owner.id, sport=p.sport, gender=p_gender).first()
+                    if w:
+                        w.spent += (p.bid_amount or 0)
+                        w.balance = max(0, w.allocated_budget - w.spent)
+
+                if canonical_categories:
+                    owner.sports = ", ".join(canonical_categories)
+                owner.sync_budget_from_wallets()
+        db.session.commit()
+    except Exception as exc:
+        app.logger.warning("Wallet migration warning: %s", exc)
+        db.session.rollback()
 
 
 def _prepare_upload_folders():
@@ -746,6 +989,10 @@ def email_owner_registered(owner):
 
 
 def email_player_sold(player, owner, amount):
+    cat_gender = "Women" if getattr(player, "gender", None) == "Female" else "Men"
+    wallet = owner.get_wallet(player.sport, cat_gender)
+    cat_budget = wallet.balance if wallet else (owner.budget or 0)
+
     mailer.send_template(
         to=player.email,
         subject=f"SOLD! {owner.team_name} signed you for {rupees(amount)}",
@@ -772,7 +1019,7 @@ def email_player_sold(player, owner, amount):
             "team_name": owner.team_name,
             "category": category_of(player),
             "amount_display": rupees(amount),
-            "budget_display": rupees(owner.budget),
+            "budget_display": rupees(cat_budget),
             "brand": get_brand(),
             "logo_cid": has_logo(),
         },
@@ -1000,15 +1247,52 @@ def team_owner_registration():
                 selected_sports=selected_sports,
             )
 
+        # Parse selected categories into canonical (sport, gender) pairs
+        valid_categories = []
+        for s in selected_sports:
+            sp, gn = parse_sport_gender(s)
+            if sp and (sp, gn) not in valid_categories:
+                valid_categories.append((sp, gn))
+
+        canonical_labels = [f"{sp} – {gn}" for sp, gn in valid_categories]
+
         owner = TeamOwner(
-            sports=",".join(s.split("(")[0].strip() for s in selected_sports),
-            budget=DEFAULT_BUDGET,
+            sports=", ".join(canonical_labels),
+            budget=len(valid_categories) * DEFAULT_BUDGET,
             team_logo=logo_path,
             team_owner_photo=photo_path,
             **form,
         )
         try:
             db.session.add(owner)
+            db.session.flush()
+
+            # Create independent wallets of ₹10,00,000 for each selected category
+            for sp, gn in valid_categories:
+                w = TeamWallet(
+                    team_owner_id=owner.id,
+                    sport=sp,
+                    gender=gn,
+                    allocated_budget=DEFAULT_BUDGET,
+                    spent=0,
+                    balance=DEFAULT_BUDGET,
+                )
+                db.session.add(w)
+                db.session.flush()
+                tx = WalletTransaction(
+                    wallet_id=w.id,
+                    team_owner_id=owner.id,
+                    sport=sp,
+                    gender=gn,
+                    action="INITIAL_ALLOCATION",
+                    amount=DEFAULT_BUDGET,
+                    balance_before=0,
+                    balance_after=DEFAULT_BUDGET,
+                    description=f"Initial purse allocation of ₹10,00,000 for {sp} – {gn}",
+                )
+                db.session.add(tx)
+
+            owner.sync_budget_from_wallets()
             db.session.commit()
         except Exception as exc:
             db.session.rollback()
@@ -1048,15 +1332,25 @@ def registration_success(kind, code):
 @admin_required
 def bidding(sport, gender):
     sport = sport.capitalize()
-    gender = gender.capitalize()
     if sport not in SPORTS:
         flash("That sport is not part of this season.", "error")
-        return redirect(url_for("index"))
-    if gender not in {"Male", "Female"} or (sport in MENS_ONLY_SPORTS and gender == "Female"):
-        flash("That sport and category combination does not exist.", "error")
-        return redirect(url_for("index"))
+        return redirect(url_for("admin_dashboard"))
 
-    effective_gender = "Male" if sport in MENS_ONLY_SPORTS else gender
+    g_raw = (gender or "").strip().lower()
+    if g_raw in ("female", "women", "w"):
+        if sport in MENS_ONLY_SPORTS:
+            flash(f"{sport} features only Men's category this season.", "error")
+            return redirect(url_for("admin_dashboard"))
+        category_gender = "Women"
+        player_gender = "Female"
+        url_gender = "female"
+    elif g_raw in ("male", "men", "m"):
+        category_gender = "Men"
+        player_gender = "Male"
+        url_gender = "male"
+    else:
+        flash("Invalid category specified. Please select Men or Women.", "error")
+        return redirect(url_for("admin_dashboard"))
 
     if request.method == "POST":
         action = request.form.get("action", "sell")
@@ -1068,25 +1362,49 @@ def bidding(sport, gender):
             bid_amount = request.form.get("bid_amount", type=int)
 
             err = None
+            wallet = None
             if not player or not owner:
                 err = "Invalid player or team franchise selected."
             elif player.sold:
                 err = f"{player.name} has already been sold to {player.sold_to}."
             elif bid_amount is None or bid_amount <= 0:
                 err = "Enter a bid amount greater than zero."
-            elif bid_amount > owner.budget:
-                err = f"{owner.team_name} only has {rupees(owner.budget)} left in their purse."
+            else:
+                wallet = owner.get_wallet(sport, category_gender)
+                if not wallet:
+                    err = f"{owner.team_name} is not registered for {sport} – {category_gender}."
+                elif bid_amount > wallet.balance:
+                    err = f"{owner.team_name} only has {format_inr(wallet.balance)} available in their {sport} – {category_gender} purse."
 
             if err:
                 if is_ajax:
                     return jsonify({"status": "error", "message": err}), 400
                 flash(err, "error")
             else:
+                bal_before = wallet.balance
+                wallet.spent += bid_amount
+                wallet.balance = max(0, wallet.balance - bid_amount)
+                owner.sync_budget_from_wallets()
+
                 player.sold = True
                 player.unsold = False
                 player.bid_amount = bid_amount
                 player.sold_to = owner.team_name
-                owner.budget -= bid_amount
+
+                tx = WalletTransaction(
+                    wallet_id=wallet.id,
+                    team_owner_id=owner.id,
+                    player_id=player.id,
+                    sport=sport,
+                    gender=category_gender,
+                    action="BID_PURCHASE",
+                    amount=bid_amount,
+                    balance_before=bal_before,
+                    balance_after=wallet.balance,
+                    description=f"Purchased {player.name} ({player.position or 'Player'}) in {sport} – {category_gender} auction",
+                )
+                db.session.add(tx)
+
                 try:
                     db.session.commit()
                     try:
@@ -1098,7 +1416,8 @@ def bidding(sport, gender):
                         sync_sold_player(player, owner)
                     except Exception as sync_exc:
                         app.logger.warning("Auto-sync player to scorecard failed: %s", sync_exc)
-                    msg = f"≡ƒö¿ SOLD! {player.name} goes to {owner.team_name} for {rupees(bid_amount)}!"
+
+                    msg = f"🔨 SOLD! {player.name} goes to {owner.team_name} for {format_inr(bid_amount)}!"
                     if is_ajax:
                         return jsonify({
                             "status": "success",
@@ -1108,9 +1427,11 @@ def bidding(sport, gender):
                             "owner_id": owner.id,
                             "team_name": owner.team_name,
                             "bid_amount": bid_amount,
-                            "bid_amount_display": rupees(bid_amount),
-                            "remaining_budget": owner.budget,
-                            "remaining_budget_display": rupees(owner.budget),
+                            "bid_amount_display": format_inr(bid_amount),
+                            "remaining_budget": wallet.balance,
+                            "remaining_budget_display": format_inr(wallet.balance),
+                            "wallet_balance": wallet.balance,
+                            "wallet_balance_display": format_inr(wallet.balance),
                         })
                     flash(msg, "success")
                 except Exception as exc:
@@ -1136,7 +1457,27 @@ def bidding(sport, gender):
                 if player.sold and player.sold_to and player.bid_amount:
                     old_owner = TeamOwner.query.filter_by(team_name=player.sold_to).first()
                     if old_owner:
-                        old_owner.budget += player.bid_amount
+                        old_wallet = old_owner.get_wallet(player.sport, category_gender)
+                        if old_wallet:
+                            bal_before = old_wallet.balance
+                            old_wallet.spent = max(0, old_wallet.spent - player.bid_amount)
+                            old_wallet.balance = min(old_wallet.allocated_budget, old_wallet.balance + player.bid_amount)
+                            old_owner.sync_budget_from_wallets()
+                            tx = WalletTransaction(
+                                wallet_id=old_wallet.id,
+                                team_owner_id=old_owner.id,
+                                player_id=player.id,
+                                sport=player.sport,
+                                gender=category_gender,
+                                action="BID_REFUND",
+                                amount=player.bid_amount,
+                                balance_before=bal_before,
+                                balance_after=old_wallet.balance,
+                                description=f"Auction reopen refund for {player.name}",
+                            )
+                            db.session.add(tx)
+                        else:
+                            old_owner.budget = (old_owner.budget or 0) + player.bid_amount
                 player.sold = False
                 player.unsold = False
                 player.sold_to = None
@@ -1153,66 +1494,17 @@ def bidding(sport, gender):
                 flash(msg, "success")
 
         elif action == "recall_unsold":
-            count = Player.query.filter_by(sport=sport, gender=effective_gender, sold=False, unsold=True).count()
-            Player.query.filter_by(sport=sport, gender=effective_gender, sold=False, unsold=True).update({'unsold': False})
+            count = Player.query.filter_by(sport=sport, gender=player_gender, sold=False, unsold=True).count()
+            Player.query.filter_by(sport=sport, gender=player_gender, sold=False, unsold=True).update({'unsold': False})
             db.session.commit()
             flash(f"Recalled {count} unsold players back to live auction for Round 2!", "success")
 
-        elif action == "seed_demo":
-            demo_names = [
-                ("Arjun Sharma", "CSE", "Forward", "State Level Gold Medalist"),
-                ("Rohan Gowda", "ECE", "Defender", "University Best Player 2025"),
-                ("Vikram Patel", "MECH", "Midfielder", "Zonal Football Captain"),
-                ("Karthik Rao", "AI-ML", "Goalkeeper", "Inter-Collegiate Clean Sheet Champion"),
-                ("Sanjay Hegde", "CIVIL", "Winger", "District Sprint & Football Champion"),
-            ] if sport == "Football" else [
-                ("Manoj Kumar", "CSE", "Raider", "Senior National Participant"),
-                ("Pradeep Yadav", "ECE", "Defender", "All India Inter-University Gold"),
-                ("Chandan Gowda", "MECH", "All-Rounder", "State Kabaddi MVP"),
-                ("Praveen Nayak", "CIVIL", "Corner Defender", "District Kabaddi Champion"),
-                ("Shashank K", "AIML", "Raider", "Inter-Collegiate Best Raider"),
-            ]
-            for i, (pname, pbranch, ppos, pach) in enumerate(demo_names, 1):
-                existing = Player.query.filter_by(name=pname, sport=sport).first()
-                if not existing:
-                    p = Player(
-                        name=pname,
-                        sport=sport,
-                        branch=pbranch,
-                        usn=f"4GM22{pbranch[:2]}{i:03d}",
-                        email=f"{pname.lower().replace(' ', '.')}@gmu.ac.in",
-                        college_name="GM Institute of Technology",
-                        position=ppos,
-                        contact=f"98800{i:05d}",
-                        achievements=pach,
-                        experience="3 Years University Team",
-                        gender=effective_gender,
-                    )
-                    db.session.add(p)
-
-            for i, tname in enumerate(["GM Thunderbolts", "Deccan Titans", "Royal Strikers"], 1):
-                t_exist = TeamOwner.query.filter_by(team_name=tname).first()
-                if not t_exist:
-                    t = TeamOwner(
-                        name=f"Director {tname.split()[0]}",
-                        team_name=tname,
-                        sports=f"{sport}(Men),{sport}(Women)",
-                        budget=1000000,
-                        contact=f"99000{i:05d}",
-                        email=f"owner_{tname.lower().replace(' ', '_')}@gmu.ac.in",
-                        manager_name=f"Manager {i}",
-                        manager_contact_number=f"98000{i:05d}",
-                    )
-                    db.session.add(t)
-            db.session.commit()
-            flash(f"ΓÜí Generated demo roster for {sport} ({effective_gender})! Ready to auction.", "success")
-
-        return redirect(url_for("bidding", sport=sport.lower(), gender=gender.lower()))
+        return redirect(url_for("bidding", sport=sport.lower(), gender=url_gender))
 
     players = (
         Player.query.filter(
             Player.sport == sport,
-            Player.gender == effective_gender,
+            Player.gender == player_gender,
             Player.sold.is_(False),
             db.or_(Player.unsold.is_(False), Player.unsold.is_(None)),
         )
@@ -1220,30 +1512,38 @@ def bidding(sport, gender):
         .all()
     )
     unsold_players = (
-        Player.query.filter_by(sport=sport, gender=effective_gender, sold=False, unsold=True)
+        Player.query.filter_by(sport=sport, gender=player_gender, sold=False, unsold=True)
         .order_by(Player.name)
         .all()
     )
     sold_here = (
-        Player.query.filter_by(sport=sport, gender=effective_gender, sold=True)
+        Player.query.filter_by(sport=sport, gender=player_gender, sold=True)
         .order_by(Player.bid_amount.desc())
         .all()
     )
-    owners = (
-        TeamOwner.query.filter(TeamOwner.sports.ilike(f"%{sport}%")).order_by(TeamOwner.team_name).all()
-    )
+
+    # Franchise eligibility: franchises with a wallet for this sport & category
+    eligible_wallets = TeamWallet.query.filter_by(sport=sport, gender=category_gender).all()
+    eligible_owner_ids = {w.team_owner_id for w in eligible_wallets}
+    all_owners = TeamOwner.query.order_by(TeamOwner.team_name).all()
+    owners = [o for o in all_owners if o.id in eligible_owner_ids]
     if not owners:
-        owners = TeamOwner.query.order_by(TeamOwner.team_name).all()
+        owners = all_owners
 
     owner_stats = {}
     for o in owners:
-        squad = Player.query.filter_by(sold_to=o.team_name, sport=sport, gender=effective_gender).all()
-        spent = sum(p.bid_amount or 0 for p in squad)
+        w = o.get_wallet(sport, category_gender)
+        squad = Player.query.filter_by(sold_to=o.team_name, sport=sport, gender=player_gender).all()
+        spent = w.spent if w else sum(p.bid_amount or 0 for p in squad)
+        budget = w.balance if w else (o.budget or 0)
+        allocated = w.allocated_budget if w else DEFAULT_BUDGET
+        pct = max(0, min(100, int((budget / allocated) * 100))) if allocated > 0 else 0
         owner_stats[o.id] = {
             "squad_count": len(squad),
             "spent": spent,
-            "budget": o.budget or 0,
-            "budget_pct": max(0, min(100, int(((o.budget or 0) / DEFAULT_BUDGET) * 100))),
+            "budget": budget,
+            "allocated": allocated,
+            "budget_pct": pct,
         }
 
     total_spent = sum(p.bid_amount or 0 for p in sold_here)
@@ -1252,7 +1552,9 @@ def bidding(sport, gender):
     return render_template(
         "bidding.html",
         sport=sport,
-        gender=gender,
+        gender=category_gender,
+        url_gender=url_gender,
+        player_gender=player_gender,
         players=players,
         unsold_players=unsold_players,
         sold_players=sold_here,
@@ -1500,9 +1802,31 @@ def admin_resend_confirmation(kind, record_id):
 @admin_required
 def admin_reset_bid(player_id):
     player = db.session.get(Player, player_id) or abort(404)
-    owner = TeamOwner.query.filter_by(team_name=player.sold_to).first()
-    if owner and player.bid_amount:
-        owner.budget += player.bid_amount
+    if player.sold and player.sold_to and player.bid_amount:
+        owner = TeamOwner.query.filter_by(team_name=player.sold_to).first()
+        cat_gender = "Women" if player.gender == "Female" else "Men"
+        if owner:
+            wallet = owner.get_wallet(player.sport, cat_gender)
+            if wallet:
+                bal_before = wallet.balance
+                wallet.spent = max(0, wallet.spent - player.bid_amount)
+                wallet.balance = min(wallet.allocated_budget, wallet.balance + player.bid_amount)
+                owner.sync_budget_from_wallets()
+                tx = WalletTransaction(
+                    wallet_id=wallet.id,
+                    team_owner_id=owner.id,
+                    player_id=player.id,
+                    sport=player.sport,
+                    gender=cat_gender,
+                    action="BID_REFUND",
+                    amount=player.bid_amount,
+                    balance_before=bal_before,
+                    balance_after=wallet.balance,
+                    description=f"Admin reset bid refund for {player.name}",
+                )
+                db.session.add(tx)
+            else:
+                owner.budget = (owner.budget or 0) + player.bid_amount
     player.sold = False
     player.bid_amount = None
     player.sold_to = None
@@ -1513,7 +1837,7 @@ def admin_reset_bid(player_id):
             sync_reopened_player(player)
         except Exception as sync_exc:
             app.logger.warning("Could not auto-remove player from scorecard: %s", sync_exc)
-        flash(f"Bid reset for {player.name}. The purse has been refunded.", "success")
+        flash(f"Bid reset for {player.name}. The purse has been refunded to franchise wallet.", "success")
     except Exception as exc:
         db.session.rollback()
         flash(f"Error resetting bid: {exc}", "error")
@@ -1641,19 +1965,69 @@ def admin_edit_team_owner(id):
     if request.method == "POST":
         selected = [s for s in request.form.getlist("sports") if s in OWNER_SPORT_OPTIONS]
         if not selected:
-            flash("Select at least one sport.", "error")
+            flash("Select at least one sport and category.", "error")
             return redirect(url_for("admin_edit_team_owner", id=id))
         try:
             owner.name = clean(request.form.get("name"), 100) or owner.name
             owner.team_name = clean(request.form.get("team_name"), 100) or owner.team_name
-            owner.sports = ",".join(s.split("(")[0].strip() for s in selected)
-            owner.budget = request.form.get("budget", type=int) or 0
             owner.contact = normalise_phone(request.form.get("contact")) or None
             owner.usn = clean(request.form.get("employee_id") or request.form.get("usn"), 50).upper() or None
             owner.designation = clean(request.form.get("designation"), 100) or None
             owner.email = clean(request.form.get("email"), 120).lower() or None
             owner.manager_name = clean(request.form.get("manager_name"), 100) or None
             owner.manager_contact_number = normalise_phone(request.form.get("manager_contact_number")) or None
+
+            # Manage category wallets
+            new_categories = []
+            for s in selected:
+                sp, gn = parse_sport_gender(s)
+                if sp and (sp, gn) not in new_categories:
+                    new_categories.append((sp, gn))
+
+            existing_wallets = {(w.sport, w.gender): w for w in owner.wallets}
+
+            # 1. Add wallets for newly selected categories
+            for sp, gn in new_categories:
+                if (sp, gn) not in existing_wallets:
+                    w = TeamWallet(
+                        team_owner_id=owner.id,
+                        sport=sp,
+                        gender=gn,
+                        allocated_budget=DEFAULT_BUDGET,
+                        spent=0,
+                        balance=DEFAULT_BUDGET,
+                    )
+                    db.session.add(w)
+                    db.session.flush()
+                    tx = WalletTransaction(
+                        wallet_id=w.id,
+                        team_owner_id=owner.id,
+                        sport=sp,
+                        gender=gn,
+                        action="INITIAL_ALLOCATION",
+                        amount=DEFAULT_BUDGET,
+                        balance_before=0,
+                        balance_after=DEFAULT_BUDGET,
+                        description=f"Initial purse allocation of ₹10,00,000 for {sp} – {gn}",
+                    )
+                    db.session.add(tx)
+
+            # 2. Check unselected categories: preserve if squad has signed players
+            new_cat_set = set(new_categories)
+            for (sp, gn), w in list(existing_wallets.items()):
+                if (sp, gn) not in new_cat_set:
+                    p_gender = "Female" if gn == "Women" else "Male"
+                    has_players = Player.query.filter_by(sold_to=owner.team_name, sport=sp, gender=p_gender).count()
+                    if has_players:
+                        flash(f"Preserved {sp} – {gn} wallet because {owner.team_name} has {has_players} signed players in this category.", "warning")
+                        if (sp, gn) not in new_categories:
+                            new_categories.append((sp, gn))
+                    else:
+                        db.session.delete(w)
+
+            canonical_labels = [f"{sp} – {gn}" for sp, gn in new_categories]
+            owner.sports = ", ".join(canonical_labels)
+            owner.sync_budget_from_wallets()
 
             new_logo, logo_error = save_upload(
                 request.files.get("team_logo"), "TEAM_LOGO_FOLDER", "team_logos", owner.team_name
@@ -1673,13 +2047,20 @@ def admin_edit_team_owner(id):
                 owner.team_owner_photo = new_photo
 
             db.session.commit()
-            flash(f"Team owner {owner.team_name} updated.", "success")
+            flash(f"Franchise {owner.team_name} updated successfully.", "success")
         except Exception as exc:
             db.session.rollback()
             flash(f"Error updating team owner: {exc}", "error")
         return redirect(url_for("admin_dashboard"))
 
-    owned = {s.strip().lower() for s in (owner.sports or "").split(",") if s.strip()}
+    # Build normalized set of owned categories
+    owned = {f"{w.sport} – {w.gender}".lower() for w in owner.wallets}
+    if not owned:
+        for s in (owner.sports or "").split(","):
+            sp, gn = parse_sport_gender(s)
+            if sp:
+                owned.add(f"{sp} – {gn}".lower())
+
     return render_template(
         "edit_team_owner.html", owner=owner, sport_options=OWNER_SPORT_OPTIONS, owned=owned
     )
@@ -1723,8 +2104,14 @@ def owner_rows(owners):
             "Email": o.email or "N/A",
             "Contact": o.contact or "N/A",
             "Designation": o.designation or "N/A",
-            "Sports": o.sports,
-            "Remaining Budget": o.budget,
+            "Categories": ", ".join(f"{w.sport} – {w.gender}" for w in o.wallets) if o.wallets else o.sports,
+            "Total Allocated": format_inr(o.total_allocated_budget),
+            "Total Spent": format_inr(o.total_spent),
+            "Total Remaining": format_inr(o.total_balance),
+            "Wallets Breakdown": "; ".join(
+                f"{w.sport} ({w.gender}): Bal {format_inr(w.balance)} / Alloc {format_inr(w.allocated_budget)}"
+                for w in o.wallets
+            ),
             "Manager Name": o.manager_name or "N/A",
             "Manager Contact": o.manager_contact_number or "N/A",
             "Registered On": o.registered_at.strftime("%Y-%m-%d %H:%M") if o.registered_at else "N/A",

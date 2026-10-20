@@ -16,7 +16,7 @@
     ("DESIGNATION", owner.designation),
     ("EMPLOYEE ID", owner.usn),
     ("SPORTS", owner.sports),
-    ("AUCTION PURSE", "₹ " ~ "{:,}".format(owner.budget or 1000000)),
+    ("AUCTION PURSE", owner.total_balance|inr),
     ("EMAIL", ('<a href="mailto:' ~ owner.email ~ '" style="color:#0056b3; text-decoration:underline;">' ~ owner.email ~ '</a>') if owner.email else None),
     ("CONTACT", owner.contact),
     ("MANAGER", owner.manager_name),

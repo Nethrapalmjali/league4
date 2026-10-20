@@ -20,9 +20,10 @@ def sync_sold_player(player, owner):
         gender = "Women" if getattr(player, "gender", None) == "Female" else "Men"
         sport = player.sport
 
-        # 1. Match existing ScTeam by ems_owner_id or name and sport
+        # 1. Match existing ScTeam by ems_owner_id or name, matching BOTH sport and gender
         sc_team = ScTeam.query.filter(
             ScTeam.sport == sport,
+            ScTeam.gender == gender,
             db.or_(
                 ScTeam.ems_owner_id == owner.id,
                 db.func.lower(ScTeam.name) == owner.team_name.lower().strip(),

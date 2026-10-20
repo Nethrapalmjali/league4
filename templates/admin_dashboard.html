@@ -4,10 +4,25 @@
 
 {% macro player_table(sport, players) %}
   {% if players %}
-    <div class="card__head">
-      <div class="card__title">{{ sport }} · {{ players|length }} registered</div>
+    {% set men_count = players|selectattr('gender', 'equalto', 'Male')|list|length %}
+    {% set women_count = players|selectattr('gender', 'equalto', 'Female')|list|length %}
+    <div class="card__head" style="flex-wrap: wrap; gap: 0.75rem;">
+      <div style="display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
+        <div class="card__title">{{ sport }} · {{ players|length }} registered</div>
+        <div class="filter-pills" style="display: inline-flex; gap: 0.35rem; background: #f1f5f9; padding: 3px; border-radius: 8px;">
+          <button type="button" class="btn btn--sm btn--gold" style="padding: 0.2rem 0.65rem; font-size: 0.78rem; border-radius: 6px;" onclick="filterSportCategory('{{ sport|lower }}', 'all', this)">All ({{ players|length }})</button>
+          <button type="button" class="btn btn--sm btn--ghost" style="padding: 0.2rem 0.65rem; font-size: 0.78rem; border-radius: 6px;" onclick="filterSportCategory('{{ sport|lower }}', 'male', this)">Men ({{ men_count }})</button>
+          {% if sport not in mens_only_sports %}
+          <button type="button" class="btn btn--sm btn--ghost" style="padding: 0.2rem 0.65rem; font-size: 0.78rem; border-radius: 6px;" onclick="filterSportCategory('{{ sport|lower }}', 'female', this)">Women ({{ women_count }})</button>
+          {% endif %}
+        </div>
+      </div>
       <input type="search" class="search" placeholder="Search name, USN, email…" data-search="{{ sport|lower }}">
-      <div style="display:flex; gap:0.5rem; align-items:center;">
+      <div style="display:flex; gap:0.5rem; align-items:center; flex-wrap: wrap;">
+        <a href="{{ url_for('bidding', sport=sport|lower, gender='male') }}" class="btn btn--maroon btn--sm" style="font-size:0.78rem;">🔨 {{ sport }} (Men) Room</a>
+        {% if sport not in mens_only_sports %}
+        <a href="{{ url_for('bidding', sport=sport|lower, gender='female') }}" class="btn btn--maroon btn--sm" style="font-size:0.78rem;">🔨 {{ sport }} (Women) Room</a>
+        {% endif %}
         <a href="{{ url_for('export_summary', sport=sport) }}" class="btn btn--gold btn--sm">{{ ico.icon('download', 15) }} Export {{ sport }}</a>
         <button type="button" class="btn btn--danger btn--sm" data-bulk="players" data-scope="{{ sport|lower }}" disabled>
           Delete selected (<span data-count="{{ sport|lower }}">0</span>)
@@ -40,7 +55,7 @@
           </thead>
           <tbody>
             {% for player in players %}
-            <tr data-row data-text="{{ (player.name ~ ' ' ~ (player.usn or '') ~ ' ' ~ (player.email or '') ~ ' ' ~ (player.branch or '') ~ ' ' ~ (player.sold_to or ''))|lower }}">
+            <tr data-row data-gender="{{ player.gender|lower }}" data-text="{{ (player.name ~ ' ' ~ (player.usn or '') ~ ' ' ~ (player.email or '') ~ ' ' ~ (player.branch or '') ~ ' ' ~ (player.sold_to or ''))|lower }}">
               <td><input type="checkbox" class="rowcheck" data-scope="{{ sport|lower }}" value="{{ player.id }}" aria-label="Select {{ player.name }}"></td>
               <td>
                 {% if player.photo %}
@@ -73,7 +88,7 @@
                   <span class="badge badge--open">In pool</span>
                 {% endif %}
               </td>
-              <td class="cell-strong">{{ '₹ {:,}'.format(player.bid_amount) if player.bid_amount else '—' }}</td>
+              <td class="cell-strong">{{ player.bid_amount|inr if player.bid_amount else '—' }}</td>
               <td>{{ player.sold_to or '—' }}</td>
               <td>
                 <div class="row-actions">
@@ -241,8 +256,8 @@
       </div>
       <div class="stat-card">
         <div class="stat-card__label">Purse spent</div>
-        <div class="stat-card__value">₹{{ '{:,}'.format(spent) }}</div>
-        <div class="stat-card__note">₹{{ '{:,}'.format(remaining) }} remaining</div>
+        <div class="stat-card__value">{{ spent|inr }}</div>
+        <div class="stat-card__note">{{ remaining|inr }} remaining</div>
       </div>
       <div class="stat-card {{ 'stat-card--alert' if missing_email else '' }}">
         <div class="stat-card__label">Missing email</div>
@@ -303,7 +318,7 @@
                     <td class="cell-strong">{{ sport }}</td>
                     <td>{{ group|length }}</td>
                     <td>{{ group|selectattr('gender', 'equalto', 'Male')|list|length }}</td>
-                    <td>{{ group|selectattr('gender', 'equalto', 'Female')|list|length }}</td>
+                    <td>{{ group|selectattr('gender', 'equalto', 'Female')|list|length if sport not in mens_only_sports else '—' }}</td>
                     <td>{{ group|selectattr('sold')|list|length }}</td>
                     <td><a href="{{ url_for('export_summary', sport=sport) }}" class="link-btn link-btn--edit">Export</a></td>
                   </tr>
@@ -327,7 +342,7 @@
                       <td class="cell-strong">{{ player.name }}</td>
                       <td>{{ player.sport }}</td>
                       <td>{{ player.sold_to }}</td>
-                      <td class="cell-strong">₹{{ '{:,}'.format(player.bid_amount or 0) }}</td>
+                      <td class="cell-strong">{{ (player.bid_amount or 0)|inr }}</td>
                     </tr>
                   {% endfor %}
                 </tbody>
@@ -581,7 +596,7 @@
                     <span class="badge badge--open">In pool</span>
                   {% endif %}
                 </td>
-                <td class="cell-strong">{{ '₹ {:,}'.format(player.bid_amount) if player.bid_amount else '—' }}</td>
+                <td class="cell-strong">{{ player.bid_amount|inr if player.bid_amount else '—' }}</td>
                 <td>{{ player.sold_to or '—' }}</td>
                 <td>
                   <div class="row-actions">
@@ -695,11 +710,29 @@
                   <td class="cell-mono">{{ owner.contact or '—' }}</td>
                   <td>{{ owner.designation or '—' }}</td>
                   <td class="cell-wrap">
-                    {% for sport in (owner.sports or '').split(',') if sport %}
-                      <span class="badge badge--gold">{{ sport }}</span>
+                    {% for cat in owner.categories_display %}
+                      <span class="badge badge--gold" style="white-space:nowrap; margin-bottom:3px; display:inline-block;">{{ cat.label }}</span>
+                    {% else %}
+                      {% for sport in (owner.sports or '').split(',') if sport %}
+                        <span class="badge badge--gold">{{ sport }}</span>
+                      {% endfor %}
                     {% endfor %}
                   </td>
-                  <td class="cell-strong">₹{{ '{:,}'.format(owner.budget or 0) }}</td>
+                  <td class="cell-strong" style="min-width: 170px;">
+                    {% if owner.wallets %}
+                      <div style="font-weight: 800; font-size: 0.95rem; color: #15803d; margin-bottom: 4px;">Total: {{ owner.total_balance|inr }}</div>
+                      <div style="display: flex; flex-direction: column; gap: 3px; font-size: 0.78rem;">
+                        {% for w in owner.wallets %}
+                          <div style="background: rgba(0,0,0,0.04); padding: 2px 6px; border-radius: 4px; display: flex; justify-content: space-between; gap: 6px;">
+                            <span style="font-weight: 600; color: #475569;">{{ w.label }}:</span>
+                            <span style="font-weight: 700; color: #0f172a;">{{ w.balance|inr }}</span>
+                          </div>
+                        {% endfor %}
+                      </div>
+                    {% else %}
+                      {{ (owner.budget or 0)|inr }}
+                    {% endif %}
+                  </td>
                   <td>{{ owner.manager_name or '—' }}</td>
                   <td class="cell-mono">{{ owner.manager_contact_number or '—' }}</td>
                   <td>

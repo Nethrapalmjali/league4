@@ -1170,7 +1170,7 @@
         </div>
         <div class="metric-card-pill">
           <span class="lbl">Total Spent</span>
-          <span class="val">₹{{ '{:,}'.format(total_spent) }}</span>
+          <span class="val">{{ total_spent|inr }}</span>
         </div>
       </div>
     </div>
@@ -1279,7 +1279,7 @@
                     Current Highest Bid / Hammer Price
                   </div>
                   <div class="hammer-val">
-                    ₹<span data-price-display>{{ '{:,}'.format(20000) }}</span>
+                    ₹<span data-price-display>{{ 20000|inr_num }}</span>
                   </div>
                   <div class="hammer-lead-franchise">
                     Held by <strong data-leader-display>{{ owners[0].team_name if owners else 'Awaiting First Bid' }}</strong>
@@ -1307,6 +1307,8 @@
               <!-- Quick Increments Strip -->
               <div class="quick-increments">
                 <span class="quick-inc-label">Quick Increment:</span>
+                <button type="button" class="quick-btn" data-inc="1000">+ ₹1,000</button>
+                <button type="button" class="quick-btn" data-inc="2000">+ ₹2,000</button>
                 <button type="button" class="quick-btn" data-inc="5000">+ ₹5,000</button>
                 <button type="button" class="quick-btn" data-inc="10000">+ ₹10,000</button>
                 <button type="button" class="quick-btn" data-inc="25000">+ ₹25,000</button>
@@ -1325,8 +1327,9 @@
                     <label for="owner_{{ player.id }}">Winning Franchise</label>
                     <select id="owner_{{ player.id }}" name="owner_id" required class="form-select-stitch" data-owner-select>
                       {% for owner in owners %}
-                        <option value="{{ owner.id }}" data-budget="{{ owner.budget or 0 }}" data-name="{{ owner.team_name }}">
-                          {{ owner.team_name }} — ₹{{ '{:,}'.format(owner.budget or 0) }} purse remaining
+                        {% set st = owner_stats.get(owner.id, {}) %}
+                        <option value="{{ owner.id }}" data-budget="{{ st.budget if st.budget is defined else (owner.budget or 0) }}" data-name="{{ owner.team_name }}">
+                          {{ owner.team_name }} — {{ (st.budget if st.budget is defined else (owner.budget or 0))|inr }} purse remaining
                         </option>
                       {% endfor %}
                     </select>
@@ -1417,7 +1420,7 @@
                   <span>{{ sp.name }} ({{ sp.position or sport }})</span>
                 </div>
                 <div style="display:flex; align-items:center;">
-                  <span class="history-price">₹{{ '{:,}'.format(sp.bid_amount or 0) }}</span>
+                  <span class="history-price">{{ (sp.bid_amount or 0)|inr }}</span>
                   <button type="button" class="reopen-btn" data-reopen-id="{{ sp.id }}" title="Refund team & re-open player into pool">
                     ↩ Re-bid
                   </button>
@@ -1444,17 +1447,17 @@
         <div class="franchise-purses-list" id="franchisePursesList">
           {% for owner in owners %}
             {% set stats = owner_stats.get(owner.id, {'squad_count': 0, 'spent': 0, 'budget': owner.budget, 'budget_pct': 100}) %}
-            <div class="franchise-row" data-owner-card-id="{{ owner.id }}" data-team-name="{{ owner.team_name }}" data-purse="{{ owner.budget or 0 }}">
+            <div class="franchise-row" data-owner-card-id="{{ owner.id }}" data-team-name="{{ owner.team_name }}" data-purse="{{ stats.budget }}">
               <div class="franchise-row-head">
                 <span class="franchise-name-txt">{{ owner.team_name }}</span>
-                <span class="franchise-purse-txt">₹{{ '{:,}'.format(owner.budget or 0) }}</span>
+                <span class="franchise-purse-txt">{{ stats.budget|inr }}</span>
               </div>
               <div class="progress-track">
                 <div class="progress-fill" style="width: {{ stats.budget_pct }}%;"></div>
               </div>
               <div class="franchise-squad-meta">
                 <span>{{ stats.squad_count }} Players Signed</span>
-                <span>Spent: ₹{{ '{:,}'.format(stats.spent) }}</span>
+                <span>Spent: {{ stats.spent|inr }}</span>
               </div>
             </div>
           {% endfor %}

@@ -65,16 +65,39 @@
         </div>
       </div>
 
+      {% if owner.wallets %}
+      <div class="field" style="margin-top:1.5rem; background:rgba(212,175,55,0.08); border:1px solid rgba(212,175,55,0.3); border-radius:8px; padding:1rem 1.25rem;">
+        <label style="font-weight:700; margin-bottom:0.75rem; display:block; color:var(--maroon);">Active Category Wallets &amp; Balances</label>
+        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap:0.75rem;">
+          {% for w in owner.wallets %}
+          <div style="background:#fff; border:1px solid #e2e8f0; border-radius:6px; padding:0.75rem 1rem; box-shadow:0 1px 3px rgba(0,0,0,0.05);">
+            <div style="font-weight:700; color:var(--maroon); font-size:0.95rem;">{{ w.label }}</div>
+            <div style="display:flex; justify-content:space-between; margin-top:0.4rem; font-size:0.85rem; color:#64748b;">
+              <span>Allocated:</span> <strong style="color:#0f172a;">{{ w.allocated_budget|inr }}</strong>
+            </div>
+            <div style="display:flex; justify-content:space-between; margin-top:0.2rem; font-size:0.85rem; color:#64748b;">
+              <span>Spent:</span> <strong style="color:#b91c1c;">{{ w.spent|inr }}</strong>
+            </div>
+            <div style="display:flex; justify-content:space-between; margin-top:0.2rem; font-size:0.85rem; color:#64748b;">
+              <span>Remaining:</span> <strong style="color:#15803d;">{{ w.balance|inr }}</strong>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
+
       <div class="field" style="margin-top:1.5rem;">
-        <label style="font-weight:700; margin-bottom:0.5rem; display:block;">Participating Sports <span class="req">*</span></label>
+        <label style="font-weight:700; margin-bottom:0.5rem; display:block;">Participating Sports &amp; Categories <span class="req">*</span></label>
         <div style="display:flex; flex-wrap:wrap; gap:1rem;">
           {% for opt in sport_options %}
             <label style="display:flex; align-items:center; gap:0.4rem; font-size:0.9rem; cursor:pointer;">
-              <input type="checkbox" name="sports" value="{{ opt }}" {% if opt in sport_options and (opt.split('(')[0].strip().lower() in owned or opt.lower() in owned) %}checked{% endif %}>
+              <input type="checkbox" name="sports" value="{{ opt }}" {% if opt.lower() in owned or opt.replace('–', '-').lower() in owned %}checked{% endif %}>
               <span>{{ opt }}</span>
             </label>
           {% endfor %}
         </div>
+        <span class="hint" style="margin-top:0.5rem; display:block;">Each newly enabled category receives its own independent ₹10,00,000 purse. Categories with active signed players are automatically preserved.</span>
       </div>
 
       <div style="display:grid; grid-template-columns: 1fr 1fr; gap:1.25rem; margin-top:1.5rem;">
