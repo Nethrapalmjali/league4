@@ -1,6 +1,6 @@
 {% extends "admin_base.html" %}
 {% import "_icons.html" as ico %}
-{% block title %}{{ sport }} Live Auction · {{ brand.short }}{% endblock %}
+{% block title %}{{ sport }} ({{ 'Women' if gender in ['Female', 'Women'] or player_gender == 'Female' else 'Men' }}) Live Auction · {{ brand.short }}{% endblock %}
 
 {% block head %}
 <!-- Stitch MCP Design System Fonts & Material Symbols -->
@@ -1080,7 +1080,7 @@
         <span class="material-symbols-outlined" style="font-size: 18px;">dashboard</span>
         Dashboard
       </a>
-      <a href="{{ url_for('bidding', sport=sport|lower, gender=gender|lower) }}" class="stitch-nav-link is-active">
+      <a href="{{ url_for('bidding', sport=sport|lower, gender=url_gender) }}" class="stitch-nav-link is-active">
         <span class="material-symbols-outlined" style="font-size: 18px;">gavel</span>
         Live Auction
       </a>
@@ -1136,21 +1136,21 @@
         </span>
         <div class="filter-pills">
           {% for s in sports %}
-            <a href="{{ url_for('bidding', sport=s|lower, gender='male') }}" class="filter-pill {{ 'is-active' if s.lower() == sport.lower() else '' }}">
+            <a href="{{ url_for('bidding', sport=s|lower, gender=('female' if s not in mens_only_sports and (gender in ['Female', 'Women'] or player_gender == 'Female') else 'male')) }}" class="filter-pill {{ 'is-active' if s.lower() == sport.lower() else '' }}">
               {{ s }}
             </a>
           {% endfor %}
         </div>
       </div>
-      <h2>{{ sport }} <span>{{ 'Men' if gender == 'Male' else 'Women' }}'s Auction</span></h2>
+      <h2>{{ sport }} <span>{{ 'Women' if gender in ['Female', 'Women'] or player_gender == 'Female' else 'Men' }}'s Auction</span></h2>
     </div>
 
     <div style="display:flex; flex-direction:column; align-items:flex-end; gap:0.6rem;">
       <!-- Category Switcher (Men / Women) -->
       {% if not mens_only %}
         <div class="filter-pills">
-          <a href="{{ url_for('bidding', sport=sport|lower, gender='male') }}" class="filter-pill {{ 'is-active' if gender == 'Male' else '' }}">Men's League</a>
-          <a href="{{ url_for('bidding', sport=sport|lower, gender='female') }}" class="filter-pill {{ 'is-active' if gender == 'Female' else '' }}">Women's League</a>
+          <a href="{{ url_for('bidding', sport=sport|lower, gender='male') }}" class="filter-pill {{ 'is-active' if gender in ['Male', 'Men'] or player_gender == 'Male' else '' }}">Men's League</a>
+          <a href="{{ url_for('bidding', sport=sport|lower, gender='female') }}" class="filter-pill {{ 'is-active' if gender in ['Female', 'Women'] or player_gender == 'Female' else '' }}">Women's League</a>
         </div>
       {% endif %}
 
@@ -1317,7 +1317,7 @@
               </div>
 
               <!-- Bidding Submission Form -->
-              <form method="POST" action="{{ url_for('bidding', sport=sport|lower, gender=gender|lower) }}" class="live-bid-form" data-player-id="{{ player.id }}">
+              <form method="POST" action="{{ url_for('bidding', sport=sport|lower, gender=url_gender) }}" class="live-bid-form" data-player-id="{{ player.id }}">
                 <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
                 <input type="hidden" name="player_id" value="{{ player.id }}">
                 <input type="hidden" name="action" value="sell">
@@ -1372,7 +1372,7 @@
 
           <div style="display:flex; justify-content:center; gap:0.75rem; flex-wrap:wrap;">
             {% if unsold_players %}
-              <form method="POST" action="{{ url_for('bidding', sport=sport|lower, gender=gender|lower) }}">
+              <form method="POST" action="{{ url_for('bidding', sport=sport|lower, gender=url_gender) }}">
                 <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
                 <input type="hidden" name="action" value="recall_unsold">
                 <button type="submit" class="btn-hammer-stitch" style="font-size:0.88rem; padding:0.75rem 1.4rem;">
@@ -1381,7 +1381,7 @@
                 </button>
               </form>
             {% else %}
-              <form method="POST" action="{{ url_for('bidding', sport=sport|lower, gender=gender|lower) }}">
+              <form method="POST" action="{{ url_for('bidding', sport=sport|lower, gender=url_gender) }}">
                 <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
                 <input type="hidden" name="action" value="seed_demo">
                 <button type="submit" class="btn-hammer-stitch" style="font-size:0.88rem; padding:0.75rem 1.4rem;">
@@ -1477,7 +1477,7 @@
             Players passed during Round 1. Click below to recall them back into the live auction pool for Round 2.
           </p>
         </div>
-        <form method="POST" action="{{ url_for('bidding', sport=sport|lower, gender=gender|lower) }}">
+        <form method="POST" action="{{ url_for('bidding', sport=sport|lower, gender=url_gender) }}">
           <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
           <input type="hidden" name="action" value="recall_unsold">
           <button type="submit" class="btn-hammer-stitch" style="font-size:0.85rem; padding:0.65rem 1.25rem;">
