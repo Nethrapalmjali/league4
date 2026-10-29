@@ -1822,16 +1822,34 @@
     const btn = e.target.closest('[data-action="unsold"]');
     if (!btn) return;
     e.preventDefault();
+    e.stopPropagation();
 
-    const playerId = btn.dataset.playerId;
+    // Find the closest active lot block or lot block container
     const block = btn.closest('.lot-block') || document.querySelector('.lot-block.is-active') || document.querySelector('.lot-block');
     const form = btn.closest('form') || (block ? block.querySelector('form') : document.querySelector('.live-bid-form'));
-    const csrfInput = form ? form.querySelector('[name="_csrf_token"]') : document.querySelector('[name="_csrf_token"]');
+    
+    // Resolve player ID: from button dataset, form hidden input, or block attribute
+    let playerId = btn.dataset.playerId;
+    if (!playerId && form) {
+      const pInput = form.querySelector('[name="player_id"]');
+      if (pInput) playerId = pInput.value;
+    }
+    if (!playerId && block) {
+      const pInput = block.querySelector('[name="player_id"]');
+      if (pInput) playerId = pInput.value;
+    }
+
+    if (!playerId) {
+      alert("Unable to detect player ID. Please refresh the page.");
+      return;
+    }
+
+    const csrfInput = (form && form.querySelector('[name="_csrf_token"]')) || document.querySelector('[name="_csrf_token"]');
     const csrf = csrfInput ? csrfInput.value : '';
-    const actionUrl = form ? form.action : window.location.pathname;
+    const actionUrl = (form && form.action) ? form.action : window.location.href;
 
     btn.disabled = true;
-    const originalText = btn.innerHTML;
+    const originalContent = btn.innerHTML;
     btn.innerHTML = '<span class="material-symbols-outlined" style="animation: spin 1s infinite linear;">sync</span> Passing...';
 
     const fd = new FormData();
@@ -1843,21 +1861,33 @@
       const resp = await fetch(actionUrl, {
         method: 'POST',
         body: fd,
-        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        headers: { 
+          'X-Requested-With': 'XMLHttpRequest',
+          'Accept': 'application/json'
+        }
       });
+
       const data = await resp.json().catch(() => null);
+
       if (resp.ok && data && data.status === 'success') {
         window.location.reload();
       } else {
-        alert((data && data.message) || 'Error marking unsold.');
+        const errorMsg = (data && data.message) || (resp.status ? ('Server error (' + resp.status + ')') : 'Error marking unsold.');
+        alert(errorMsg);
         btn.disabled = false;
-        btn.innerHTML = originalText;
+        btn.innerHTML = originalContent;
       }
     } catch (err) {
-      // In case fetch is interrupted or fails, fallback to standard form submit
+      console.warn("Unsold AJAX failed, attempting form submission fallback:", err);
       if (form) {
-        let actionField = form.querySelector('[name="action"]');
-        if (actionField) actionField.value = 'unsold';
+        let actionInput = form.querySelector('[name="action"]');
+        if (!actionInput) {
+          actionInput = document.createElement('input');
+          actionInput.type = 'hidden';
+          actionInput.name = 'action';
+          form.appendChild(actionInput);
+        }
+        actionInput.value = 'unsold';
         form.submit();
       } else {
         window.location.reload();

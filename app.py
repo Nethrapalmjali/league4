@@ -1442,14 +1442,32 @@ def bidding(sport, gender):
                     flash(f"Could not record that bid: {exc}", "error")
 
         elif action == "unsold":
-            player = db.session.get(Player, request.form.get("player_id", type=int))
-            if player and not player.sold:
-                player.unsold = True
-                db.session.commit()
-                msg = f"{player.name} passed as Unsold."
+            player_id_raw = request.form.get("player_id")
+            player = db.session.get(Player, int(player_id_raw)) if player_id_raw and str(player_id_raw).isdigit() else None
+            if not player:
+                app.logger.warning("Unsold failed: Player ID '%s' not found.", player_id_raw)
                 if is_ajax:
-                    return jsonify({"status": "success", "message": msg, "player_id": player.id})
-                flash(msg, "info")
+                    return jsonify({"status": "error", "message": "Player not found or already processed."}), 400
+                flash("Player not found.", "error")
+            elif player.sold:
+                app.logger.warning("Unsold failed: Player %s (ID %s) is already sold.", player.name, player.id)
+                if is_ajax:
+                    return jsonify({"status": "error", "message": f"{player.name} is already sold to {player.sold_to}."}), 400
+                flash(f"{player.name} is already sold.", "error")
+            else:
+                try:
+                    player.unsold = True
+                    db.session.commit()
+                    msg = f"{player.name} passed as Unsold."
+                    if is_ajax:
+                        return jsonify({"status": "success", "message": msg, "player_id": player.id})
+                    flash(msg, "info")
+                except Exception as exc:
+                    db.session.rollback()
+                    app.logger.exception("Failed to mark player unsold: %s", exc)
+                    if is_ajax:
+                        return jsonify({"status": "error", "message": f"Could not mark unsold: {exc}"}), 500
+                    flash(f"Could not mark unsold: {exc}", "error")
 
         elif action == "reopen":
             player = db.session.get(Player, request.form.get("player_id", type=int))
