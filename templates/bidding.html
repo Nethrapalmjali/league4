@@ -1633,7 +1633,10 @@
     lotBlocks.forEach((block, i) => {
       block.style.display = (i === idx) ? 'flex' : 'none';
       if (i === idx) {
+        block.classList.add('is-active');
         resetTimerForBlock(block);
+      } else {
+        block.classList.remove('is-active');
       }
     });
   }
@@ -1776,7 +1779,7 @@
   if (closeCelebrationBtn) {
     closeCelebrationBtn.addEventListener('click', () => {
       celebrationModal.style.display = 'none';
-      window.location.reload();
+      window.location.href = window.location.pathname + '?_t=' + Date.now();
     });
   }
 
@@ -1825,17 +1828,17 @@
     e.stopPropagation();
 
     // Find the closest active lot block or lot block container
-    const block = btn.closest('.lot-block') || document.querySelector('.lot-block.is-active') || document.querySelector('.lot-block');
+    const block = btn.closest('.lot-block') || (lotBlocks.length > currentLotIdx ? lotBlocks[currentLotIdx] : null) || document.querySelector('.lot-block.is-active') || document.querySelector('.lot-block');
     const form = btn.closest('form') || (block ? block.querySelector('form') : document.querySelector('.live-bid-form'));
     
     // Resolve player ID: from button dataset, form hidden input, or block attribute
     let playerId = btn.dataset.playerId;
-    if (!playerId && form) {
-      const pInput = form.querySelector('[name="player_id"]');
-      if (pInput) playerId = pInput.value;
-    }
     if (!playerId && block) {
       const pInput = block.querySelector('[name="player_id"]');
+      if (pInput) playerId = pInput.value;
+    }
+    if (!playerId && form) {
+      const pInput = form.querySelector('[name="player_id"]');
       if (pInput) playerId = pInput.value;
     }
 
@@ -1870,7 +1873,7 @@
       const data = await resp.json().catch(() => null);
 
       if (resp.ok && data && data.status === 'success') {
-        window.location.reload();
+        window.location.href = window.location.pathname + '?_t=' + Date.now();
       } else {
         const errorMsg = (data && data.message) || (resp.status ? ('Server error (' + resp.status + ')') : 'Error marking unsold.');
         alert(errorMsg);
