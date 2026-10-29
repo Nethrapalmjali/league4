@@ -963,7 +963,33 @@
     font-size: 0.8rem;
     display: inline-flex;
     align-items: center;
-    gap: 0.4rem;
+    gap: 0.5rem;
+    transition: all 0.2s ease;
+  }
+  .unsold-chip:hover {
+    border-color: var(--heritage-gold);
+    background: #ffffff;
+    box-shadow: 0 2px 8px rgba(72, 7, 14, 0.08);
+  }
+  .undo-unsold-btn {
+    background: transparent;
+    border: 1px solid var(--outline-variant);
+    color: var(--deep-maroon);
+    border-radius: 12px;
+    padding: 0.15rem 0.5rem;
+    font-size: 0.72rem;
+    font-weight: 700;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.2rem;
+    transition: all 0.15s ease;
+  }
+  .undo-unsold-btn:hover {
+    background: var(--deep-maroon);
+    color: #ffffff;
+    border-color: var(--deep-maroon);
+    transform: translateY(-1px);
   }
 
   /* Empty Pool State */
@@ -1492,6 +1518,10 @@
           <div class="unsold-chip">
             <span style="font-weight:700; color:var(--deep-maroon);">{{ up.name }}</span>
             <span style="color:var(--on-surface-variant);">({{ up.position or sport }} · {{ up.branch or 'N/A' }})</span>
+            <button type="button" class="undo-unsold-btn" data-undo-id="{{ up.id }}" data-player-name="{{ up.name }}" title="Undo Unsold: Bring {{ up.name }} back into live auction pool">
+              <span class="material-symbols-outlined" style="font-size:13px;">undo</span>
+              Undo
+            </button>
           </div>
         {% endfor %}
       </div>
@@ -1898,34 +1928,56 @@
     }
   });
 
-  // Reopen / Refund button handler in history stream
-  document.querySelectorAll('[data-reopen-id]').forEach(btn => {
-    btn.addEventListener('click', async function() {
-      if (!confirm('Re-open this player into live auction pool and refund the franchise purse?')) return;
-      const playerId = btn.dataset.reopenId;
-      const csrf = document.querySelector('[name="_csrf_token"]').value;
+  // Reopen / Refund button handler in history stream & Undo handler for Unsold players
+  document.addEventListener('click', async function(e) {
+    const reopenBtn = e.target.closest('[data-reopen-id]');
+    const undoBtn = e.target.closest('[data-undo-id]');
+    if (!reopenBtn && !undoBtn) return;
+    e.preventDefault();
 
-      const fd = new FormData();
-      fd.append('_csrf_token', csrf);
-      fd.append('action', 'reopen');
-      fd.append('player_id', playerId);
+    const isUndo = Boolean(undoBtn);
+    const playerId = isUndo ? undoBtn.dataset.undoId : reopenBtn.dataset.reopenId;
+    const playerName = isUndo ? (undoBtn.dataset.playerName || 'player') : 'player';
 
-      try {
-        const resp = await fetch(window.location.pathname, {
-          method: 'POST',
-          body: fd,
-          headers: { 'X-Requested-With': 'XMLHttpRequest' }
-        });
-        const data = await resp.json();
-        if (resp.ok && data.status === 'success') {
-          window.location.reload();
-        } else {
-          alert(data.message || 'Error re-opening player.');
+    const confirmMsg = isUndo 
+      ? `Bring ${playerName} back into the live auction pool now?`
+      : 'Re-open this player into live auction pool and refund the franchise purse?';
+
+    if (!confirm(confirmMsg)) return;
+
+    const btn = isUndo ? undoBtn : reopenBtn;
+    btn.disabled = true;
+    const oldText = btn.innerHTML;
+    btn.innerHTML = '<span class="material-symbols-outlined" style="font-size:13px; animation: spin 1s infinite linear;">sync</span>';
+
+    const csrfInput = document.querySelector('[name="_csrf_token"]');
+    const csrf = csrfInput ? csrfInput.value : '';
+
+    const fd = new FormData();
+    fd.append('_csrf_token', csrf);
+    fd.append('action', 'reopen');
+    fd.append('player_id', playerId);
+
+    try {
+      const resp = await fetch(window.location.pathname, {
+        method: 'POST',
+        body: fd,
+        headers: { 
+          'X-Requested-With': 'XMLHttpRequest',
+          'Accept': 'application/json'
         }
-      } catch (err) {
-        window.location.reload();
+      });
+      const data = await resp.json().catch(() => null);
+      if (resp.ok && data && data.status === 'success') {
+        window.location.href = window.location.pathname + '?_t=' + Date.now();
+      } else {
+        alert((data && data.message) || 'Error restoring player.');
+        btn.disabled = false;
+        btn.innerHTML = oldText;
       }
-    });
+    } catch (err) {
+      window.location.href = window.location.pathname + '?_t=' + Date.now();
+    }
   });
 
 })();
