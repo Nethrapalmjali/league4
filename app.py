@@ -1036,8 +1036,13 @@ def admin_required(view):
     @wraps(view)
     def wrapper(*args, **kwargs):
         if not session.get("admin_logged_in"):
-            if request.is_json:
-                return jsonify({"error": "Admin login required."}), 401
+            is_ajax = (
+                request.is_json
+                or request.headers.get("X-Requested-With") == "XMLHttpRequest"
+                or "application/json" in request.headers.get("Accept", "")
+            )
+            if is_ajax:
+                return jsonify({"status": "error", "message": "Admin session expired. Please reload or log in again."}), 401
             flash("Admin login required.", "error")
             return redirect(url_for("admin_login", next=request.path))
         return view(*args, **kwargs)

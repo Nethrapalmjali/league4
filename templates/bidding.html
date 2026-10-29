@@ -1905,8 +1905,12 @@
       if (resp.ok && data && data.status === 'success') {
         window.location.href = window.location.pathname + '?_t=' + Date.now();
       } else {
-        const errorMsg = (data && data.message) || (resp.status ? ('Server error (' + resp.status + ')') : 'Error marking unsold.');
+        const errorMsg = (data && data.message) || (data && data.error) || (resp.status === 401 ? 'Session expired. Please log in again.' : (resp.status ? ('Server error (' + resp.status + ')') : 'Error marking unsold.'));
         alert(errorMsg);
+        if (resp.status === 401) {
+          window.location.href = "{{ url_for('admin_login') }}";
+          return;
+        }
         btn.disabled = false;
         btn.innerHTML = originalContent;
       }
