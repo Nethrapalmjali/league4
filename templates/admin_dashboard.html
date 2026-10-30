@@ -495,14 +495,20 @@
           </div>
         </div>
 
-        <!-- Secondary Toolbar: Search, Sport & Status dropdowns, Count indicator -->
+        <!-- Secondary Toolbar: Search, Sport buttons & Status dropdowns, Count indicator -->
         <div style="display:flex; gap:0.75rem; flex-wrap:wrap; align-items:center; background:#fff; padding:0.6rem 0.8rem; border-radius:8px; border:1px solid var(--line);">
           <div style="flex:1; min-width:220px;">
             <input type="search" id="inst-search-input" class="search" style="width:100%;" placeholder="Search athlete name, college name, USN, branch, position…">
           </div>
-          <div style="display:flex; align-items:center; gap:0.4rem;">
-            <label for="inst-sport-select" style="font-size:0.78rem; font-weight:700; color:var(--muted); white-space:nowrap;">Sport:</label>
-            <select id="inst-sport-select" style="padding:0.4rem 0.7rem; border-radius:6px; border:1px solid var(--line); font-size:0.82rem; font-weight:600; background:#fff; color:var(--ink);">
+          <div style="display:flex; align-items:center; gap:0.4rem; flex-wrap:wrap;">
+            <span style="font-size:0.78rem; font-weight:700; color:var(--muted); white-space:nowrap;">Sport:</span>
+            <div class="filter-pills" id="inst-sport-pills" style="display:inline-flex; gap:0.25rem; flex-wrap:wrap;">
+              <button type="button" class="filter-pill is-active" data-sport="all" onclick="filterInstitutionSport('all')" style="padding:0.3rem 0.65rem; font-size:0.78rem;">All</button>
+              {% for s in sports %}
+                <button type="button" class="filter-pill" data-sport="{{ s|lower }}" onclick="filterInstitutionSport('{{ s|lower }}')" style="padding:0.3rem 0.65rem; font-size:0.78rem;">{{ s }}</button>
+              {% endfor %}
+            </div>
+            <select id="inst-sport-select" style="display:none;">
               <option value="all">All Sports</option>
               {% for s in sports %}
                 <option value="{{ s|lower }}">{{ s }}</option>
@@ -878,6 +884,7 @@
 
     /* ------------------------------------------- institution filtering */
     let activeInst = 'all';
+    let activeInstSport = 'all';
     const exportBaseUrl = "{{ url_for('export_institution', category='all') }}".replace('/all', '');
     const exportBtn = document.getElementById('btn-export-current-inst');
     const instSearch = document.getElementById('inst-search-input');
@@ -890,7 +897,7 @@
     function applyInstFilters() {
       if (!instTable) return;
       const term = (instSearch ? instSearch.value : '').trim().toLowerCase();
-      const sport = instSport ? instSport.value : 'all';
+      const sport = activeInstSport || (instSport ? instSport.value : 'all');
       const status = instStatus ? instStatus.value : 'all';
       let visible = 0;
 
@@ -931,6 +938,15 @@
       applyInstFilters();
     };
 
+    window.filterInstitutionSport = function (sport) {
+      activeInstSport = sport || 'all';
+      if (instSport) instSport.value = activeInstSport;
+      document.querySelectorAll('#inst-sport-pills .filter-pill').forEach(pill => {
+        pill.classList.toggle('is-active', pill.dataset.sport === activeInstSport);
+      });
+      applyInstFilters();
+    };
+
     window.activateInstFilter = function (cat) {
       activate('institutions');
       window.filterInstitution(cat);
@@ -945,8 +961,31 @@
       }
     };
 
+    window.filterSportCategory = function (sport, category, btn) {
+      const cat = (category || 'all').toLowerCase();
+      const table = document.querySelector(`table[data-table="${sport}"]`);
+      if (table) {
+        table.querySelectorAll('tbody tr[data-row]').forEach(row => {
+          const rowGender = (row.dataset.gender || '').toLowerCase();
+          let match = true;
+          if (cat === 'male') match = (rowGender === 'male' || rowGender === 'men');
+          else if (cat === 'female') match = (rowGender === 'female' || rowGender === 'women');
+          row.classList.toggle('is-hidden', !match);
+        });
+      }
+      if (btn && btn.parentElement) {
+        btn.parentElement.querySelectorAll('button').forEach(b => {
+          b.className = 'btn btn--sm btn--ghost';
+        });
+        btn.className = 'btn btn--sm btn--gold';
+      }
+      refresh(sport);
+    };
+
     if (instSearch) instSearch.addEventListener('input', applyInstFilters);
-    if (instSport) instSport.addEventListener('change', applyInstFilters);
+    if (instSport) instSport.addEventListener('change', () => {
+      window.filterInstitutionSport(instSport.value);
+    });
     if (instStatus) instStatus.addEventListener('change', applyInstFilters);
 
     document.querySelectorAll('.nav-item[data-inst-filter]').forEach(btn => {
