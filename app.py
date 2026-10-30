@@ -1675,7 +1675,9 @@ def admin_login():
             session["admin_logged_in"] = True
             flash("Welcome back. You're logged in.", "success")
             target = request.args.get("next") or request.form.get("next") or ""
-            return redirect(target if target.startswith("/admin") else url_for("admin_dashboard"))
+            if target and (target.startswith("/admin") or target.startswith("/bidding")):
+                return redirect(target)
+            return redirect(url_for("admin_dashboard"))
 
         session["_login_attempts"] = attempts + 1
         flash("Invalid username or password.", "error")
