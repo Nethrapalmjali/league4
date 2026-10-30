@@ -1837,89 +1837,95 @@
     });
   }
 
-  document.querySelectorAll('.live-bid-form').forEach(form => {
-    form.addEventListener('submit', async function(e) {
-      e.preventDefault();
-      initAudio();
+  // Event delegation for all form submissions (including Hammer Down / Sell)
+  document.addEventListener('submit', async function(e) {
+    const form = e.target.closest('.live-bid-form');
+    if (!form) return;
+    e.preventDefault();
+    initAudio();
 
-      const block = form.closest('.lot-block');
-      const submitBtn = form.querySelector('[data-action="sell"]');
-      if (submitBtn) {
-        submitBtn.disabled = true;
-        submitBtn.innerHTML = '<span class="material-symbols-outlined" style="animation: spin 1s infinite linear;">sync</span> Selling...';
-      }
+    const block = form.closest('.lot-block') || (lotBlocks.length > currentLotIdx ? lotBlocks[currentLotIdx] : null) || document.querySelector('.lot-block.is-active');
+    const submitBtn = form.querySelector('[data-action="sell"]');
+    if (submitBtn) {
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = '<span class="material-symbols-outlined" style="animation: spin 1s infinite linear;">sync</span> Selling...';
+    }
 
-      const formData = new FormData(form);
+    const formData = new FormData(form);
 
-      try {
-        const resp = await fetch(form.action, {
-          method: 'POST',
-          body: formData,
-          headers: {
-            'X-Requested-With': 'XMLHttpRequest',
-            'Accept': 'application/json'
-          }
-        });
+    try {
+      const resp = await fetch(form.action, {
+        method: 'POST',
+        body: formData,
+        headers: {
+          'X-Requested-With': 'XMLHttpRequest',
+          'Accept': 'application/json'
+        }
+      });
 
-        const data = await resp.json().catch(() => null);
+      const data = await resp.json().catch(() => null);
 
-        if (resp.ok && data && data.status === 'success') {
-          playGavel();
-          playFanfare();
+      if (resp.ok && data && data.status === 'success') {
+        playGavel();
+        playFanfare();
 
-          soldPlayerTitle.textContent = data.player_name;
-          soldTeamBanner.textContent = data.team_name;
-          soldPriceBanner.textContent = '₹' + Number(data.bid_amount).toLocaleString('en-IN');
-          celebrationModal.style.display = 'flex';
-          pendingSoldBlock = block;
+        soldPlayerTitle.textContent = data.player_name;
+        soldTeamBanner.textContent = data.team_name;
+        soldPriceBanner.textContent = '₹' + Number(data.bid_amount).toLocaleString('en-IN');
+        celebrationModal.style.display = 'flex';
+        pendingSoldBlock = block;
 
-          // Update remaining purse in owner dropdowns and sidebar
-          if (data.owner_id && data.remaining_budget !== undefined) {
-            document.querySelectorAll(`select[name="owner_id"] option[value="${data.owner_id}"]`).forEach(opt => {
-              opt.dataset.budget = data.remaining_budget;
-              opt.textContent = `${data.team_name} — ₹${Number(data.remaining_budget).toLocaleString('en-IN')} purse remaining`;
-            });
-            const ownerCard = document.querySelector(`[data-owner-card-id="${data.owner_id}"]`);
-            if (ownerCard) {
-              const purseTxt = ownerCard.querySelector('.franchise-purse-txt');
-              if (purseTxt) purseTxt.textContent = '₹' + Number(data.remaining_budget).toLocaleString('en-IN');
-            }
-          }
-
-          // Prepend to live feed stream
-          const historyStream = document.getElementById('historyStream');
-          const noSalesNotice = document.getElementById('noSalesNotice');
-          if (noSalesNotice) noSalesNotice.remove();
-          if (historyStream) {
-            const newItem = document.createElement('div');
-            newItem.className = 'history-item';
-            newItem.id = 'soldRow_' + data.player_id;
-            newItem.innerHTML = `
-              <div class="history-item-info">
-                <strong>${data.team_name}</strong>
-                <span>${data.player_name}</span>
-              </div>
-              <div style="display:flex; align-items:center;">
-                <span class="history-price">₹${Number(data.bid_amount).toLocaleString('en-IN')}</span>
-                <button type="button" class="reopen-btn" data-reopen-id="${data.player_id}" title="Refund team & re-open player into pool">
-                  ↩ Re-bid
-                </button>
-              </div>
-            `;
-            historyStream.prepend(newItem);
-          }
-        } else {
-          alert((data && data.message) || (data && data.error) || 'Error executing sale.');
-          if (submitBtn) {
-            submitBtn.disabled = false;
-            submitBtn.innerHTML = '<span class="material-symbols-outlined">gavel</span> Hammer Down (SOLD)';
+        // Update remaining purse in owner dropdowns and sidebar
+        if (data.owner_id && data.remaining_budget !== undefined) {
+          document.querySelectorAll(`select[name="owner_id"] option[value="${data.owner_id}"]`).forEach(opt => {
+            opt.dataset.budget = data.remaining_budget;
+            opt.textContent = `${data.team_name} — ₹${Number(data.remaining_budget).toLocaleString('en-IN')} purse remaining`;
+          });
+          const ownerCard = document.querySelector(`[data-owner-card-id="${data.owner_id}"]`);
+          if (ownerCard) {
+            const purseTxt = ownerCard.querySelector('.franchise-purse-txt');
+            if (purseTxt) purseTxt.textContent = '₹' + Number(data.remaining_budget).toLocaleString('en-IN');
           }
         }
-      } catch (err) {
-        console.warn("Sale AJAX failed, attempting standard form fallback:", err);
-        form.submit();
+
+        // Prepend to live feed stream
+        const historyStream = document.getElementById('historyStream');
+        const noSalesNotice = document.getElementById('noSalesNotice');
+        if (noSalesNotice) noSalesNotice.remove();
+        if (historyStream) {
+          const newItem = document.createElement('div');
+          newItem.className = 'history-item';
+          newItem.id = 'soldRow_' + data.player_id;
+          newItem.innerHTML = `
+            <div class="history-item-info">
+              <strong>${data.team_name}</strong>
+              <span>${data.player_name}</span>
+            </div>
+            <div style="display:flex; align-items:center;">
+              <span class="history-price">₹${Number(data.bid_amount).toLocaleString('en-IN')}</span>
+              <button type="button" class="reopen-btn" data-reopen-id="${data.player_id}" title="Refund team & re-open player into pool">
+                ↩ Re-bid
+              </button>
+            </div>
+          `;
+          historyStream.prepend(newItem);
+        }
+      } else {
+        const errorMsg = (data && data.message) || (data && data.error) || (resp.status === 401 ? 'Session expired. Please log in again.' : (resp.status ? ('Server error (' + resp.status + ')') : 'Error executing sale.'));
+        alert(errorMsg);
+        if (resp.status === 401) {
+          window.location.href = "{{ url_for('admin_login') }}";
+          return;
+        }
+        if (submitBtn) {
+          submitBtn.disabled = false;
+          submitBtn.innerHTML = '<span class="material-symbols-outlined">gavel</span> Hammer Down (SOLD)';
+        }
       }
-    });
+    } catch (err) {
+      console.warn("Sale AJAX failed, attempting standard form fallback:", err);
+      form.submit();
+    }
   });
 
   // Pass / Unsold button handler
