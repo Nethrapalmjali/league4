@@ -1621,7 +1621,12 @@ def auction_squads():
     total_spent = sum(p.bid_amount or 0 for p in all_sold)
     total_sold = len(all_sold)
     highest_bid = all_sold[0].bid_amount if all_sold else 0
-    top_signings = all_sold[:6]
+
+    if selected_sport:
+        sport_sold = [p for p in all_sold if p.sport == selected_sport]
+        top_signings = sport_sold[:6]
+    else:
+        top_signings = all_sold[:6]
 
     franchise_squads = []
     for o in owners:
