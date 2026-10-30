@@ -1412,15 +1412,29 @@ def bidding(sport, gender):
 
                 try:
                     db.session.commit()
-                    try:
-                        email_player_sold(player, owner, bid_amount)
-                    except Exception:
-                        pass
-                    try:
-                        from scorecard.sync import sync_sold_player
-                        sync_sold_player(player, owner)
-                    except Exception as sync_exc:
-                        app.logger.warning("Auto-sync player to scorecard failed: %s", sync_exc)
+                    
+                    # Run post-bid hooks (email notification and scorecard sync) in a background
+                    # daemon thread so the auction operator's screen responds instantly without delay.
+                    def _async_post_bid(p_id, o_id, amt):
+                        try:
+                            with app.app_context():
+                                async_p = db.session.get(Player, p_id)
+                                async_o = db.session.get(TeamOwner, o_id)
+                                if async_p and async_o:
+                                    try:
+                                        email_player_sold(async_p, async_o, amt)
+                                    except Exception as mail_err:
+                                        app.logger.warning("Async bid email error: %s", mail_err)
+                                    try:
+                                        from scorecard.sync import sync_sold_player
+                                        sync_sold_player(async_p, async_o)
+                                    except Exception as sync_exc:
+                                        app.logger.warning("Auto-sync player to scorecard failed: %s", sync_exc)
+                        except Exception as e:
+                            app.logger.warning("Post-bid background worker error: %s", e)
+
+                    t_post = threading.Thread(target=_async_post_bid, args=(player.id, owner.id, bid_amount), daemon=True)
+                    t_post.start()
 
                     msg = f"🔨 SOLD! {player.name} goes to {owner.team_name} for {format_inr(bid_amount)}!"
                     if is_ajax:

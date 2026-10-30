@@ -1651,7 +1651,7 @@
   }
 
   // ---------------- Lot Navigation ----------------
-  const lotBlocks = Array.from(document.querySelectorAll('.lot-block'));
+  let lotBlocks = Array.from(document.querySelectorAll('.lot-block'));
   let currentLotIdx = 0;
 
   function showLot(idx) {
@@ -1669,6 +1669,24 @@
         block.classList.remove('is-active');
       }
     });
+  }
+
+  function advanceToNextLot(removedBlock) {
+    if (removedBlock) {
+      const idx = lotBlocks.indexOf(removedBlock);
+      if (idx > -1) {
+        lotBlocks.splice(idx, 1);
+      }
+      removedBlock.remove();
+    }
+    if (lotBlocks.length === 0) {
+      window.location.href = window.location.pathname + '?_t=' + Date.now();
+      return;
+    }
+    if (currentLotIdx >= lotBlocks.length) {
+      currentLotIdx = 0;
+    }
+    showLot(currentLotIdx);
   }
 
   document.addEventListener('click', function(e) {
@@ -1805,11 +1823,17 @@
   const soldTeamBanner = document.getElementById('soldTeamBanner');
   const soldPriceBanner = document.getElementById('soldPriceBanner');
   const closeCelebrationBtn = document.getElementById('closeCelebrationBtn');
+  let pendingSoldBlock = null;
 
   if (closeCelebrationBtn) {
     closeCelebrationBtn.addEventListener('click', () => {
       celebrationModal.style.display = 'none';
-      window.location.href = window.location.pathname + '?_t=' + Date.now();
+      if (pendingSoldBlock) {
+        advanceToNextLot(pendingSoldBlock);
+        pendingSoldBlock = null;
+      } else {
+        window.location.href = window.location.pathname + '?_t=' + Date.now();
+      }
     });
   }
 
@@ -1818,21 +1842,28 @@
       e.preventDefault();
       initAudio();
 
+      const block = form.closest('.lot-block');
+      const submitBtn = form.querySelector('[data-action="sell"]');
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<span class="material-symbols-outlined" style="animation: spin 1s infinite linear;">sync</span> Selling...';
+      }
+
       const formData = new FormData(form);
-      const action = formData.get('action');
 
       try {
         const resp = await fetch(form.action, {
           method: 'POST',
           body: formData,
           headers: {
-            'X-Requested-With': 'XMLHttpRequest'
+            'X-Requested-With': 'XMLHttpRequest',
+            'Accept': 'application/json'
           }
         });
 
-        const data = await resp.json();
+        const data = await resp.json().catch(() => null);
 
-        if (resp.ok && data.status === 'success') {
+        if (resp.ok && data && data.status === 'success') {
           playGavel();
           playFanfare();
 
@@ -1840,11 +1871,52 @@
           soldTeamBanner.textContent = data.team_name;
           soldPriceBanner.textContent = '₹' + Number(data.bid_amount).toLocaleString('en-IN');
           celebrationModal.style.display = 'flex';
+          pendingSoldBlock = block;
+
+          // Update remaining purse in owner dropdowns and sidebar
+          if (data.owner_id && data.remaining_budget !== undefined) {
+            document.querySelectorAll(`select[name="owner_id"] option[value="${data.owner_id}"]`).forEach(opt => {
+              opt.dataset.budget = data.remaining_budget;
+              opt.textContent = `${data.team_name} — ₹${Number(data.remaining_budget).toLocaleString('en-IN')} purse remaining`;
+            });
+            const ownerCard = document.querySelector(`[data-owner-card-id="${data.owner_id}"]`);
+            if (ownerCard) {
+              const purseTxt = ownerCard.querySelector('.franchise-purse-txt');
+              if (purseTxt) purseTxt.textContent = '₹' + Number(data.remaining_budget).toLocaleString('en-IN');
+            }
+          }
+
+          // Prepend to live feed stream
+          const historyStream = document.getElementById('historyStream');
+          const noSalesNotice = document.getElementById('noSalesNotice');
+          if (noSalesNotice) noSalesNotice.remove();
+          if (historyStream) {
+            const newItem = document.createElement('div');
+            newItem.className = 'history-item';
+            newItem.id = 'soldRow_' + data.player_id;
+            newItem.innerHTML = `
+              <div class="history-item-info">
+                <strong>${data.team_name}</strong>
+                <span>${data.player_name}</span>
+              </div>
+              <div style="display:flex; align-items:center;">
+                <span class="history-price">₹${Number(data.bid_amount).toLocaleString('en-IN')}</span>
+                <button type="button" class="reopen-btn" data-reopen-id="${data.player_id}" title="Refund team & re-open player into pool">
+                  ↩ Re-bid
+                </button>
+              </div>
+            `;
+            historyStream.prepend(newItem);
+          }
         } else {
-          alert(data.message || 'Error executing action.');
+          alert((data && data.message) || (data && data.error) || 'Error executing sale.');
+          if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = '<span class="material-symbols-outlined">gavel</span> Hammer Down (SOLD)';
+          }
         }
       } catch (err) {
-        // Fallback to standard form submission
+        console.warn("Sale AJAX failed, attempting standard form fallback:", err);
         form.submit();
       }
     });
@@ -1903,7 +1975,25 @@
       const data = await resp.json().catch(() => null);
 
       if (resp.ok && data && data.status === 'success') {
-        window.location.href = window.location.pathname + '?_t=' + Date.now();
+        // Fast instant lot transition without reloading entire page
+        advanceToNextLot(block);
+
+        // Add to Unsold Pool drawer below
+        const unsoldChipsWrap = document.querySelector('.unsold-chips-wrap');
+        if (unsoldChipsWrap && block) {
+          const playerNameEl = block.querySelector('.player-main-name');
+          const pName = playerNameEl ? playerNameEl.textContent.trim() : (data.player_name || 'Player');
+          const chip = document.createElement('div');
+          chip.className = 'unsold-chip';
+          chip.innerHTML = `
+            <span style="font-weight:700; color:var(--deep-maroon);">${pName}</span>
+            <button type="button" class="undo-unsold-btn" data-undo-id="${playerId}" data-player-name="${pName}" title="Undo Unsold">
+              <span class="material-symbols-outlined" style="font-size:13px;">undo</span>
+              Undo
+            </button>
+          `;
+          unsoldChipsWrap.appendChild(chip);
+        }
       } else {
         const errorMsg = (data && data.message) || (data && data.error) || (resp.status === 401 ? 'Session expired. Please log in again.' : (resp.status ? ('Server error (' + resp.status + ')') : 'Error marking unsold.'));
         alert(errorMsg);
