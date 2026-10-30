@@ -1853,8 +1853,9 @@
 
     const formData = new FormData(form);
 
+    const formUrl = (form && form.getAttribute('action')) ? form.getAttribute('action') : window.location.pathname;
     try {
-      const resp = await fetch(form.action, {
+      const resp = await fetch(formUrl, {
         method: 'POST',
         body: formData,
         headers: {
@@ -1957,7 +1958,7 @@
 
     const csrfInput = (form && form.querySelector('[name="_csrf_token"]')) || document.querySelector('[name="_csrf_token"]');
     const csrf = csrfInput ? csrfInput.value : '';
-    const actionUrl = (form && form.action) ? form.action : window.location.href;
+    const actionUrl = (form && form.getAttribute('action')) ? form.getAttribute('action') : window.location.pathname;
 
     btn.disabled = true;
     const originalContent = btn.innerHTML;
