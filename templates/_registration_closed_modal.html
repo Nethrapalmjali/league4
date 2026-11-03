@@ -1,0 +1,253 @@
+<!-- Registration Closed Announcement Modal -->
+<div id="regClosedModal" class="announcement-modal" role="dialog" aria-modal="true" aria-labelledby="regClosedTitle">
+  <div class="announcement-modal__backdrop" id="regClosedBackdrop"></div>
+  <div class="announcement-modal__card">
+    <button type="button" class="announcement-modal__close" id="closeRegModalBtn" aria-label="Close message">&times;</button>
+    
+    <div class="announcement-modal__badge">
+      <span class="announcement-modal__badge-dot"></span>
+      Official Notice
+    </div>
+
+    <div class="announcement-modal__icon-wrap">
+      <svg viewBox="0 0 24 24" width="36" height="36" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+        <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+      </svg>
+    </div>
+
+    <h2 id="regClosedTitle" class="announcement-modal__title">Registrations Are Closed</h2>
+    <p class="announcement-modal__subtitle">GM League Season 4</p>
+
+    <p class="announcement-modal__desc">
+      Player and franchise registrations for <strong>GM League Season 4</strong> have officially closed and the live bidding auction has concluded. You can explore the finalized rosters and franchise squads below.
+    </p>
+
+    <div class="announcement-modal__actions">
+      <a href="{{ url_for('auction_squads') }}" class="announcement-modal__btn announcement-modal__btn--primary">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:6px;">
+          <circle cx="12" cy="8" r="7"></circle>
+          <polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"></polyline>
+        </svg>
+        View Auction Squads
+      </a>
+      <button type="button" class="announcement-modal__btn announcement-modal__btn--secondary" id="dismissRegModalBtn">
+        Continue to Site
+      </button>
+    </div>
+  </div>
+</div>
+
+<style>
+  .announcement-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    z-index: 99999;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 1.25rem;
+    box-sizing: border-box;
+  }
+  .announcement-modal.is-visible {
+    display: flex;
+    animation: gmlModalFadeIn 0.25s ease-out forwards;
+  }
+  .announcement-modal__backdrop {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(18, 9, 9, 0.78);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+  }
+  .announcement-modal__card {
+    position: relative;
+    background: #ffffff;
+    border: 2px solid #e2b755;
+    border-radius: 18px;
+    padding: 2.25rem 2rem;
+    max-width: 480px;
+    width: 100%;
+    text-align: center;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.35), 0 0 30px rgba(226, 183, 85, 0.2);
+    z-index: 1;
+    transform: translateY(12px) scale(0.96);
+    animation: gmlCardPop 0.3s cubic-bezier(0.16, 1, 0.3, 1) 0.05s forwards;
+  }
+  .announcement-modal__close {
+    position: absolute;
+    top: 14px;
+    right: 16px;
+    background: rgba(0, 0, 0, 0.05);
+    border: none;
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    font-size: 1.5rem;
+    line-height: 1;
+    cursor: pointer;
+    color: #555;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.15s, color 0.15s, transform 0.15s;
+  }
+  .announcement-modal__close:hover {
+    background: rgba(139, 26, 26, 0.12);
+    color: #8b1a1a;
+    transform: scale(1.08);
+  }
+  .announcement-modal__badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: #fdf5e6;
+    color: #925c08;
+    border: 1px solid #fae1a6;
+    font-size: 0.78rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    padding: 0.3rem 0.85rem;
+    border-radius: 999px;
+    margin-bottom: 1.1rem;
+  }
+  .announcement-modal__badge-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #d97706;
+    display: inline-block;
+    animation: gmlPulse 1.8s infinite;
+  }
+  .announcement-modal__icon-wrap {
+    width: 68px;
+    height: 68px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #fbeaea 0%, #fae1a6 100%);
+    color: #8b1a1a;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 1.1rem;
+    border: 2px solid rgba(226, 183, 85, 0.4);
+    box-shadow: 0 6px 16px rgba(139, 26, 26, 0.12);
+  }
+  .announcement-modal__title {
+    font-family: 'Prata', 'Playfair Display', Georgia, serif;
+    color: #5b1f1f;
+    font-size: 1.65rem;
+    margin: 0 0 0.25rem;
+    line-height: 1.25;
+  }
+  .announcement-modal__subtitle {
+    font-size: 0.85rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: #925c08;
+    margin: 0 0 1rem;
+  }
+  .announcement-modal__desc {
+    font-size: 0.95rem;
+    line-height: 1.55;
+    color: #555555;
+    margin: 0 0 1.6rem;
+  }
+  .announcement-modal__desc strong {
+    color: #1f2937;
+  }
+  .announcement-modal__actions {
+    display: flex;
+    flex-direction: column;
+    gap: 0.65rem;
+  }
+  .announcement-modal__btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.8rem 1.4rem;
+    border-radius: 10px;
+    font-size: 0.95rem;
+    font-weight: 700;
+    text-decoration: none;
+    cursor: pointer;
+    transition: all 0.18s ease;
+  }
+  .announcement-modal__btn--primary {
+    background: #5b1f1f;
+    color: #ffffff;
+    border: 1px solid #5b1f1f;
+    box-shadow: 0 4px 12px rgba(91, 31, 31, 0.25);
+  }
+  .announcement-modal__btn--primary:hover {
+    background: #752828;
+    border-color: #752828;
+    color: #ffffff;
+    transform: translateY(-1px);
+    box-shadow: 0 6px 16px rgba(91, 31, 31, 0.32);
+  }
+  .announcement-modal__btn--secondary {
+    background: #f8fafc;
+    color: #475569;
+    border: 1px solid #cbd5e1;
+  }
+  .announcement-modal__btn--secondary:hover {
+    background: #f1f5f9;
+    color: #1e293b;
+    border-color: #94a3b8;
+  }
+  @keyframes gmlModalFadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  @keyframes gmlCardPop {
+    from { transform: translateY(16px) scale(0.95); opacity: 0; }
+    to { transform: translateY(0) scale(1); opacity: 1; }
+  }
+  @keyframes gmlPulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.4; transform: scale(0.85); }
+  }
+</style>
+
+<script>
+  (function() {
+    function initClosedModal() {
+      var modal = document.getElementById('regClosedModal');
+      if (!modal) return;
+      
+      modal.classList.add('is-visible');
+
+      var closeBtn = document.getElementById('closeRegModalBtn');
+      var dismissBtn = document.getElementById('dismissRegModalBtn');
+      var backdrop = document.getElementById('regClosedBackdrop');
+
+      function hideModal() {
+        modal.classList.remove('is-visible');
+      }
+
+      if (closeBtn) closeBtn.addEventListener('click', hideModal);
+      if (dismissBtn) dismissBtn.addEventListener('click', hideModal);
+      if (backdrop) backdrop.addEventListener('click', hideModal);
+      
+      document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape' && modal.classList.contains('is-visible')) {
+          hideModal();
+        }
+      });
+    }
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', initClosedModal);
+    } else {
+      initClosedModal();
+    }
+  })();
+</script>
