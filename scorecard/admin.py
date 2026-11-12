@@ -218,6 +218,17 @@ def admin_toggle_scorer(scorer_id):
     return redirect(url_for("scorecard.admin_scorers"))
 
 
+@scorecard_bp.route("/admin/scorers/<int:scorer_id>/delete", methods=["POST"])
+@admin_required
+def admin_delete_scorer(scorer_id):
+    scorer = ScScorer.query.get_or_404(scorer_id)
+    name = scorer.name
+    db.session.delete(scorer)
+    db.session.commit()
+    flash(f"Scorer {name} was permanently deleted.", "success")
+    return redirect(url_for("scorecard.admin_scorers"))
+
+
 # ------------------------------------------------------------- EMS linking --
 @scorecard_bp.route("/admin/link", methods=["GET", "POST"])
 @admin_required

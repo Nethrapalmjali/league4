@@ -34,11 +34,17 @@
             <span class="sc-row__team">{{ scorer.name }}</span>
             {% if not scorer.active %}<span class="sc-when">Disabled</span>{% endif %}
           </span>
-          <span class="sc-row__tail">
+          <span class="sc-row__tail" style="display:flex;gap:0.5rem;align-items:center;">
             <form method="post" action="{{ url_for('scorecard.admin_toggle_scorer', scorer_id=scorer.id) }}">
               <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
               <button class="btn btn--ghost btn--sm" type="submit">
                 {{ 'Enable' if not scorer.active else 'Disable' }}
+              </button>
+            </form>
+            <form method="post" action="{{ url_for('scorecard.admin_delete_scorer', scorer_id=scorer.id) }}" onsubmit="return confirm('Permanently delete scorer {{ scorer.name }}?');">
+              <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+              <button class="btn btn--danger btn--sm" type="submit" style="background:#dc2626;color:#fff;border-color:#dc2626;padding:0.25rem 0.6rem;border-radius:4px;cursor:pointer;">
+                Delete
               </button>
             </form>
           </span>
