@@ -35,130 +35,85 @@
         </label>
         <label>
           <span>Category</span>
-          <select name="gender"><option>Men</option><option>Women</option><option>Mixed</option></select>
+          <select name="gender" required>
+            {% for g in genders %}<option value="{{ g }}">{{ g }}</option>{% endfor %}
+          </select>
         </label>
         <button class="btn btn--primary" type="submit">Add team</button>
       </form>
     </section>
 
-    <!-- Sport Selection Filter Bar -->
-    <div style="background:#fff; border:1px solid var(--sc-border, #e2e8f0); border-radius:8px; padding:0.75rem 1rem; margin-bottom:1rem; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.75rem;">
-      <div style="display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap;">
-        <span style="font-weight:700; font-size:0.85rem; color:#475569;">Filter Sport:</span>
-        <div id="sc-sport-pills" style="display:flex; gap:0.35rem; flex-wrap:wrap;">
-          <button type="button" class="btn btn--primary btn--sm" data-sport="all" onclick="filterScTeams('all')">
-            All ({{ teams|length }})
-          </button>
-          {% for sport in sports %}
-            <button type="button" class="btn btn--ghost btn--sm" data-sport="{{ sport|lower }}" onclick="filterScTeams('{{ sport|lower }}')">
-              {{ sport }}
-            </button>
-          {% endfor %}
-        </div>
-      </div>
-      <div style="display:flex; align-items:center; gap:0.4rem;">
-        <label for="sc-gender-filter" style="font-size:0.8rem; font-weight:700; color:#475569;">Category:</label>
-        <select id="sc-gender-filter" onchange="filterScTeams(currentScSport)" style="padding:0.35rem 0.6rem; border-radius:6px; border:1px solid #cbd5e1; font-size:0.82rem; font-weight:600;">
-          <option value="all">All</option>
-          <option value="men">Men</option>
-          <option value="women">Women</option>
-          <option value="mixed">Mixed</option>
-        </select>
-      </div>
-    </div>
+    <!-- Grouped by (sport, gender) -->
+    {% if grouped %}
+      {% for (sport, gender), teams in grouped.items() %}
+        <section class="sc-card" style="margin-top:1rem;">
+          <h2 style="font-size:1rem; text-transform:uppercase; letter-spacing:1px; color:var(--maroon, #7f1d1d); border-bottom:2px solid #ecc35c; padding-bottom:0.4rem; margin-bottom:0.75rem;">{{ sport }} · {{ gender }}</h2>
+          <div class="sc-list" id="sc-teams-list-{{ sport|lower }}-{{ gender|lower }}">
+            {% for team in teams %}
+              <div class="sc-row sc-row--static" data-team-row data-sport="{{ team.sport|lower }}" data-gender="{{ team.gender|lower }}">
+                <span class="sc-row__meta">
+                  <span class="sc-row__sport">{{ team.sport }}</span>
+                  <span class="sc-row__stage">{{ team.gender }}</span>
+                </span>
+                <span class="sc-row__teams">
+                  <span class="sc-row__team">{{ team.name }}</span>
+                  <span class="sc-tag">{{ team.tag }}</span>
+                </span>
+                <span class="sc-row__tail" style="display:flex; gap:0.4rem; align-items:center; flex-wrap:wrap;">
+                  <a class="btn btn--ghost btn--sm" href="{{ url_for('scorecard.admin_players', team_id=team.id) }}">
+                    Players ({{ team.players|length }})
+                  </a>
 
-    <div class="sc-list" id="sc-teams-list">
-      {% for team in teams %}
-        <div class="sc-row sc-row--static" data-team-row data-sport="{{ team.sport|lower }}" data-gender="{{ team.gender|lower }}">
-          <span class="sc-row__meta">
-            <span class="sc-row__sport">{{ team.sport }}</span>
-            <span class="sc-row__stage">{{ team.gender }}</span>
-          </span>
-          <span class="sc-row__teams">
-            <span class="sc-row__team">{{ team.name }}</span>
-            <span class="sc-tag">{{ team.tag }}</span>
-          </span>
-          <span class="sc-row__tail" style="display:flex; gap:0.4rem; align-items:center; flex-wrap:wrap;">
-            <a class="btn btn--ghost btn--sm" href="{{ url_for('scorecard.admin_players', team_id=team.id) }}">
-              Players ({{ team.players|length }})
-            </a>
-            
-            <!-- Inline Edit details -->
-            <details style="display:inline-block; position:relative;">
-              <summary class="btn btn--ghost btn--sm" style="cursor:pointer; list-style:none;">Edit</summary>
-              <div style="position:absolute; right:0; top:calc(100% + 5px); background:#fff; border:1px solid #cbd5e1; border-radius:8px; padding:1rem; box-shadow:0 10px 25px rgba(0,0,0,0.15); z-index:50; width:280px;">
-                <form method="post" action="{{ url_for('scorecard.admin_edit_team', team_id=team.id) }}">
-                  <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-                  <label style="display:block; margin-bottom:0.5rem; font-size:0.8rem; font-weight:700;">
-                    Team name
-                    <input type="text" name="name" value="{{ team.name }}" required style="width:100%; padding:0.35rem 0.5rem; margin-top:2px;">
-                  </label>
-                  <label style="display:block; margin-bottom:0.5rem; font-size:0.8rem; font-weight:700;">
-                    Tag
-                    <input type="text" name="short_name" value="{{ team.short_name or '' }}" maxlength="6" style="width:100%; padding:0.35rem 0.5rem; margin-top:2px;">
-                  </label>
-                  <label style="display:block; margin-bottom:0.5rem; font-size:0.8rem; font-weight:700;">
-                    Sport
-                    <select name="sport" style="width:100%; padding:0.35rem 0.5rem; margin-top:2px;">
-                      {% for sport in sports %}
-                        <option value="{{ sport }}" {% if team.sport == sport %}selected{% endif %}>{{ sport }}</option>
-                      {% endfor %}
-                    </select>
-                  </label>
-                  <label style="display:block; margin-bottom:0.75rem; font-size:0.8rem; font-weight:700;">
-                    Category
-                    <select name="gender" style="width:100%; padding:0.35rem 0.5rem; margin-top:2px;">
-                      <option value="Men" {% if team.gender == 'Men' %}selected{% endif %}>Men</option>
-                      <option value="Women" {% if team.gender == 'Women' %}selected{% endif %}>Women</option>
-                      <option value="Mixed" {% if team.gender == 'Mixed' %}selected{% endif %}>Mixed</option>
-                    </select>
-                  </label>
-                  <div style="display:flex; justify-content:flex-end; gap:0.4rem;">
-                    <button type="submit" class="btn btn--primary btn--sm">Save</button>
-                  </div>
-                </form>
+                  <!-- Inline Edit details -->
+                  <details style="display:inline-block; position:relative;">
+                    <summary class="btn btn--ghost btn--sm" style="cursor:pointer; list-style:none;">Edit</summary>
+                    <div style="position:absolute; right:0; top:calc(100% + 5px); background:#fff; border:1px solid #cbd5e1; border-radius:8px; padding:1rem; box-shadow:0 10px 25px rgba(0,0,0,0.15); z-index:50; width:280px;">
+                      <form method="post" action="{{ url_for('scorecard.admin_edit_team', team_id=team.id) }}">
+                        <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                        <label style="display:block; margin-bottom:0.5rem; font-size:0.8rem; font-weight:700;">
+                          Team name
+                          <input type="text" name="name" value="{{ team.name }}" required style="width:100%; padding:0.35rem 0.5rem; margin-top:2px;">
+                        </label>
+                        <label style="display:block; margin-bottom:0.5rem; font-size:0.8rem; font-weight:700;">
+                          Tag
+                          <input type="text" name="short_name" value="{{ team.short_name or '' }}" maxlength="6" style="width:100%; padding:0.35rem 0.5rem; margin-top:2px;">
+                        </label>
+                        <label style="display:block; margin-bottom:0.5rem; font-size:0.8rem; font-weight:700;">
+                          Sport
+                          <select name="sport" style="width:100%; padding:0.35rem 0.5rem; margin-top:2px;">
+                            {% for s in sports %}
+                              <option value="{{ s }}" {% if team.sport == s %}selected{% endif %}>{{ s }}</option>
+                            {% endfor %}
+                          </select>
+                        </label>
+                        <label style="display:block; margin-bottom:0.75rem; font-size:0.8rem; font-weight:700;">
+                          Category
+                          <select name="gender" style="width:100%; padding:0.35rem 0.5rem; margin-top:2px;">
+                            {% for g in genders %}
+                              <option value="{{ g }}" {% if team.gender == g %}selected{% endif %}>{{ g }}</option>
+                            {% endfor %}
+                          </select>
+                        </label>
+                        <div style="display:flex; justify-content:flex-end; gap:0.4rem;">
+                          <button type="submit" class="btn btn--primary btn--sm">Save</button>
+                        </div>
+                      </form>
+                    </div>
+                  </details>
+
+                  <form method="post" action="{{ url_for('scorecard.admin_delete_team', team_id=team.id) }}"
+                        onsubmit="return confirm('Permanently remove team {{ team.name }}?')">
+                    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                    <button class="btn btn--danger btn--sm" type="submit" style="background:#dc2626; color:#fff; border-color:#dc2626;">Delete</button>
+                  </form>
+                </span>
               </div>
-            </details>
-
-            <form method="post" action="{{ url_for('scorecard.admin_delete_team', team_id=team.id) }}"
-                  onsubmit="return confirm('Permanently remove team {{ team.name }}?')">
-              <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-              <button class="btn btn--danger btn--sm" type="submit" style="background:#dc2626; color:#fff; border-color:#dc2626;">Delete</button>
-            </form>
-          </span>
-        </div>
-      {% else %}
-        <p class="sc-empty">No teams yet. Add the first one above.</p>
+            {% endfor %}
+          </div>
+        </section>
       {% endfor %}
-      <p id="sc-empty-filter" class="sc-empty" style="display:none;">No teams registered for this sport.</p>
-    </div>
+    {% else %}
+      <p class="sc-empty">No teams yet. Add the first one above.</p>
+    {% endif %}
   </div>
-
-  <script>
-    let currentScSport = 'all';
-    function filterScTeams(sport) {
-      currentScSport = (sport || 'all').toLowerCase();
-      const pills = document.querySelectorAll('#sc-sport-pills button');
-      pills.forEach(p => {
-        const isAct = (p.dataset.sport || '').toLowerCase() === currentScSport;
-        p.className = isAct ? 'btn btn--primary btn--sm' : 'btn btn--ghost btn--sm';
-      });
-
-      const gen = (document.getElementById('sc-gender-filter')?.value || 'all').toLowerCase();
-      const rows = document.querySelectorAll('#sc-teams-list [data-team-row]');
-      let count = 0;
-
-      rows.forEach(r => {
-        const rSport = (r.dataset.sport || '').toLowerCase();
-        const rGen = (r.dataset.gender || '').toLowerCase();
-        const show = (currentScSport === 'all' || rSport === currentScSport) &&
-                     (gen === 'all' || rGen === gen);
-        r.style.display = show ? 'flex' : 'none';
-        if (show) count++;
-      });
-
-      const empty = document.getElementById('sc-empty-filter');
-      if (empty) empty.style.display = (count === 0 && rows.length > 0) ? 'block' : 'none';
-    }
-  </script>
 {% endblock %}

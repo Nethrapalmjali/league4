@@ -132,10 +132,7 @@ if not _secret_key:
 
 def resolve_database_uri():
     """Determine database URI with automatic, resilient fallback to SQLite."""
-    default_supabase = (
-        "postgresql://postgres.bqoszyelbcxrqojvutva:Rachana%401237@aws-0-ap-southeast-2.pooler.supabase.com:5432/postgres?sslmode=require"
-    )
-    raw_url = env_str("DATABASE_URL", default_supabase)
+    raw_url = env_str("DATABASE_URL")
     if raw_url:
         normalized = normalise_database_url(raw_url)
         if normalized.startswith("postgresql"):
@@ -158,12 +155,9 @@ def resolve_database_uri():
         else:
             return normalized
 
-    if SERVERLESS:
-        fallback = "sqlite:////tmp/league.db"
-    else:
-        instance_dir = os.path.join(app.root_path, "instance")
-        os.makedirs(instance_dir, exist_ok=True)
-        fallback = f"sqlite:///{os.path.join(instance_dir, 'league.db').replace(os.sep, '/')}"
+    instance_dir = os.path.join(app.root_path, "instance")
+    os.makedirs(instance_dir, exist_ok=True)
+    fallback = f"sqlite:///{os.path.join(instance_dir, 'league.db').replace(os.sep, '/')}"
     app.logger.info("Database: using SQLite (%s).", fallback)
     return fallback
 
@@ -812,9 +806,9 @@ def inject_globals():
 # --------------------------------------------------------------------------- #
 # Validation + upload helpers (Supabase Storage Cloud + Local Fallback)
 # --------------------------------------------------------------------------- #
-SUPABASE_URL = env_str("SUPABASE_URL", "https://bqoszyelbcxrqojvutva.supabase.co")
-SUPABASE_KEY = env_str("SUPABASE_KEY", "sb_publishable_zujftvHxzH1EuxAXwc9RRA_62_6kRUC")
-SUPABASE_BUCKET = env_str("SUPABASE_BUCKET", "gml-media")
+SUPABASE_URL = env_str("SUPABASE_URL")
+SUPABASE_KEY = env_str("SUPABASE_KEY")
+SUPABASE_BUCKET = env_str("SUPABASE_BUCKET")
 
 EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[a-zA-Z]{2,}$")
 PHONE_RE = re.compile(r"^[6-9]\d{9}$")

@@ -65,3 +65,4 @@ if __name__ == "__main__":
                 break
             except Exception as e:
                 print(f"SQL Error: {e}")
+

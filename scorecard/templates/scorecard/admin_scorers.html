@@ -13,17 +13,35 @@
       </p>
     </header>
 
+    <!-- Gender tabs -->
+    <nav class="sc-tabs" aria-label="Scorer category">
+      {% for g in genders %}
+        <a class="sc-tab{% if g == filter_gender %} is-active{% endif %}"
+           href="{{ url_for('scorecard.admin_scorers', gender=g) }}"
+           {% if g == filter_gender %}aria-current="page"{% endif %}>
+          {{ g }}
+        </a>
+      {% endfor %}
+    </nav>
+
     <section class="sc-card">
-      <h2>Issue a passcode</h2>
+      <h2>Issue a passcode ({{ filter_gender }})</h2>
       <form method="post" class="sc-form sc-form--row">
         <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
         <label><span>Name</span><input type="text" name="name" required placeholder="Volunteer's name"></label>
         <label><span>Passcode</span><input type="text" name="passcode" required minlength="4"></label>
+        <label style="display:none;">
+          <span>Category</span>
+          <select name="gender"><option value="{{ filter_gender }}">{{ filter_gender }}</option></select>
+        </label>
+        <input type="hidden" name="gender" value="{{ filter_gender }}">
         <button class="btn btn--primary" type="submit">Create</button>
       </form>
       <p class="sc-hint">
         Write the passcode down now — it is stored hashed and cannot be read back.
         A scorer can only reach the scoring screen, never the auction or player data.
+        Scorers are separated by category so a {{ filter_gender }} scorer is offered
+        for {{ filter_gender }} fixtures first.
       </p>
     </section>
 
@@ -32,6 +50,7 @@
         <div class="sc-row sc-row--static">
           <span class="sc-row__teams">
             <span class="sc-row__team">{{ scorer.name }}</span>
+            <span class="sc-tag">{{ scorer.gender }}</span>
             {% if not scorer.active %}<span class="sc-when">Disabled</span>{% endif %}
           </span>
           <span class="sc-row__tail" style="display:flex;gap:0.5rem;align-items:center;">
@@ -41,7 +60,7 @@
                 {{ 'Enable' if not scorer.active else 'Disable' }}
               </button>
             </form>
-            <form method="post" action="{{ url_for('scorecard.admin_delete_scorer', scorer_id=scorer.id) }}" onsubmit="return confirm('Permanently delete scorer {{ scorer.name }}?');">
+            <form method="post" action="{{ url_for('scorecard.admin_delete_scorer', scorer_id=scorer.id, gender=scorer.gender) }}" onsubmit="return confirm('Permanently delete scorer {{ scorer.name }}?');">
               <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
               <button class="btn btn--danger btn--sm" type="submit" style="background:#dc2626;color:#fff;border-color:#dc2626;padding:0.25rem 0.6rem;border-radius:4px;cursor:pointer;">
                 Delete
@@ -50,7 +69,7 @@
           </span>
         </div>
       {% else %}
-        <p class="sc-empty">No scorers yet. Committee members can score with the admin login.</p>
+        <p class="sc-empty">No {{ filter_gender }} scorers yet. Add one above.</p>
       {% endfor %}
     </div>
   </div>

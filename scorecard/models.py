@@ -57,6 +57,7 @@ class ScScorer(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(80), nullable=False)
     passcode_hash = db.Column(db.String(255), nullable=False)
+    gender = db.Column(db.String(10), default="Men")
     active = db.Column(db.Boolean, default=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 

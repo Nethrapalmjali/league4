@@ -6,3 +6,4 @@ xlsxwriter==3.2.9
 aws-lambda-wsgi
 gunicorn>=22.0.0
 psycopg2-binary>=2.9.9
+waitress>=3.0.0

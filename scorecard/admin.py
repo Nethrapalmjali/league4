@@ -2,6 +2,10 @@
 
 These reuse the EMS admin session via its own ``admin_required`` decorator, so
 there is no second committee login to remember.
+
+Everything is gender-aware: teams, fixtures, and scorers are all managed per
+(sport, gender) pair so Basketball Men and Basketball Women never share a
+table, fixture list, or scorer roster.
 """
 
 from datetime import datetime
@@ -10,7 +14,7 @@ from flask import flash, redirect, render_template, request, url_for
 from werkzeug.security import generate_password_hash
 
 from . import scorecard_bp
-from .config import STAGES, STATUS_LIVE, STATUS_SCHEDULED, rules_for
+from .config import STAGES, STATUS_LIVE, STATUS_SCHEDULED, rules_for, GENDERS
 from .ems import SPORTS, admin_required, db, team_owner_model
 from .models import ScEvent, ScMatch, ScPlayer, ScScorer, ScTeam
 
@@ -36,23 +40,30 @@ def admin_teams():
     if request.method == "POST":
         name = _clean(request.form.get("name"), 100)
         sport = _clean(request.form.get("sport"), 50)
-        if not name or sport not in SPORTS:
-            flash("A team needs a name and a valid sport.", "error")
+        gender = request.form.get("gender") or "Men"
+        if not name or sport not in SPORTS or gender not in GENDERS:
+            flash("A team needs a name, a valid sport, and a valid gender.", "error")
         else:
             db.session.add(ScTeam(
                 name=name,
                 short_name=_clean(request.form.get("short_name"), 6).upper() or None,
                 sport=sport,
-                gender=_clean(request.form.get("gender"), 10) or "Men",
+                gender=gender,
             ))
             db.session.commit()
-            flash(f"Added {name}.", "success")
+            flash(f"Added {name} ({sport} – {gender}).", "success")
         return redirect(url_for("scorecard.admin_teams"))
 
+    # Group teams by (sport, gender) so each table is separate.
+    teams = ScTeam.query.order_by(ScTeam.sport, ScTeam.gender, ScTeam.name).all()
+    grouped = {}
+    for team in teams:
+        grouped.setdefault((team.sport, team.gender), []).append(team)
     return render_template(
         "scorecard/admin_teams.html",
-        teams=ScTeam.query.order_by(ScTeam.sport, ScTeam.name).all(),
+        grouped=grouped,
         sports=SPORTS,
+        genders=GENDERS,
     )
 
 
@@ -142,29 +153,49 @@ def admin_delete_player(player_id):
 @scorecard_bp.route("/admin/matches", methods=["GET", "POST"])
 @admin_required
 def admin_matches():
+    # Optional filters so the admin can view one (sport, gender) at a time.
+    filter_sport = request.args.get("sport") or request.form.get("sport") or ""
+    filter_gender = request.args.get("gender") or request.form.get("gender") or "Men"
+    if filter_gender not in GENDERS:
+        filter_gender = "Men"
+
     if request.method == "POST":
         sport = _clean(request.form.get("sport"), 50)
         team_a = request.form.get("team_a_id")
         team_b = request.form.get("team_b_id")
+        gender = request.form.get("gender") or "Men"
         instant = request.form.get("start_now") == "1"
 
-        if sport not in SPORTS or not team_a or not team_b:
-            flash("Pick a sport and both teams.", "error")
-            return redirect(url_for("scorecard.admin_matches"))
+        if sport not in SPORTS or not team_a or not team_b or gender not in GENDERS:
+            flash("Pick a sport, both teams, and a gender.", "error")
+            return redirect(url_for(
+                "scorecard.admin_matches", sport=filter_sport, gender=filter_gender
+            ))
         if team_a == team_b:
             flash("Team A and Team B are the same team — pick two different ones.", "error")
-            return redirect(url_for("scorecard.admin_matches"))
+            return redirect(url_for(
+                "scorecard.admin_matches", sport=filter_sport, gender=filter_gender
+            ))
 
         side_a = ScTeam.query.get(int(team_a))
         side_b = ScTeam.query.get(int(team_b))
-        wrong = [t.name for t in (side_a, side_b) if t and t.sport != sport]
+        wrong = []
+        for t in (side_a, side_b):
+            if not t:
+                wrong.append("unknown team")
+            elif t.sport != sport:
+                wrong.append(f"{t.name} does not play {sport}")
+            elif t.gender != gender:
+                wrong.append(f"{t.name} is a {t.gender} team, not {gender}")
         if wrong:
-            flash(f"{' and '.join(wrong)} do not play {sport}. Pick teams from that sport.", "error")
-            return redirect(url_for("scorecard.admin_matches"))
+            flash("; ".join(wrong) + ". Pick teams from that sport and gender.", "error")
+            return redirect(url_for(
+                "scorecard.admin_matches", sport=filter_sport, gender=filter_gender
+            ))
 
         match = ScMatch(
             sport=sport,
-            gender=_clean(request.form.get("gender"), 10) or "Men",
+            gender=gender,
             stage=_clean(request.form.get("stage"), 40) or "League",
             team_a_id=int(team_a),
             team_b_id=int(team_b),
@@ -182,15 +213,32 @@ def admin_matches():
         flash("Match started." if instant else "Fixture added.", "success")
         if instant:
             return redirect(url_for("scorecard.console", match_id=match.id))
-        return redirect(url_for("scorecard.admin_matches"))
+        return redirect(url_for(
+            "scorecard.admin_matches", sport=sport, gender=gender
+        ))
+
+    # Build the match list, optionally filtered.
+    query = ScMatch.query
+    if filter_sport:
+        query = query.filter_by(sport=filter_sport)
+    if filter_gender:
+        query = query.filter_by(gender=filter_gender)
+    matches = query.order_by(ScMatch.starts_at.desc(), ScMatch.id.desc()).all()
+
+    # Teams available for selection, grouped by (sport, gender).
+    teams = ScTeam.query.order_by(ScTeam.sport, ScTeam.gender, ScTeam.name).all()
+    scorers = ScScorer.query.filter_by(active=True).order_by(ScScorer.name).all()
 
     return render_template(
         "scorecard/admin_matches.html",
-        matches=ScMatch.query.order_by(ScMatch.starts_at.desc(), ScMatch.id.desc()).all(),
-        teams=ScTeam.query.order_by(ScTeam.sport, ScTeam.name).all(),
-        scorers=ScScorer.query.filter_by(active=True).order_by(ScScorer.name).all(),
+        matches=matches,
+        teams=teams,
+        scorers=scorers,
         sports=SPORTS,
+        genders=GENDERS,
         stages=STAGES,
+        filter_sport=filter_sport,
+        filter_gender=filter_gender,
     )
 
 
@@ -198,34 +246,48 @@ def admin_matches():
 @admin_required
 def admin_delete_match(match_id):
     match = ScMatch.query.get_or_404(match_id)
+    sport = match.sport
+    gender = match.gender
     db.session.delete(match)
     db.session.commit()
     flash("Fixture removed.", "success")
-    return redirect(url_for("scorecard.admin_matches"))
+    return redirect(url_for("scorecard.admin_matches", sport=sport, gender=gender))
 
 
 # ----------------------------------------------------------------- scorers --
 @scorecard_bp.route("/admin/scorers", methods=["GET", "POST"])
 @admin_required
 def admin_scorers():
+    filter_gender = request.args.get("gender") or request.form.get("gender") or "Men"
+    if filter_gender not in GENDERS:
+        filter_gender = "Men"
+
     if request.method == "POST":
         name = _clean(request.form.get("name"), 80)
         passcode = request.form.get("passcode") or ""
-        if not name or len(passcode) < 4:
-            flash("A scorer needs a name and a passcode of at least 4 characters.", "error")
-        elif ScScorer.query.filter(db.func.lower(ScScorer.name) == name.lower()).first():
-            # Case-insensitive, matching how sign-in looks names up — two
-            # scorers differing only in case would make that lookup ambiguous.
-            flash(f"There is already a scorer called {name}.", "error")
+        gender = request.form.get("gender") or "Men"
+        if not name or len(passcode) < 4 or gender not in GENDERS:
+            flash("A scorer needs a name, a passcode of at least 4 characters, and a valid gender.", "error")
+        elif ScScorer.query.filter(
+            db.func.lower(ScScorer.name) == name.lower(),
+            ScScorer.gender == gender,
+        ).first():
+            flash(f"There is already a {gender} scorer called {name}.", "error")
         else:
-            db.session.add(ScScorer(name=name, passcode_hash=generate_password_hash(passcode)))
+            db.add(ScScorer(name=name, passcode_hash=generate_password_hash(passcode), gender=gender))
             db.session.commit()
-            flash(f"{name} can now sign in and score.", "success")
-        return redirect(url_for("scorecard.admin_scorers"))
+            flash(f"{name} ({gender}) can now sign in and score.", "success")
+        return redirect(url_for("scorecard.admin_scorers", gender=filter_gender))
+
+    scorers = ScScorer.query.filter_by(
+        gender=filter_gender
+    ).order_by(ScScorer.name).all()
 
     return render_template(
         "scorecard/admin_scorers.html",
-        scorers=ScScorer.query.order_by(ScScorer.name).all(),
+        scorers=scorers,
+        genders=GENDERS,
+        filter_gender=filter_gender,
     )
 
 
@@ -233,10 +295,11 @@ def admin_scorers():
 @admin_required
 def admin_toggle_scorer(scorer_id):
     scorer = ScScorer.query.get_or_404(scorer_id)
+    gender = scorer.gender
     scorer.active = not scorer.active
     db.session.commit()
     flash(f"{scorer.name} {'can score again' if scorer.active else 'can no longer sign in'}.", "info")
-    return redirect(url_for("scorecard.admin_scorers"))
+    return redirect(url_for("scorecard.admin_scorers", gender=gender))
 
 
 @scorecard_bp.route("/admin/scorers/<int:scorer_id>/delete", methods=["POST"])
@@ -244,10 +307,11 @@ def admin_toggle_scorer(scorer_id):
 def admin_delete_scorer(scorer_id):
     scorer = ScScorer.query.get_or_404(scorer_id)
     name = scorer.name
+    gender = scorer.gender
     db.session.delete(scorer)
     db.session.commit()
     flash(f"Scorer {name} was permanently deleted.", "success")
-    return redirect(url_for("scorecard.admin_scorers"))
+    return redirect(url_for("scorecard.admin_scorers", gender=gender))
 
 
 # ------------------------------------------------------------- EMS linking --
@@ -272,7 +336,7 @@ def admin_link():
 
     owners = TeamOwner.query.order_by(TeamOwner.team_name).all()
     by_name = {(o.team_name or "").strip().lower(): o.id for o in owners}
-    teams = ScTeam.query.order_by(ScTeam.sport, ScTeam.name).all()
+    teams = ScTeam.query.order_by(ScTeam.sport, ScTeam.gender, ScTeam.name).all()
     suggestions = {
         team.id: by_name.get(team.name.strip().lower())
         for team in teams
@@ -291,7 +355,7 @@ def export_tournament_excel():
     from io import BytesIO
     from flask import send_file
     import xlsxwriter
-    from .stats import standings_for, leaders_for
+    from .stats import standings_for, leaders_for, _sport_gender_combos
 
     output = BytesIO()
     workbook = xlsxwriter.Workbook(output, {"in_memory": True})
@@ -336,18 +400,19 @@ def export_tournament_excel():
     ws_matches.set_column(11, 11, 32)
     ws_matches.set_column(12, 13, 20)
 
-    # Sheet 2: League Standings
+    # Sheet 2: League Standings (per sport + gender)
     ws_standings = workbook.add_worksheet("League Standings")
     ws_standings.write(0, 0, "GM LEAGUE SEASON 4 — OFFICIAL STANDINGS", title_format)
-    stand_headers = ["Sport", "Rank", "Team Name", "Tag", "Played", "Won", "Drawn", "Lost", "For", "Against", "+/-", "Points"]
+    stand_headers = ["Sport", "Gender", "Rank", "Team Name", "Tag", "Played", "Won", "Drawn", "Lost", "For", "Against", "+/-", "Points"]
     ws_standings.write_row(2, 0, stand_headers, header_format)
 
     curr_row = 3
-    for sport in SPORTS:
-        table = standings_for(sport)
+    for sport, gender in _sport_gender_combos():
+        table = standings_for(sport, gender)
         for r in table:
             stand_row = [
                 sport,
+                gender,
                 r.get("position", 1),
                 r["team"].name,
                 r["team"].tag,
@@ -367,18 +432,19 @@ def export_tournament_excel():
     ws_standings.set_column(2, 2, 24)
     ws_standings.set_column(3, 11, 10)
 
-    # Sheet 3: Top Scorers
+    # Sheet 3: Top Scorers (per sport + gender)
     ws_scorers = workbook.add_worksheet("Top Scorers")
     ws_scorers.write(0, 0, "GM LEAGUE SEASON 4 — TOP SCORERS & LEADERS", title_format)
-    score_headers = ["Sport", "Rank", "Player Name", "Team", "Jersey", "Total Points/Goals"]
+    score_headers = ["Sport", "Gender", "Rank", "Player Name", "Team", "Jersey", "Total Points/Goals"]
     ws_scorers.write_row(2, 0, score_headers, header_format)
 
     s_row = 3
-    for sport in SPORTS:
-        leaders = leaders_for(sport, limit=20)
+    for sport, gender in _sport_gender_combos():
+        leaders = leaders_for(sport, gender, limit=20)
         for idx, (player, pts, entries) in enumerate(leaders, start=1):
             s_data = [
                 sport,
+                gender,
                 idx,
                 player.name,
                 player.team.name if player.team else "—",
@@ -406,15 +472,19 @@ def export_tournament_excel():
 @admin_required
 def tournament_report():
     """Print-ready official tournament summary with college branding."""
-    from .stats import standings_for, leaders_for
+    from .stats import standings_for, leaders_for, _sport_gender_combos, _sport_gender_combos
     matches = ScMatch.query.order_by(ScMatch.starts_at.asc(), ScMatch.id.asc()).all()
-    sport_tables = {sport: standings_for(sport) for sport in SPORTS}
-    sport_leaders = {sport: leaders_for(sport, limit=10) for sport in SPORTS}
+    sport_tables = {}
+    sport_leaders = {}
+    for sport, gender in _sport_gender_combos():
+        sport_tables[(sport, gender)] = standings_for(sport, gender)
+        sport_leaders[(sport, gender)] = leaders_for(sport, gender, limit=10)
     return render_template(
         "scorecard/admin_report.html",
         matches=matches,
         sport_tables=sport_tables,
         sport_leaders=sport_leaders,
         sports=SPORTS,
+        genders=GENDERS,
         now=datetime.utcnow(),
     )

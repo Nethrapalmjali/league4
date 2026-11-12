@@ -15,6 +15,31 @@
       </p>
     </header>
 
+    <!-- Sport & Category filter bar -->
+    <div style="background:#fff; border:1px solid var(--sc-border, #e2e8f0); border-radius:8px; padding:0.75rem 1rem; margin-bottom:1rem; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.75rem;">
+      <div style="display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap;">
+        <span style="font-weight:700; font-size:0.85rem; color:#475569;">Sport:</span>
+        <div id="sc-match-sport-pills" style="display:flex; gap:0.35rem; flex-wrap:wrap;">
+          <button type="button" class="btn{% if not filter_sport %} btn--primary{% else %} btn--ghost{% endif %} btn--sm" data-sport="all" onclick="filterScMatches('all', '{{ filter_gender }}')">
+            All Sports
+          </button>
+          {% for s in sports %}
+            <button type="button" class="btn btn--ghost btn--sm" data-sport="{{ s|lower }}" onclick="filterScMatches('{{ s|lower }}', '{{ filter_gender }}')">
+              {{ s }}
+            </button>
+          {% endfor %}
+        </div>
+      </div>
+      <div style="display:flex; align-items:center; gap:0.4rem;">
+        <label for="sc-match-gender-filter" style="font-size:0.8rem; font-weight:700; color:#475569;">Category:</label>
+        <select id="sc-match-gender-filter" onchange="filterScMatches('{{ filter_sport }}', this.value)" style="padding:0.35rem 0.6rem; border-radius:6px; border:1px solid #cbd5e1; font-size:0.82rem; font-weight:600;">
+          {% for g in genders %}
+            <option value="{{ g }}" {% if g == filter_gender %}selected{% endif %}>{{ g }}</option>
+          {% endfor %}
+        </select>
+      </div>
+    </div>
+
     <section class="sc-card">
       <h2>New match</h2>
       {% if teams|length < 2 %}
@@ -26,7 +51,7 @@
           <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
           <label>
             <span>Sport</span>
-            <select name="sport" required>
+            <select name="sport" id="new-match-sport" required onchange="updateMatchTeamOptions()">
               {% for sport in sports %}<option value="{{ sport }}">{{ sport }}</option>{% endfor %}
             </select>
           </label>
@@ -38,36 +63,25 @@
           </label>
           <label>
             <span>Category</span>
-            <select name="gender">
-              <option value="Men">Men</option>
-              <option value="Women">Women</option>
+            <select name="gender" id="new-match-gender" required>
+              {% for g in genders %}<option value="{{ g }}">{{ g }}</option>{% endfor %}
             </select>
           </label>
           <label>
             <span>Team A</span>
-            <select name="team_a_id" required>
-              {% for team in teams %}<option value="{{ team.id }}">{{ team.name }} ({{ team.sport }})</option>{% endfor %}
-            </select>
+            <select name="team_a_id" id="team-a-select" required></select>
           </label>
           <label>
             <span>Team B</span>
-            {# Defaults to the second team: leaving both on the first one is the
-               easiest way to get a rejected fixture and wonder why. #}
-            <select name="team_b_id" required>
-              {% for team in teams %}
-                <option value="{{ team.id }}"{% if loop.index == 2 %} selected{% endif %}>
-                  {{ team.name }} ({{ team.sport }})
-                </option>
-              {% endfor %}
-            </select>
+            <select name="team_b_id" id="team-b-select" required></select>
           </label>
           <label><span>Venue</span><input type="text" name="venue" placeholder="Main ground"></label>
           <label><span>Starts</span><input type="datetime-local" name="starts_at"></label>
           <label>
             <span>Scorer</span>
-            <select name="scorer_id">
+            <select name="scorer_id" id="scorer-select">
               <option value="">Anyone</option>
-              {% for scorer in scorers %}<option value="{{ scorer.id }}">{{ scorer.name }}</option>{% endfor %}
+              {% for scorer in scorers %}<option value="{{ scorer.id }}" data-gender="{{ scorer.gender }}">{{ scorer.name }} ({{ scorer.gender }})</option>{% endfor %}
             </select>
           </label>
           <div class="sc-form__buttons">
@@ -85,11 +99,12 @@
       {% endif %}
     </section>
 
-    <div class="sc-list">
+    <div class="sc-list" id="sc-matches-list">
       {% for match in matches %}
-        <div class="sc-row sc-row--static">
+        <div class="sc-row sc-row--static" data-match-row data-sport="{{ match.sport|lower }}" data-gender="{{ match.gender|lower }}">
           <span class="sc-row__meta">
             <span class="sc-row__sport">{{ match.sport }}</span>
+            <span class="sc-row__stage">{{ match.gender }}</span>
             <span class="sc-row__stage">{{ match.stage }}</span>
           </span>
           <span class="sc-row__teams">
@@ -106,7 +121,7 @@
                href="{{ url_for('scorecard.console', match_id=match.id) }}">
               {{ 'Review' if match.status == 'final' else 'Open scoring' }}
             </a>
-            <form method="post" action="{{ url_for('scorecard.admin_delete_match', match_id=match.id) }}"
+            <form method="post" action="{{ url_for('scorecard.admin_delete_match', match_id=match.id, sport=match.sport, gender=match.gender) }}"
                   onsubmit="return confirm('Delete this fixture and its events?')">
               <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
               <button class="btn btn--ghost btn--sm" type="submit">Delete</button>
@@ -118,4 +133,68 @@
       {% endfor %}
     </div>
   </div>
+
+  <script>
+    // Team options for the new-match form, filtered by sport + gender.
+    const allTeams = {{ teams|tojson }};
+    const allScorers = {{ scorers|tojson }};
+
+    function updateMatchTeamOptions() {
+      const sport = document.getElementById('new-match-sport').value;
+      const gender = document.getElementById('new-match-gender').value;
+      const ta = document.getElementById('team-a-select');
+      const tb = document.getElementById('team-b-select');
+      const sel = document.getElementById('scorer-select');
+
+      ta.innerHTML = '';
+      tb.innerHTML = '';
+      sel.innerHTML = '<option value="">Anyone</option>';
+
+      allTeams.forEach(t => {
+        if (t.sport === sport && t.gender === gender) {
+          const o = document.createElement('option');
+          o.value = t.id;
+          o.textContent = t.name;
+          ta.appendChild(o.cloneNode(true));
+          tb.appendChild(o);
+        }
+      });
+
+      allScorers.forEach(s => {
+        if (s.gender === gender) {
+          const o = document.createElement('option');
+          o.value = s.id;
+          o.textContent = s.name + ' (' + s.gender + ')';
+          sel.appendChild(o);
+        }
+      });
+    }
+
+    // Initialise on load.
+    updateMatchTeamOptions();
+
+    let currentMatchSport = '{{ filter_sport }}';
+    let currentMatchGender = '{{ filter_gender }}';
+    function filterScMatches(sport, gender) {
+      currentMatchSport = (sport || 'all').toLowerCase();
+      currentMatchGender = gender;
+
+      const pills = document.querySelectorAll('#sc-match-sport-pills button');
+      pills.forEach(p => {
+        const isAct = (p.dataset.sport || '').toLowerCase() === currentMatchSport;
+        p.className = isAct ? 'btn btn--primary btn--sm' : 'btn btn--ghost btn--sm';
+      });
+
+      const rows = document.querySelectorAll('#sc-matches-list [data-match-row]');
+      let count = 0;
+      rows.forEach(r => {
+        const rSport = (r.dataset.sport || '').toLowerCase();
+        const rGen = (r.dataset.gender || '').toLowerCase();
+        const show = (currentMatchSport === 'all' || rSport === currentMatchSport) &&
+                     (currentMatchGender === 'all' || rGen === currentMatchGender.toLowerCase());
+        r.style.display = show ? 'flex' : 'none';
+        if (show) count++;
+      });
+    }
+  </script>
 {% endblock %}

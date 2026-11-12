@@ -723,7 +723,7 @@
           </div>
           <div style="display:flex; align-items:center; gap:0.4rem; margin-left:auto;">
             <label for="team-gender-select" style="font-size:0.78rem; font-weight:700; color:var(--muted); white-space:nowrap;">Category:</label>
-            <select id="team-gender-select" onchange="filterTeamBySport(currentTeamSport)" style="padding:0.35rem 0.65rem; border-radius:6px; border:1px solid var(--line); font-size:0.8rem; font-weight:600; background:#fff; color:var(--ink);">
+            <select id="team-gender-select" style="padding:0.35rem 0.65rem; border-radius:6px; border:1px solid var(--line); font-size:0.8rem; font-weight:600; background:#fff; color:var(--ink);">
               <option value="all">All Categories</option>
               <option value="men">Men</option>
               <option value="women">Women</option>
@@ -1221,6 +1221,11 @@
     const teamSearch = document.getElementById('team-search-input');
     if (teamSearch) {
       teamSearch.addEventListener('input', () => window.filterTeamBySport(window.currentTeamSport));
+    }
+
+    const teamGender = document.getElementById('team-gender-select');
+    if (teamGender) {
+      teamGender.addEventListener('change', () => window.filterTeamBySport(window.currentTeamSport));
     }
 
     /* ------------------------------------------------------ live search */

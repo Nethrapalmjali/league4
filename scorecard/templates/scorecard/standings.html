@@ -1,6 +1,6 @@
 {% extends "scorecard/_page.html" %}
-{% block title %}{{ sport }} standings{% endblock %}
-{% block description %}League table and leading scorers for {{ sport }} in {{ brand.name }}.{% endblock %}
+{% block title %}{{ sport }} {{ gender }} standings{% endblock %}
+{% block description %}League table and leading scorers for {{ sport }} ({{ gender }}) in {{ brand.name }}.{% endblock %}
 
 {% block content %}
   <div class="sc-page">
@@ -14,23 +14,23 @@
       </p>
     </header>
 
-    {% if sports|length > 1 %}
-      <nav class="sc-tabs" aria-label="Sport">
-        {% for name in sports %}
-          <a class="sc-tab{% if name == sport %} is-active{% endif %}"
-             href="{{ url_for('scorecard.standings', sport=name) }}"
-             {% if name == sport %}aria-current="page"{% endif %}>{{ name }}</a>
-        {% endfor %}
-      </nav>
-    {% endif %}
+    <nav class="sc-tabs" aria-label="Sport &amp; category">
+      {% for s, g in sports %}
+        <a class="sc-tab{% if s == sport and g == gender %} is-active{% endif %}"
+           href="{{ url_for('scorecard.standings', sport=s, gender=g) }}"
+           {% if s == sport and g == gender %}aria-current="page"{% endif %}>
+          {{ s }} · {{ g }}
+        </a>
+      {% endfor %}
+    </nav>
 
     <section class="sc-block">
-      <h2 class="sc-block__title">{{ sport }} table</h2>
+      <h2 class="sc-block__title">{{ sport }} · {{ gender }} table</h2>
       {% if not table %}
-        <p class="sc-empty">No {{ sport }} teams yet.</p>
+        <p class="sc-empty">No {{ sport }} {{ gender }} teams yet.</p>
       {% else %}
         {% if played == 0 %}
-          <p class="sc-hint">No {{ sport }} match has finished yet, so everyone is still on zero.</p>
+          <p class="sc-hint">No {{ sport }} {{ gender }} match has finished yet, so everyone is still on zero.</p>
         {% endif %}
         <div class="sc-scroll">
           <table class="sc-table">
@@ -73,10 +73,10 @@
     </section>
 
     <section class="sc-block">
-      <h2 class="sc-block__title">Leading scorers</h2>
+      <h2 class="sc-block__title">Leading scorers ({{ sport }} · {{ gender }})</h2>
       {% if not leaders %}
         <p class="sc-empty">
-          Nobody has been credited with a score in {{ sport }} yet. Scorers can
+          Nobody has been credited with a score in {{ sport }} {{ gender }} yet. Scorers can
           name the player when they record each point.
         </p>
       {% else %}
