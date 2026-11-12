@@ -74,5 +74,35 @@
     {% block login_content %}{% endblock %}
   {% endif %}
   {% endblock %}
+  <script>
+    // Global graceful image fallback for restricted cloud storage
+    document.addEventListener('error', function (e) {
+      if (e.target && e.target.tagName && e.target.tagName.toLowerCase() === 'img') {
+        const img = e.target;
+        if (img.dataset.hasFallback) return;
+        img.dataset.hasFallback = 'true';
+        img.style.display = 'none';
+
+        const alt = (img.getAttribute('alt') || 'GM').replace(/logo|photo|player/gi, '').trim();
+        const words = alt.split(/\s+/).filter(Boolean);
+        let initials = 'GM';
+        if (words.length >= 2) {
+          initials = (words[0][0] + words[1][0]).toUpperCase();
+        } else if (words.length === 1 && words[0].length >= 2) {
+          initials = words[0].slice(0, 2).toUpperCase();
+        }
+
+        const fallback = document.createElement('div');
+        fallback.className = 'thumb thumb--fallback';
+        fallback.setAttribute('title', alt);
+        fallback.style.cssText = 'width:100%; height:100%; min-width:32px; min-height:32px; border-radius:inherit; display:flex; align-items:center; justify-content:center; background:linear-gradient(135deg, #78350f 0%, #b45309 100%); color:#fff; font-weight:800; font-size:0.82rem; letter-spacing:0.04em; text-transform:uppercase; box-shadow:inset 0 0 0 1px rgba(255,255,255,0.2); user-select:none;';
+        fallback.textContent = initials;
+
+        if (img.parentElement) {
+          img.parentElement.appendChild(fallback);
+        }
+      }
+    }, true);
+  </script>
 </body>
 </html>
