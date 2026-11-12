@@ -1765,10 +1765,59 @@ def admin_dashboard():
     other_players = [p for p in all_players if p.institution_category == "other"]
     other_colleges_summary = Counter(p.college_name.strip() for p in other_players if p.college_name).most_common(14)
 
+    # Competing sport teams breakdown across all franchises
+    sport_teams = []
+    sport_team_breakdown = Counter()
+    for o in owners:
+        if o.wallets:
+            for w in o.wallets:
+                cat_label = f"{w.sport} ({w.gender})"
+                sport_team_breakdown[cat_label] += 1
+                sport_teams.append({
+                    "owner": o,
+                    "team_name": o.team_name,
+                    "sport": w.sport,
+                    "gender": w.gender,
+                    "label": f"{w.sport} – {w.gender}",
+                    "allocated": w.allocated_budget,
+                    "spent": w.spent,
+                    "balance": w.balance,
+                    "manager": o.manager_name,
+                    "manager_contact": o.manager_contact_number,
+                    "contact": o.contact,
+                })
+        else:
+            for raw_s in (o.sports or "").split(","):
+                raw_s = raw_s.strip()
+                if not raw_s:
+                    continue
+                sp, gen = parse_sport_gender(raw_s)
+                sp_name = sp or raw_s
+                gen_name = gen or "Men"
+                cat_label = f"{sp_name} ({gen_name})"
+                sport_team_breakdown[cat_label] += 1
+                sport_teams.append({
+                    "owner": o,
+                    "team_name": o.team_name,
+                    "sport": sp_name,
+                    "gender": gen_name,
+                    "label": f"{sp_name} – {gen_name}",
+                    "allocated": o.budget or DEFAULT_BUDGET,
+                    "spent": 0,
+                    "balance": o.budget or DEFAULT_BUDGET,
+                    "manager": o.manager_name,
+                    "manager_contact": o.manager_contact_number,
+                    "contact": o.contact,
+                })
+
+    sport_teams.sort(key=lambda t: (t["sport"], t["gender"], t["team_name"]))
+
     return render_template(
         "admin_dashboard.html",
         players_by_sport=players_by_sport,
         owners=owners,
+        sport_teams=sport_teams,
+        sport_team_breakdown=dict(sorted(sport_team_breakdown.items())),
         sold_players=sold_players,
         all_players=all_players,
         total_players=len(all_players),
@@ -2148,6 +2197,7 @@ def owner_rows(owners):
             "Email": o.email or "N/A",
             "Contact": o.contact or "N/A",
             "Designation": o.designation or "N/A",
+            "Total Fielded Teams": len(o.wallets) if o.wallets else len([s for s in (o.sports or "").split(",") if s.strip()]),
             "Categories": ", ".join(f"{w.sport} – {w.gender}" for w in o.wallets) if o.wallets else o.sports,
             "Total Allocated": format_inr(o.total_allocated_budget),
             "Total Spent": format_inr(o.total_spent),
@@ -2162,6 +2212,53 @@ def owner_rows(owners):
         }
         for o in owners
     ]
+
+
+def competing_team_rows(owners):
+    rows = []
+    for o in owners:
+        if o.wallets:
+            for w in o.wallets:
+                rows.append({
+                    "Team Name": o.team_name,
+                    "Sport": w.sport,
+                    "Category": w.gender,
+                    "Franchise Owner": o.name,
+                    "Designation": o.designation or "N/A",
+                    "Employee ID": o.usn or "N/A",
+                    "Contact": o.contact or "N/A",
+                    "Email": o.email or "N/A",
+                    "Category Allocated Purse": format_inr(w.allocated_budget),
+                    "Category Spent": format_inr(w.spent),
+                    "Category Remaining": format_inr(w.balance),
+                    "Manager Name": o.manager_name or "N/A",
+                    "Manager Contact": o.manager_contact_number or "N/A",
+                    "Franchise ID": o.reg_code,
+                })
+        else:
+            for raw_s in (o.sports or "").split(","):
+                raw_s = raw_s.strip()
+                if not raw_s:
+                    continue
+                sp, gen = parse_sport_gender(raw_s)
+                rows.append({
+                    "Team Name": o.team_name,
+                    "Sport": sp or raw_s,
+                    "Category": gen or "Men",
+                    "Franchise Owner": o.name,
+                    "Designation": o.designation or "N/A",
+                    "Employee ID": o.usn or "N/A",
+                    "Contact": o.contact or "N/A",
+                    "Email": o.email or "N/A",
+                    "Category Allocated Purse": format_inr(o.budget or DEFAULT_BUDGET),
+                    "Category Spent": format_inr(0),
+                    "Category Remaining": format_inr(o.budget or DEFAULT_BUDGET),
+                    "Manager Name": o.manager_name or "N/A",
+                    "Manager Contact": o.manager_contact_number or "N/A",
+                    "Franchise ID": o.reg_code,
+                })
+    rows.sort(key=lambda r: (r["Sport"], r["Category"], r["Team Name"]))
+    return rows
 
 
 def excel_response(sheets, filename):
@@ -2210,7 +2307,9 @@ def export_summary(sport):
 @admin_required
 def export_all_summaries():
     sheets = [(s, player_rows(Player.query.filter_by(sport=s).order_by(Player.name).all())) for s in SPORTS]
-    sheets.append(("Team Owners", owner_rows(TeamOwner.query.order_by(TeamOwner.team_name).all())))
+    all_owners = TeamOwner.query.order_by(TeamOwner.team_name).all()
+    sheets.append(("All Competing Teams", competing_team_rows(all_owners)))
+    sheets.append(("Franchise Owners", owner_rows(all_owners)))
     return excel_response(sheets, f"{BRAND['short']}_All_Summaries.xlsx")
 
 
@@ -2218,7 +2317,20 @@ def export_all_summaries():
 @admin_required
 def export_owners():
     owners = TeamOwner.query.order_by(TeamOwner.team_name).all()
-    return excel_response([("Team Owners", owner_rows(owners))], f"{BRAND['short']}_Team_Owners.xlsx")
+    all_competing = competing_team_rows(owners)
+
+    sheets = [
+        ("All Competing Teams", all_competing),
+        ("Franchise Owners Summary", owner_rows(owners)),
+    ]
+
+    # Add individual tabs per sport
+    sports_found = sorted(set(r["Sport"] for r in all_competing))
+    for sp in sports_found:
+        sp_rows = [r for r in all_competing if r["Sport"] == sp]
+        sheets.append((f"{sp} ({len(sp_rows)} Teams)", sp_rows))
+
+    return excel_response(sheets, f"{BRAND['short']}_Team_Owners.xlsx")
 
 
 @app.route("/export_institution/<category>")

@@ -177,8 +177,8 @@
 
     <div class="sidebar__label">League</div>
     <button type="button" class="nav-item" data-target="owners">
-      <span>Team owners</span>
-      <span class="nav-item__count">{{ owners|length }}</span>
+      <span>Team owners &amp; Squads</span>
+      <span class="nav-item__count" title="{{ owners|length }} franchises · {{ sport_teams|length }} competing teams">{{ owners|length }} / {{ sport_teams|length }}</span>
     </button>
     <button type="button" class="nav-item" data-target="mail">Email automation</button>
 
@@ -250,9 +250,14 @@
         <div class="stat-card__note">{{ total_players - sold_players|length }} still in the pool</div>
       </div>
       <div class="stat-card">
-        <div class="stat-card__label">Franchises</div>
+        <div class="stat-card__label">Franchise Owners</div>
         <div class="stat-card__value">{{ owners|length }}</div>
-        <div class="stat-card__note">registered team owners</div>
+        <div class="stat-card__note">registered franchises</div>
+      </div>
+      <div class="stat-card" style="border-top-color: var(--gold);">
+        <div class="stat-card__label">Competing Teams</div>
+        <div class="stat-card__value" style="color:var(--gold-dark, #b45309);">{{ sport_teams|length }}</div>
+        <div class="stat-card__note">fielded across all sports</div>
       </div>
       <div class="stat-card">
         <div class="stat-card__label">Purse spent</div>
@@ -650,13 +655,109 @@
 
   <!-- ============================== OWNERS ================================ -->
   <section id="owners" class="section">
-    <div class="card">
+    <!-- Summary Header Banner for Franchises & Competing Teams -->
+    <div style="background: linear-gradient(135deg, #5b1f1f 0%, #3e1212 100%); color:#fff; border-radius:12px; padding:1.25rem 1.5rem; margin-bottom:1.25rem; box-shadow:0 4px 15px rgba(0,0,0,0.12);">
+      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem; margin-bottom:1rem;">
+        <div>
+          <span style="display:inline-block; font-size:0.75rem; font-weight:800; letter-spacing:0.08em; text-transform:uppercase; color:var(--gold); margin-bottom:4px;">Franchise &amp; Squad Registry</span>
+          <h2 style="font-size:1.45rem; font-weight:900; color:var(--gold-light); margin:0;">Franchise Owners &amp; Competing Teams</h2>
+          <p style="margin:4px 0 0; font-size:0.86rem; color:rgba(255,255,255,0.85);">
+            <strong>{{ owners|length }} Franchise Owners</strong> fielding a total of <strong>{{ sport_teams|length }} Competing Teams</strong> across all tournament sports.
+          </p>
+        </div>
+        <div style="display:flex; gap:0.6rem; flex-wrap:wrap;">
+          <a href="{{ url_for('export_owners') }}" class="btn btn--gold btn--sm">
+            {{ ico.icon('download', 15) }} Export Teams &amp; Owners (Excel)
+          </a>
+        </div>
+      </div>
+
+      <!-- Quick Distribution Chips -->
+      <div style="display:flex; gap:0.5rem; flex-wrap:wrap; align-items:center; padding-top:0.75rem; border-top:1px solid rgba(255,255,255,0.15); font-size:0.82rem;">
+        <span style="color:rgba(255,255,255,0.7); font-weight:700;">Fielded Teams by Category:</span>
+        {% for cat, count in sport_team_breakdown.items() %}
+          <span class="badge" style="background:rgba(255,255,255,0.15); color:#fff; border:1px solid rgba(255,255,255,0.25); font-weight:700; padding:3px 8px;">
+            {{ cat }}: <strong style="color:var(--gold-light);">{{ count }}</strong>
+          </span>
+        {% endfor %}
+      </div>
+    </div>
+
+    <!-- Toggle Controls: Franchises vs Fielded Teams -->
+    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.75rem; margin-bottom:1rem;">
+      <div style="display:flex; gap:0.4rem; background:#f1f5f9; padding:4px; border-radius:8px; border:1px solid var(--line);">
+        <button type="button" id="tab-btn-teams" class="btn btn--sm btn--gold" onclick="switchOwnerView('teams')" style="font-weight:700;">
+          All Competing Teams ({{ sport_teams|length }})
+        </button>
+        <button type="button" id="tab-btn-franchises" class="btn btn--sm btn--ghost" onclick="switchOwnerView('franchises')" style="font-weight:700;">
+          Franchise Owners ({{ owners|length }})
+        </button>
+      </div>
+      <div style="font-size:0.85rem; color:var(--muted); font-weight:600;">
+        💡 Multi-sport franchises (e.g. <em>GM United</em>, <em>SET STAR ⭐</em>) field dedicated teams with separate wallets per sport.
+      </div>
+    </div>
+
+    <!-- VIEW 1: ALL COMPETING TEAMS (28 teams) -->
+    <div id="view-competing-teams" class="card">
+      <div class="card__head">
+        <div class="card__title">All Competing Teams · {{ sport_teams|length }} teams fielded</div>
+        <input type="search" class="search" placeholder="Search team, sport, owner…" data-search="competing_teams">
+      </div>
+      <div class="card__body card__body--flush">
+        <div class="table-wrap">
+          <table data-table="competing_teams">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Team Name</th>
+                <th>Sport &amp; Category</th>
+                <th>Franchise Owner</th>
+                <th>Employee ID</th>
+                <th>Allocated Purse</th>
+                <th>Remaining</th>
+                <th>Manager</th>
+                <th>Manager Contact</th>
+                <th>Franchise ID</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for team in sport_teams %}
+              <tr data-row data-text="{{ (team.team_name ~ ' ' ~ team.sport ~ ' ' ~ team.gender ~ ' ' ~ team.owner.name ~ ' ' ~ (team.owner.usn or '') ~ ' ' ~ (team.manager or ''))|lower }}">
+                <td class="cell-mono">{{ loop.index }}</td>
+                <td class="cell-strong">{{ team.team_name }}</td>
+                <td>
+                  <span class="badge badge--gold" style="font-weight:800;">{{ team.label }}</span>
+                </td>
+                <td>
+                  <div style="font-weight:700; color:var(--ink);">{{ team.owner.name }}</div>
+                  <div style="font-size:0.75rem; color:var(--muted);">{{ team.owner.designation or '—' }}</div>
+                </td>
+                <td class="cell-mono">{{ team.owner.usn or '—' }}</td>
+                <td class="cell-mono">{{ team.allocated|inr }}</td>
+                <td class="cell-mono" style="font-weight:700; color: #15803d;">{{ team.balance|inr }}</td>
+                <td>{{ team.manager or '—' }}</td>
+                <td class="cell-mono">{{ team.manager_contact or team.contact or '—' }}</td>
+                <td class="cell-mono">{{ team.owner.reg_code }}</td>
+                <td>
+                  <a href="{{ url_for('admin_edit_team_owner', id=team.owner.id) }}" class="link-btn link-btn--edit">Edit</a>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- VIEW 2: FRANCHISE OWNERS (21 franchises) -->
+    <div id="view-franchise-owners" class="card" style="display:none;">
       {% if owners %}
         <div class="card__head">
-          <div class="card__title">Team owners · {{ owners|length }} franchises</div>
+          <div class="card__title">Franchise Owners · {{ owners|length }} registered entities</div>
           <input type="search" class="search" placeholder="Search team, owner, email…" data-search="owners">
           <div style="display:flex; gap:0.5rem; align-items:center;">
-            <a href="{{ url_for('export_owners') }}" class="btn btn--gold btn--sm">{{ ico.icon('download', 15) }} Export owners</a>
             <button type="button" class="btn btn--danger btn--sm" data-bulk="owners" data-scope="owners" disabled>
               Delete selected (<span data-count="owners">0</span>)
             </button>
@@ -676,8 +777,8 @@
                   <th>Employee ID</th>
                   <th>Email</th>
                   <th>Contact</th>
-                  <th>Designation</th>
-                  <th>Sports</th>
+                  <th>Teams Fielded</th>
+                  <th>Categories</th>
                   <th>Remaining purse</th>
                   <th>Manager</th>
                   <th>Manager contact</th>
@@ -714,7 +815,9 @@
                     {% endif %}
                   </td>
                   <td class="cell-mono">{{ owner.contact or '—' }}</td>
-                  <td>{{ owner.designation or '—' }}</td>
+                  <td style="text-align:center;">
+                    <span class="badge badge--gold" style="font-size:0.9rem; font-weight:800;">{{ owner.wallets|length if owner.wallets else 1 }}</span>
+                  </td>
                   <td class="cell-wrap">
                     {% for cat in owner.categories_display %}
                       <span class="badge badge--gold" style="white-space:nowrap; margin-bottom:3px; display:inline-block;">{{ cat.label }}</span>
@@ -1003,6 +1106,26 @@
     } else if (initial && document.getElementById(initial)) {
       activate(initial);
     }
+
+    /* ------------------------------------------------------ owner view switch */
+    window.switchOwnerView = function(view) {
+      const vTeams = document.getElementById('view-competing-teams');
+      const vOwners = document.getElementById('view-franchise-owners');
+      const btnTeams = document.getElementById('tab-btn-teams');
+      const btnFranchises = document.getElementById('tab-btn-franchises');
+
+      if (view === 'teams') {
+        if (vTeams) vTeams.style.display = 'block';
+        if (vOwners) vOwners.style.display = 'none';
+        if (btnTeams) btnTeams.className = 'btn btn--sm btn--gold';
+        if (btnFranchises) btnFranchises.className = 'btn btn--sm btn--ghost';
+      } else {
+        if (vTeams) vTeams.style.display = 'none';
+        if (vOwners) vOwners.style.display = 'block';
+        if (btnTeams) btnTeams.className = 'btn btn--sm btn--ghost';
+        if (btnFranchises) btnFranchises.className = 'btn btn--sm btn--gold';
+      }
+    };
 
     /* ------------------------------------------------------ live search */
     document.querySelectorAll('[data-search]').forEach(input => {
