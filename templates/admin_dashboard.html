@@ -700,13 +700,41 @@
 
     <!-- VIEW 1: ALL COMPETING TEAMS (28 teams) -->
     <div id="view-competing-teams" class="card">
-      <div class="card__head">
-        <div class="card__title">All Competing Teams · {{ sport_teams|length }} teams fielded</div>
-        <input type="search" class="search" placeholder="Search team, sport, owner…" data-search="competing_teams">
+      <div class="card__head" style="flex-direction:column; align-items:stretch; gap:0.75rem;">
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.5rem;">
+          <div class="card__title">All Competing Teams · <span id="team-visible-count">{{ sport_teams|length }}</span> of {{ sport_teams|length }} teams fielded</div>
+          <div style="display:flex; gap:0.5rem; align-items:center;">
+            <input type="search" id="team-search-input" class="search" placeholder="Search team, sport, owner…" data-search="competing_teams">
+          </div>
+        </div>
+
+        <!-- Sport & Category Interactive Filters -->
+        <div style="display:flex; gap:0.75rem; flex-wrap:wrap; align-items:center; background:#f8fafc; padding:0.5rem 0.75rem; border-radius:8px; border:1px solid var(--line);">
+          <div style="display:flex; align-items:center; gap:0.35rem; flex-wrap:wrap;">
+            <span style="font-size:0.8rem; font-weight:800; color:var(--ink); white-space:nowrap;">Sport:</span>
+            <div class="filter-pills" id="team-sport-pills" style="display:inline-flex; gap:0.25rem; flex-wrap:wrap;">
+              <button type="button" class="filter-pill is-active" data-team-sport="all" onclick="filterTeamBySport('all')" style="padding:0.3rem 0.65rem; font-size:0.78rem;">All Sports ({{ sport_teams|length }})</button>
+              {% for s in sports %}
+                <button type="button" class="filter-pill" data-team-sport="{{ s|lower }}" onclick="filterTeamBySport('{{ s|lower }}')" style="padding:0.3rem 0.65rem; font-size:0.78rem;">
+                  {{ s }}
+                </button>
+              {% endfor %}
+            </div>
+          </div>
+          <div style="display:flex; align-items:center; gap:0.4rem; margin-left:auto;">
+            <label for="team-gender-select" style="font-size:0.78rem; font-weight:700; color:var(--muted); white-space:nowrap;">Category:</label>
+            <select id="team-gender-select" onchange="filterTeamBySport(currentTeamSport)" style="padding:0.35rem 0.65rem; border-radius:6px; border:1px solid var(--line); font-size:0.8rem; font-weight:600; background:#fff; color:var(--ink);">
+              <option value="all">All Categories</option>
+              <option value="men">Men</option>
+              <option value="women">Women</option>
+            </select>
+          </div>
+        </div>
       </div>
+
       <div class="card__body card__body--flush">
         <div class="table-wrap">
-          <table data-table="competing_teams">
+          <table data-table="competing_teams" id="competing-teams-table">
             <thead>
               <tr>
                 <th>#</th>
@@ -719,14 +747,24 @@
                 <th>Manager</th>
                 <th>Manager Contact</th>
                 <th>Franchise ID</th>
-                <th>Action</th>
+                <th>Actions</th>
               </tr>
             </thead>
             <tbody>
               {% for team in sport_teams %}
-              <tr data-row data-text="{{ (team.team_name ~ ' ' ~ team.sport ~ ' ' ~ team.gender ~ ' ' ~ team.owner.name ~ ' ' ~ (team.owner.usn or '') ~ ' ' ~ (team.manager or ''))|lower }}">
+              <tr data-row 
+                  data-sport="{{ team.sport|lower }}"
+                  data-gender="{{ team.gender|lower }}"
+                  data-text="{{ (team.team_name ~ ' ' ~ team.sport ~ ' ' ~ team.gender ~ ' ' ~ team.owner.name ~ ' ' ~ (team.owner.usn or '') ~ ' ' ~ (team.manager or '') ~ ' ' ~ (team.owner.reg_code or ''))|lower }}">
                 <td class="cell-mono">{{ loop.index }}</td>
-                <td class="cell-strong">{{ team.team_name }}</td>
+                <td class="cell-strong">
+                  <div style="display:flex; align-items:center; gap:0.5rem;">
+                    {% if team.owner.team_logo %}
+                      <img src="{{ media_url(team.owner.team_logo) }}" class="thumb" style="width:26px; height:26px;" alt="{{ team.team_name }}" loading="lazy">
+                    {% endif %}
+                    <span>{{ team.team_name }}</span>
+                  </div>
+                </td>
                 <td>
                   <span class="badge badge--gold" style="font-weight:800;">{{ team.label }}</span>
                 </td>
@@ -741,12 +779,22 @@
                 <td class="cell-mono">{{ team.manager_contact or team.contact or '—' }}</td>
                 <td class="cell-mono">{{ team.owner.reg_code }}</td>
                 <td>
-                  <a href="{{ url_for('admin_edit_team_owner', id=team.owner.id) }}" class="link-btn link-btn--edit">Edit</a>
+                  <div class="row-actions" style="display:flex; gap:0.35rem; align-items:center;">
+                    <a href="{{ url_for('admin_edit_team_owner', id=team.owner.id) }}" class="link-btn link-btn--edit" title="Edit franchise and team details">Edit</a>
+                    <form method="POST" action="{{ url_for('admin_delete_team_sport', owner_id=team.owner.id, sport=team.sport, gender=team.gender) }}"
+                          onsubmit="return confirm('Permanently remove team {{ team.team_name }} from {{ team.sport }} ({{ team.gender }})?');">
+                      <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                      <button type="submit" class="link-btn link-btn--del" title="Delete this team from {{ team.sport }}">Delete</button>
+                    </form>
+                  </div>
                 </td>
               </tr>
               {% endfor %}
             </tbody>
           </table>
+          <div id="team-empty-msg" class="empty" style="display:none; padding:2rem 1rem;">
+            No teams found matching the selected sport or filter criteria.
+          </div>
         </div>
       </div>
     </div>
@@ -1126,6 +1174,54 @@
         if (btnFranchises) btnFranchises.className = 'btn btn--sm btn--gold';
       }
     };
+
+    /* ------------------------------------------------------ team sport filter */
+    let currentTeamSport = 'all';
+    window.currentTeamSport = currentTeamSport;
+
+    window.filterTeamBySport = function(sport) {
+      currentTeamSport = (sport || 'all').toLowerCase();
+      window.currentTeamSport = currentTeamSport;
+
+      const pills = document.querySelectorAll('#team-sport-pills button');
+      pills.forEach(p => {
+        p.classList.toggle('is-active', (p.dataset.teamSport || '').toLowerCase() === currentTeamSport);
+      });
+
+      const genderSelect = document.getElementById('team-gender-select');
+      const gender = (genderSelect ? genderSelect.value : 'all').toLowerCase();
+
+      const searchInput = document.getElementById('team-search-input');
+      const term = (searchInput ? searchInput.value : '').trim().toLowerCase();
+
+      const table = document.getElementById('competing-teams-table');
+      const countLabel = document.getElementById('team-visible-count');
+      const emptyMsg = document.getElementById('team-empty-msg');
+      if (!table) return;
+
+      let visible = 0;
+      table.querySelectorAll('tbody tr[data-row]').forEach(row => {
+        const rowSport = (row.dataset.sport || '').toLowerCase();
+        const rowGender = (row.dataset.gender || '').toLowerCase();
+        const rowText = (row.dataset.text || '').toLowerCase();
+
+        const matchSport = (currentTeamSport === 'all' || rowSport === currentTeamSport);
+        const matchGender = (gender === 'all' || rowGender === gender);
+        const matchText = (term === '' || rowText.includes(term));
+
+        const show = matchSport && matchGender && matchText;
+        row.classList.toggle('is-hidden', !show);
+        if (show) visible++;
+      });
+
+      if (countLabel) countLabel.textContent = visible;
+      if (emptyMsg) emptyMsg.style.display = (visible === 0) ? 'block' : 'none';
+    };
+
+    const teamSearch = document.getElementById('team-search-input');
+    if (teamSearch) {
+      teamSearch.addEventListener('input', () => window.filterTeamBySport(window.currentTeamSport));
+    }
 
     /* ------------------------------------------------------ live search */
     document.querySelectorAll('[data-search]').forEach(input => {

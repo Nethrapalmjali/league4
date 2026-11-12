@@ -1970,6 +1970,40 @@ def admin_delete_owner(id):
     return redirect(url_for("admin_dashboard"))
 
 
+@app.route("/admin/delete_team_sport/<int:owner_id>/<sport>/<gender>", methods=["POST"])
+@admin_required
+def admin_delete_team_sport(owner_id, sport, gender):
+    owner = db.session.get(TeamOwner, owner_id) or abort(404)
+    team_name = owner.team_name
+    wallet = TeamWallet.query.filter_by(team_owner_id=owner_id, sport=sport, gender=gender).first()
+    if wallet:
+        db.session.delete(wallet)
+
+    # Clean up sports comma-separated string on owner
+    sports_list = [s.strip() for s in (owner.sports or "").split(",") if s.strip()]
+    updated_sports = []
+    for s in sports_list:
+        sp, gen = parse_sport_gender(s)
+        if sp == sport and (not gen or gen == gender):
+            continue
+        updated_sports.append(s)
+
+    # Check remaining wallets or sports
+    remaining_wallets = [w for w in owner.wallets if not (w.sport == sport and w.gender == gender)]
+    if not updated_sports and not remaining_wallets:
+        delete_upload(owner.team_logo, "TEAM_LOGO_FOLDER")
+        delete_upload(owner.team_owner_photo, "OWNER_PHOTO_FOLDER")
+        db.session.delete(owner)
+        db.session.commit()
+        flash(f"Team {team_name} ({sport} – {gender}) deleted. Franchise had no other sports, so owner was deleted.", "info")
+    else:
+        owner.sports = ", ".join(updated_sports)
+        db.session.commit()
+        flash(f"Team {team_name} successfully deleted from {sport} – {gender}.", "success")
+
+    return redirect(url_for("admin_dashboard") + "#owners")
+
+
 @app.route("/admin/delete_players", methods=["POST"])
 @admin_required
 def admin_delete_players():

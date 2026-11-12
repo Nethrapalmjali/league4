@@ -65,6 +65,27 @@ def admin_sync_squads():
     return redirect(request.referrer or url_for("scorecard.admin_teams"))
 
 
+@scorecard_bp.route("/admin/teams/<int:team_id>/edit", methods=["POST"])
+@admin_required
+def admin_edit_team(team_id):
+    team = ScTeam.query.get_or_404(team_id)
+    name = _clean(request.form.get("name"), 80)
+    short_name = _clean(request.form.get("short_name"), 12)
+    sport = request.form.get("sport")
+    gender = request.form.get("gender")
+    if name:
+        team.name = name
+    if short_name is not None:
+        team.short_name = short_name.upper() if short_name else None
+    if sport:
+        team.sport = sport
+    if gender:
+        team.gender = gender
+    db.session.commit()
+    flash(f"Team {team.name} updated.", "success")
+    return redirect(url_for("scorecard.admin_teams"))
+
+
 @scorecard_bp.route("/admin/teams/<int:team_id>/delete", methods=["POST"])
 @admin_required
 def admin_delete_team(team_id):
