@@ -176,6 +176,30 @@ def admin_delete_team(team_id):
 @admin_required
 def admin_players(team_id):
     team = ScTeam.query.get_or_404(team_id)
+    if request.method == "POST" and request.form.get("action") == "jerseys":
+        # Every player's number in one save.
+        changed, bad = 0, []
+        for player in team.players:
+            if f"jersey_{player.id}" not in request.form:
+                continue
+            raw = (request.form.get(f"jersey_{player.id}") or "").strip().lstrip("#")
+            if raw and (len(raw) > 4 or not raw.isalnum()):
+                bad.append(player.name)
+                continue
+            value = raw or None
+            if player.jersey_no != value:
+                player.jersey_no = value
+                changed += 1
+        db.session.commit()
+        numbers = [p.jersey_no for p in team.players if p.active and p.jersey_no]
+        clashes = sorted({n for n in numbers if numbers.count(n) > 1})
+        if bad:
+            flash("Not saved for " + ", ".join(bad) + ": a jersey number is up to 4 letters or digits.", "error")
+        if clashes:
+            flash("Two players share number " + ", ".join(f"#{n}" for n in clashes) + " — the scorer will not be able to tell them apart.", "error")
+        flash(f"Saved {changed} jersey number(s) for {team.name}.", "success")
+        return redirect(url_for("scorecard.admin_players", team_id=team.id))
+
     if request.method == "POST":
         name = _clean(request.form.get("name"), 100)
         if not name:
@@ -190,7 +214,9 @@ def admin_players(team_id):
             flash(f"Added {name}.", "success")
         return redirect(url_for("scorecard.admin_players", team_id=team.id))
 
-    return render_template("scorecard/admin_players.html", team=team)
+    from .app_api import _player_sort_key
+    players = sorted(team.players, key=lambda p: (not p.active, _player_sort_key(p)))
+    return render_template("scorecard/admin_players.html", team=team, players=players)
 
 
 @scorecard_bp.route("/admin/players/<int:player_id>/delete", methods=["POST"])
@@ -377,6 +403,23 @@ def admin_enter_result(match_id):
     }
     live_events = [e for e in match.events if not e.voided]
     back = url_for("scorecard.admin_matches", sport=match.sport, gender=match.gender)
+    squad_ids = {p.id for p in players["a"]} | {p.id for p in players["b"]}
+
+    def chosen_potm():
+        try:
+            pid = int(request.form.get("potm_player_id") or 0) or None
+        except ValueError:
+            pid = None
+        return pid if pid in squad_ids else None
+
+    if request.method == "POST" and request.form.get("action") == "potm":
+        # Player of the Match only — the score is left exactly as it is.
+        match.potm_player_id = chosen_potm()
+        match.updated_at = datetime.utcnow()
+        db.session.commit()
+        picked = next((p.name for side in players.values() for p in side if p.id == match.potm_player_id), None)
+        flash(f"Player of the Match: {picked}." if picked else "Player of the Match cleared — the top performer is shown instead.", "success")
+        return redirect(url_for("scorecard.admin_enter_result", match_id=match.id))
 
     if request.method == "POST":
         new_events = []
@@ -455,6 +498,8 @@ def admin_enter_result(match_id):
 
         match.status = "final"
         match.period = final_period
+        if request.form.get("potm_player_id"):
+            match.potm_player_id = chosen_potm()
         match.recalculate()
         a, b = match.score_a or 0, match.score_b or 0
         match.winner_team_id = match.team_a_id if a > b else (match.team_b_id if b > a else None)
@@ -675,31 +720,34 @@ def export_tournament_excel():
     ws_standings.set_column(2, 2, 24)
     ws_standings.set_column(3, 11, 10)
 
-    # Sheet 3: Top Scorers (per sport + gender)
-    ws_scorers = workbook.add_worksheet("Top Scorers")
-    ws_scorers.write(0, 0, "GM LEAGUE SEASON 4 — TOP SCORERS & LEADERS", title_format)
-    score_headers = ["Sport", "Gender", "Rank", "Player Name", "Team", "Jersey", "Total Points/Goals"]
-    ws_scorers.write_row(2, 0, score_headers, header_format)
-
-    s_row = 3
+    # Sheet 3: Player stats — every credited player, with the stats of their
+    # sport and Player of the Match awards (per sport + gender block).
+    from .stats import player_table
+    ws_scorers = workbook.add_worksheet("Player Stats")
+    ws_scorers.write(0, 0, "GM LEAGUE SEASON 4 — PLAYER STATISTICS & AWARDS", title_format)
+    s_row = 2
     for sport, gender in _sport_gender_combos():
-        leaders = leaders_for(sport, gender, limit=20)
-        for idx, (player, pts, entries) in enumerate(leaders, start=1):
-            s_data = [
-                sport,
-                gender,
-                idx,
-                player.name,
-                player.team.name if player.team else "—",
-                f"#{player.jersey_no}" if player.jersey_no else "—",
-                pts,
-            ]
-            ws_scorers.write_row(s_row, 0, s_data, cell_format)
+        table = player_table(sport, gender)
+        if not table["players"]:
+            continue
+        ws_scorers.write(s_row, 0, f"{sport} — {gender}", title_format)
+        s_row += 1
+        headers = ["Rank", "Player", "Team", "Jersey", "Matches", "⭐ Player of the Match"] + [c["label"] for c in table["categories"]]
+        ws_scorers.write_row(s_row, 0, headers, header_format)
+        s_row += 1
+        for idx, s in enumerate(table["players"], start=1):
+            p = s["player"]
+            row = [idx, p.name, p.team.name if p.team else "—", f"#{p.jersey_no}" if p.jersey_no else "—",
+                   s["played"], s["potm"]] + [s[c["key"]] for c in table["categories"]]
+            ws_scorers.write_row(s_row, 0, row, cell_format)
             s_row += 1
-
-    ws_scorers.set_column(0, 1, 12)
-    ws_scorers.set_column(2, 3, 24)
-    ws_scorers.set_column(4, 5, 16)
+        s_row += 1
+    if s_row == 2:
+        ws_scorers.write(2, 0, "No player has been credited with a score yet.")
+    ws_scorers.set_column(0, 0, 7)
+    ws_scorers.set_column(1, 2, 24)
+    ws_scorers.set_column(3, 4, 9)
+    ws_scorers.set_column(5, 12, 14)
 
     workbook.close()
     output.seek(0)
@@ -715,13 +763,17 @@ def export_tournament_excel():
 @admin_required
 def tournament_report():
     """Print-ready official tournament summary with college branding."""
-    from .stats import standings_for, leaders_for, _sport_gender_combos, _sport_gender_combos
-    matches = ScMatch.query.order_by(ScMatch.starts_at.asc(), ScMatch.id.asc()).all()
+    from sqlalchemy.orm import selectinload
+    from .stats import standings_for, player_table, _sport_gender_combos
+    matches = (ScMatch.query.options(selectinload(ScMatch.events))
+               .order_by(ScMatch.starts_at.asc(), ScMatch.id.asc()).all())
     sport_tables = {}
     sport_leaders = {}
     for sport, gender in _sport_gender_combos():
         sport_tables[(sport, gender)] = standings_for(sport, gender)
-        sport_leaders[(sport, gender)] = leaders_for(sport, gender, limit=10)
+        table = player_table(sport, gender)
+        if table["players"]:
+            sport_leaders[(sport, gender)] = table
     return render_template(
         "scorecard/admin_report.html",
         matches=matches,

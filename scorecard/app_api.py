@@ -36,6 +36,7 @@ from flask import (
 )
 from itsdangerous import BadSignature, SignatureExpired, URLSafeTimedSerializer
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm import selectinload
 from werkzeug.security import check_password_hash
 
 from . import scorecard_bp
@@ -46,13 +47,13 @@ from .ems import (
     SPORTS, admin_credentials_ok, admin_required, admin_secret_material,
     admin_session_fingerprint, db,
 )
-from .models import ScEvent, ScMatch, ScPlayer, ScScorer, ScSyncOp, ScTeam
+from .models import ScEvent, ScMatch, ScPlayer, ScScorer, ScSyncOp, ScTeam, event_order
 
 TOKEN_SALT = "gml-scorer-app-v1"
 # Long enough to cover a whole tournament day plus a night without signal.
 TOKEN_MAX_AGE = 4 * 24 * 3600
 MAX_OPS_PER_SYNC = 200
-APP_VERSION = "1.2.0"
+APP_VERSION = "1.3.0"
 
 # Failed sign-ins per (IP, name), kept in memory: enough to stop someone
 # guessing passcodes from the stands without adding a table for it.
@@ -349,7 +350,10 @@ def _visible_matches(identity):
             ),
             db.or_(ScMatch.assigned_scorer_id.is_(None), ScMatch.assigned_scorer_id == sid),
         )
-    return query.order_by(ScMatch.starts_at.asc(), ScMatch.id.asc()).all()
+    return (
+        query.options(selectinload(ScMatch.events))
+        .order_by(ScMatch.starts_at.asc(), ScMatch.id.asc()).all()
+    )
 
 
 def _team_dict(team):
@@ -358,19 +362,32 @@ def _team_dict(team):
     return {"id": team.id, "name": team.name, "tag": team.tag}
 
 
-def _match_state(match, identity):
+def _player_sort_key(player):
+    """Jersey order (numbers numerically), then name — how a scorer looks
+    for a player on the pitch."""
+    jersey = (player.jersey_no or "").strip()
+    return (0 if jersey.isdigit() else 1, int(jersey) if jersey.isdigit() else 0, jersey, player.name.lower())
+
+
+def players_by_team(team_ids):
+    """Active players of many teams in one query: {team_id: [player dict]}."""
+    team_ids = {t for t in team_ids if t}
+    grouped = {t: [] for t in team_ids}
+    if not team_ids:
+        return grouped
+    rows = ScPlayer.query.filter(ScPlayer.team_id.in_(team_ids), ScPlayer.active.is_(True)).all()
+    for p in sorted(rows, key=_player_sort_key):
+        grouped[p.team_id].append({"id": p.id, "name": p.name, "jersey_no": p.jersey_no})
+    return grouped
+
+
+def _match_state(match, identity, squads=None):
     rules = rules_for(match.sport)
-    players = {}
-    for side, team_id in (("a", match.team_a_id), ("b", match.team_b_id)):
-        players[side] = [
-            {"id": p.id, "name": p.name, "jersey_no": p.jersey_no}
-            for p in ScPlayer.query.filter_by(team_id=team_id, active=True)
-            .order_by(ScPlayer.name).all()
-        ]
-    events = (
-        ScEvent.query.filter_by(match_id=match.id, voided=False)
-        .order_by(ScEvent.id.asc()).all()
-    )
+    if squads is None:
+        squads = players_by_team([match.team_a_id, match.team_b_id])
+    players = {"a": squads.get(match.team_a_id, []), "b": squads.get(match.team_b_id, [])}
+    names = {p["id"]: p["name"] for side in players.values() for p in side}
+    events = sorted((e for e in match.events if not e.voided), key=event_order)
     return {
         "id": match.id,
         "sport": match.sport,
@@ -396,10 +413,12 @@ def _match_state(match, identity):
                 "points": e.points or 0,
                 "clock": e.clock,
                 "player_id": e.player_id,
-                "player": e.player.name if e.player else None,
+                # From the squad already loaded; only a retired player is looked up.
+                "player": names.get(e.player_id) or (e.player.name if e.player_id and e.player else None),
             }
             for e in events
         ],
+        "potm_player_id": getattr(match, "potm_player_id", None),
         "server_updated_at": match.updated_at.isoformat() if match.updated_at else None,
     }
 
@@ -409,7 +428,7 @@ def _setup_for_new_matches():
     every squad and the scoring rules of every sport."""
     teams = ScTeam.query.order_by(ScTeam.sport, ScTeam.gender, ScTeam.name).all()
     squads = {}
-    for p in ScPlayer.query.filter_by(active=True).order_by(ScPlayer.name).all():
+    for p in sorted(ScPlayer.query.filter_by(active=True).all(), key=_player_sort_key):
         squads.setdefault(str(p.team_id), []).append({"id": p.id, "name": p.name, "jersey_no": p.jersey_no})
     return {
         "teams": [{"id": t.id, "name": t.name, "tag": t.tag, "sport": t.sport, "gender": t.gender} for t in teams],
@@ -424,11 +443,12 @@ def _setup_for_new_matches():
 @app_auth_required
 def app_bundle(identity):
     matches = _visible_matches(identity)
+    squads = players_by_team({t for m in matches for t in (m.team_a_id, m.team_b_id)})
     payload = {
         "me": {"role": identity["role"], "name": identity["name"], "scorer_id": identity["scorer_id"]},
         "server_time": datetime.utcnow().isoformat(),
         "app_version": APP_VERSION,
-        "matches": [_match_state(m, identity) for m in matches],
+        "matches": [_match_state(m, identity, squads) for m in matches],
     }
     if identity["role"] == "admin":
         payload["setup"] = _setup_for_new_matches()
@@ -463,7 +483,7 @@ def _check_writable(identity, match):
         raise _Reject("This match is already finished.")
 
 
-def _apply_event(identity, match, op_id, payload, at):
+def _apply_event(identity, match, op_id, payload, at, squad_ids):
     _check_writable(identity, match)
     side = payload.get("side")
     if side not in ("a", "b"):
@@ -476,13 +496,13 @@ def _apply_event(identity, match, op_id, payload, at):
         raise _Reject("This badminton match is already won. End it, or undo the last point first.")
     team_id = match.team_a_id if side == "a" else match.team_b_id
 
-    player_id = payload.get("player_id") or None
-    if player_id:
-        try:
-            player = ScPlayer.query.filter_by(id=int(player_id), team_id=team_id).first()
-        except (TypeError, ValueError):
-            player = None
-        player_id = player.id if player else None
+    # A player only counts if they are in that side's squad.
+    try:
+        player_id = int(payload.get("player_id") or 0) or None
+    except (TypeError, ValueError):
+        player_id = None
+    if player_id not in squad_ids(team_id):
+        player_id = None
 
     clock = (str(payload.get("clock") or "")).strip()[:8] or None
     if not clock:
@@ -492,20 +512,18 @@ def _apply_event(identity, match, op_id, payload, at):
             clock = match.period or "H1"
 
     event = ScEvent(
-        match_id=match.id, team_id=team_id, player_id=player_id,
+        team_id=team_id, player_id=player_id,
         clock=clock, kind=action["label"], points=action["points"],
-        client_id=op_id,
+        client_id=op_id, voided=False,
+        created_at=at or datetime.utcnow(),
     )
-    if at:
-        event.created_at = at
-    db.session.add(event)
+    # Added to the loaded match in memory; saved with the rest of the upload.
+    match.events.append(event)
 
     if match.status == STATUS_SCHEDULED:
         match.status = STATUS_LIVE
         match.period = match.period or rules_for(match.sport)["periods"][0]
 
-    db.session.flush()
-    db.session.refresh(match)  # pick up the new event in match.events
     match.recalculate()
     if match.sport == "Badminton":
         stats = match.badminton_stats
@@ -520,18 +538,16 @@ def _apply_undo(identity, match, payload):
     _check_writable(identity, match)
     target = str(payload.get("target") or "")
     event = None
-    if target.startswith("srv-"):
-        try:
-            event = db.session.get(ScEvent, int(target[4:]))
-        except ValueError:
-            event = None
-    elif target:
-        event = ScEvent.query.filter_by(client_id=target).first()
-    if not event or event.match_id != match.id or event.voided:
+    if target:
+        # Looked up among this match's events only — which also includes
+        # events added earlier in the same upload and not yet saved.
+        for candidate in match.events:
+            if candidate.client_id == target or (candidate.id is not None and f"srv-{candidate.id}" == target):
+                event = candidate
+                break
+    if not event or event.voided:
         return "noop"
     event.voided = True
-    db.session.flush()
-    db.session.refresh(match)
     match.recalculate()
     if match.sport == "Badminton":
         stats = match.badminton_stats
@@ -568,22 +584,22 @@ def _apply_status(identity, match, payload):
     match.updated_at = datetime.utcnow()
 
 
-NEW_MATCH_PREFIX = "n:"
-OP_KINDS = ("create", "event", "undo", "period", "status")
-
-
-def _resolve_match_id(raw):
-    """A match made offline is called "n:<id of its create change>" on the
-    device until the server has created it; afterwards that name still works."""
-    if isinstance(raw, str) and raw.startswith(NEW_MATCH_PREFIX):
-        row = db.session.get(ScSyncOp, raw[len(NEW_MATCH_PREFIX):][:40])
-        if row and row.kind == "create" and row.result == "applied":
-            return row.match_id
-        return None
+def _apply_potm(identity, match, payload, squad_ids):
+    """Player of the Match, chosen by the scorer or committee."""
+    if not _may_score(identity, match):
+        raise _Reject("This match is assigned to another scorer.")
     try:
-        return int(raw)
+        player_id = int(payload.get("player_id") or 0) or None
     except (TypeError, ValueError):
-        return None
+        player_id = None
+    if player_id is not None and player_id not in squad_ids(match.team_a_id) | squad_ids(match.team_b_id):
+        raise _Reject("That player is not in either team.")
+    match.potm_player_id = player_id
+    match.updated_at = datetime.utcnow()
+
+
+NEW_MATCH_PREFIX = "n:"
+OP_KINDS = ("create", "event", "undo", "period", "status", "potm")
 
 
 def _apply_create(identity, payload, at):
@@ -610,98 +626,157 @@ def _apply_create(identity, payload, at):
         starts_at=at or datetime.utcnow(),
         status=STATUS_SCHEDULED,
     )
+    match.events = []  # brand new: nothing to load
     db.session.add(match)
-    db.session.flush()
+    db.session.flush()  # the device needs the real id back
     return match
 
 
-def _apply_one(identity, op):
-    """Apply one queued change in its own transaction.
-
-    Returns (status, error, match_id) — match_id is the real server id, so the
-    device can rename a match it created offline.
-    """
-    op_id = str(op.get("id") or "").strip()[:40]
-    kind = op.get("type")
-    if not op_id or kind not in OP_KINDS:
-        return "rejected", "Malformed change.", None
-    done = db.session.get(ScSyncOp, op_id)
-    if done:
-        return "duplicate", None, done.match_id
-
-    at = _parse_device_time(op.get("at"))
-    payload = op.get("payload") or {}
-    actor = identity.get("actor")
-    match = None
-    match_id = None
-    if kind != "create":
-        match_id = _resolve_match_id(op.get("match_id"))
-        match = db.session.get(ScMatch, match_id) if match_id else None
-        if not match:
-            return "rejected", "This match no longer exists.", match_id
-
-    status = "applied"
-    try:
-        # Claim the id first: a second request carrying the same change blocks
-        # here on the primary key and then fails, instead of double-scoring.
-        row = ScSyncOp(op_id=op_id, match_id=match_id, kind=kind, device_at=at, actor=actor)
-        db.session.add(row)
-        db.session.flush()
-        if kind == "create":
-            match = _apply_create(identity, payload, at)
-            row.match_id = match_id = match.id
-        elif kind == "event":
-            _apply_event(identity, match, op_id, payload, at)
-        elif kind == "undo":
-            status = _apply_undo(identity, match, payload)
-        elif kind == "period":
-            _apply_period(identity, match, payload)
-        elif kind == "status":
-            _apply_status(identity, match, payload)
-        row.result = status
-        db.session.commit()
-        return status, None, match_id
-    except IntegrityError:
-        db.session.rollback()
-        done = db.session.get(ScSyncOp, op_id)
-        return "duplicate", None, done.match_id if done else match_id
-    except _Reject as exc:
-        db.session.rollback()
-        # Record the rejection so a re-send is not re-evaluated differently later.
-        try:
-            db.session.add(ScSyncOp(op_id=op_id, match_id=match_id, kind=kind,
-                                    device_at=at, result="rejected", actor=actor))
-            db.session.commit()
-        except Exception:  # noqa: BLE001
-            db.session.rollback()
-        return "rejected", str(exc), match_id
+def _op_id(op):
+    return str(op.get("id") or "").strip()[:40]
 
 
 def apply_ops(identity, ops):
-    """Apply changes in order. Returns (results, ids of matches touched)."""
-    results = []
-    touched = []
-    for op in ops:
-        if not isinstance(op, dict):
-            continue
+    """Apply a device's changes, in order, as one transaction.
+
+    The whole upload costs a handful of database round trips however many
+    taps it carries: seen-before changes and the matches involved are fetched
+    up front, every change is applied in memory with the same rules as
+    before, and it is all saved in one commit. (Each round trip to the
+    database costs ~0.3 s from the live server; this used to be ~8 per tap.)
+
+    Returns (results, ids of matches touched, fresh copies of those matches).
+    """
+    ops = [op for op in ops if isinstance(op, dict)]
+    actor = identity.get("actor")
+    ids = {_op_id(op) for op in ops} - {""}
+    known = {row.op_id: row for row in ScSyncOp.query.filter(ScSyncOp.op_id.in_(ids)).all()} if ids else {}
+
+    def created_match_id(ref):
+        row = known.get(ref)
+        if row and row.kind == "create" and row.result == "applied":
+            return row.match_id
+        return created_here.get(ref)
+
+    def resolve(raw):
+        """A match made offline is "n:<id of its create change>" on the device
+        until the server has created it; afterwards that name still works."""
+        if isinstance(raw, str) and raw.startswith(NEW_MATCH_PREFIX):
+            return created_match_id(raw[len(NEW_MATCH_PREFIX):][:40])
         try:
-            status, error, match_id = _apply_one(identity, op)
-        except Exception as exc:  # noqa: BLE001 — one bad change must not block the queue
-            db.session.rollback()
-            current_app.logger.exception("Scorer App sync failed for op %s: %s", op.get("id"), exc)
-            try:
-                from .errorlog import record
-                record(exc)
-            except Exception:  # noqa: BLE001
-                pass
-            # Stop here: later changes depend on this one, and the device will
-            # retry the whole tail on its next attempt.
-            results.append({"id": op.get("id"), "status": "retry", "error": "Server error, will retry."})
-            break
-        results.append({"id": op.get("id"), "status": status, "error": error, "match_id": match_id})
-        if match_id and match_id not in touched:
-            touched.append(match_id)
-    return results, touched
+            return int(raw)
+        except (TypeError, ValueError):
+            return None
+
+    created_here = {}
+    wanted = {resolve(op.get("match_id")) for op in ops} - {None}
+    matches = {}
+    if wanted:
+        # Locked until this upload commits: two phones uploading for the same
+        # match at the same moment take turns, so each one totals the score
+        # with the other's taps included. (SQLite has no row locks and ignores
+        # this; it serialises writes anyway.)
+        query = (ScMatch.query.options(selectinload(ScMatch.events))
+                 .filter(ScMatch.id.in_(wanted)).order_by(ScMatch.id)
+                 .with_for_update(of=ScMatch))
+        for m in query.all():
+            matches[m.id] = m
+
+    squads = {}       # team_id -> ids of every player (checks)
+    rosters = {}      # team_id -> active players, jersey order (the reply)
+
+    def load_teams(team_ids):
+        missing = set(team_ids) - set(squads)
+        if not missing:
+            return
+        for t in missing:
+            squads[t], rosters[t] = set(), []
+        rows = ScPlayer.query.filter(ScPlayer.team_id.in_(missing)).all()
+        for p in sorted(rows, key=_player_sort_key):
+            squads[p.team_id].add(p.id)
+            if p.active:
+                rosters[p.team_id].append({"id": p.id, "name": p.name, "jersey_no": p.jersey_no})
+
+    def squad_ids(team_id):
+        if team_id not in squads:
+            load_teams({t for m in matches.values() for t in (m.team_a_id, m.team_b_id)} | {team_id})
+        return squads[team_id]
+
+    results, touched, seen = [], [], {}
+    try:
+        with db.session.no_autoflush:
+            for op in ops:
+                op_id, kind = _op_id(op), op.get("type")
+                if not op_id or kind not in OP_KINDS:
+                    results.append({"id": op.get("id"), "status": "rejected", "error": "Malformed change.", "match_id": None})
+                    continue
+                if op_id in known or op_id in seen:
+                    mid = known[op_id].match_id if op_id in known else seen[op_id]
+                    results.append({"id": op_id, "status": "duplicate", "error": None, "match_id": mid})
+                    # Still send the match back: the device re-sent because it
+                    # missed our reply, so it needs the current score too.
+                    if mid and mid not in touched:
+                        touched.append(mid)
+                    continue
+                at = _parse_device_time(op.get("at"))
+                payload = op.get("payload") or {}
+                match_id = None if kind == "create" else resolve(op.get("match_id"))
+                status, error = "applied", None
+                try:
+                    if kind == "create":
+                        match = _apply_create(identity, payload, at)
+                        match_id = match.id
+                        matches[match_id] = match
+                        created_here[op_id] = match_id
+                    else:
+                        match = matches.get(match_id)
+                        if not match:
+                            raise _Reject("This match no longer exists.")
+                        if kind == "event":
+                            _apply_event(identity, match, op_id, payload, at, squad_ids)
+                        elif kind == "undo":
+                            status = _apply_undo(identity, match, payload)
+                        elif kind == "period":
+                            _apply_period(identity, match, payload)
+                        elif kind == "status":
+                            _apply_status(identity, match, payload)
+                        elif kind == "potm":
+                            _apply_potm(identity, match, payload, squad_ids)
+                except _Reject as exc:
+                    # Checks run before anything changes, so a refused change
+                    # leaves no trace — except this note that it was refused,
+                    # so a re-send gets the same answer.
+                    status, error = "rejected", str(exc)
+                db.session.add(ScSyncOp(op_id=op_id, match_id=match_id, kind=kind,
+                                        device_at=at, result=status, actor=actor))
+                seen[op_id] = match_id
+                results.append({"id": op_id, "status": status, "error": error, "match_id": match_id})
+                if match_id and match_id not in touched:
+                    touched.append(match_id)
+        # Write everything (new rows get their ids), build the device's reply
+        # from what is already in memory, then make it permanent.
+        db.session.flush()
+        replied = [matches[mid] for mid in touched if mid in matches]
+        load_teams({t for m in replied for t in (m.team_a_id, m.team_b_id)})
+        states = [_match_state(m, identity, rosters) for m in replied]
+        db.session.commit()
+    except IntegrityError:
+        # Another upload of the same changes got there first. Nothing here was
+        # saved; the device re-sends and they come back as duplicates.
+        db.session.rollback()
+        return [{"id": _op_id(op), "status": "retry", "error": "Busy, will retry.", "match_id": None}
+                for op in ops], [], []
+    except Exception as exc:  # noqa: BLE001 — never lose the device's queue
+        db.session.rollback()
+        current_app.logger.exception("Scorer App upload failed: %s", exc)
+        try:
+            from .errorlog import record
+            record(exc)
+        except Exception:  # noqa: BLE001
+            pass
+        return [{"id": _op_id(op), "status": "retry", "error": "Server error, will retry.", "match_id": None}
+                for op in ops], [], []
+    return results, touched, states
 
 
 @scorecard_bp.route("/api/app/sync", methods=["POST"])
@@ -711,13 +786,7 @@ def app_sync(identity):
     ops = data.get("ops") or []
     if not isinstance(ops, list):
         return jsonify({"error": "Bad request."}), 400
-    results, touched = apply_ops(identity, ops[:MAX_OPS_PER_SYNC])
-
-    states = []
-    for match_id in touched:
-        match = db.session.get(ScMatch, match_id)
-        if match:
-            states.append(_match_state(match, identity))
+    results, _touched, states = apply_ops(identity, ops[:MAX_OPS_PER_SYNC])
 
     return _no_store(jsonify({
         "results": results,
@@ -772,7 +841,7 @@ def admin_import_backup():
         except (ValueError, UnicodeDecodeError, AttributeError):
             flash("That is not a Scorer App backup file. In the app use ☰ → Download backup file.", "error")
             return redirect(url_for("scorecard.admin_import_backup"))
-        results, touched = apply_ops(IMPORT_IDENTITY, ops)
+        results, touched, _states = apply_ops(IMPORT_IDENTITY, ops)
         counts = {}
         for r in results:
             counts[r["status"]] = counts.get(r["status"], 0) + 1

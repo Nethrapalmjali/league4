@@ -185,10 +185,32 @@ app.config.update(
 )
 
 if _db_uri.startswith("postgresql"):
-    app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
-        "poolclass": NullPool,
-        "connect_args": {"connect_timeout": 5 if SERVERLESS else 10},
-    }
+    if SERVERLESS:
+        # A function instance may freeze between requests; never hold sockets.
+        app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
+            "poolclass": NullPool,
+            "connect_args": {"connect_timeout": 5},
+        }
+    else:
+        # A long-running server (Render) keeps connections open. Opening one
+        # to Supabase costs about a second (network + TLS + login); reusing
+        # one costs nothing. Sized to the server threads (gunicorn.conf.py).
+        app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
+            "pool_size": env_int("DB_POOL_SIZE", 8),
+            "max_overflow": env_int("DB_POOL_OVERFLOW", 4),
+            "pool_timeout": 20,
+            # Replace connections every few minutes so one silently dropped
+            # by the network is never reused for long.
+            "pool_recycle": 240,
+            "pool_use_lifo": True,
+            "connect_args": {
+                "connect_timeout": 10,
+                "keepalives": 1,
+                "keepalives_idle": 30,
+                "keepalives_interval": 10,
+                "keepalives_count": 3,
+            },
+        }
 
 if SERVERLESS:
     app.config.update(
@@ -330,6 +352,41 @@ DEFAULT_BUDGET = env_int("DEFAULT_TEAM_BUDGET", 1000000)
 db = SQLAlchemy(app)
 migrate = Migrate(app, db)
 mailer = Mailer(app)
+
+
+def _install_idle_connection_check():
+    """Check a pooled connection only if it sat unused for over a minute.
+
+    Busy periods (a match in progress) pay nothing; a connection the network
+    dropped while the site was quiet is replaced before a page can fail on it.
+    """
+    from sqlalchemy import event, exc as sa_exc
+
+    with app.app_context():
+        engine = db.engine
+    if engine.dialect.name != "postgresql" or SERVERLESS:
+        return
+
+    @event.listens_for(engine, "connect")
+    @event.listens_for(engine, "checkin")
+    def _mark_used(dbapi_conn, record):
+        record.info["last_used"] = time.time()
+
+    @event.listens_for(engine, "checkout")
+    def _ping_if_idle(dbapi_conn, record, proxy):
+        if time.time() - record.info.get("last_used", 0) < 60:
+            return
+        try:
+            cursor = dbapi_conn.cursor()
+            cursor.execute("SELECT 1")
+            cursor.close()
+            dbapi_conn.rollback()
+        except Exception as error:  # noqa: BLE001
+            # The pool throws this connection away and opens a fresh one.
+            raise sa_exc.DisconnectionError() from error
+
+
+_install_idle_connection_check()
 
 
 def format_inr(number, prefix="₹"):
@@ -798,8 +855,39 @@ def protect_against_csrf():
     return None
 
 
+_static_versions = {}
+
+
+@app.url_defaults
+def _version_static_urls(endpoint, values):
+    """Add ?v=<file time> to stylesheet/script/image links.
+
+    The link changes whenever the file does, so phones may keep each version
+    for a year (see set_security_headers) and still get changes at once.
+    """
+    if endpoint not in ("static", "scorecard.static") or "v" in values or not values.get("filename"):
+        return
+    key = (endpoint, values["filename"])
+    if key not in _static_versions:
+        if endpoint == "static":
+            folder = app.static_folder
+        else:
+            blueprint = app.blueprints.get("scorecard")
+            folder = blueprint.static_folder if blueprint else None
+        try:
+            _static_versions[key] = int(os.path.getmtime(os.path.join(folder, values["filename"])))
+        except (OSError, TypeError):
+            _static_versions[key] = None
+    if _static_versions[key]:
+        values["v"] = _static_versions[key]
+
+
 @app.after_request
 def set_security_headers(response):
+    # Versioned files never change under the same link: keep them a year.
+    # Unversioned ones (the Scorer App's own files) keep revalidating.
+    if request.endpoint in ("static", "scorecard.static") and request.args.get("v") and response.status_code == 200:
+        response.headers["Cache-Control"] = "public, max-age=31536000, immutable"
     response.headers["X-Frame-Options"] = "SAMEORIGIN"
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
@@ -1142,12 +1230,13 @@ def ping():
 
 @app.route("/")
 def index():
-    stats = {
-        "players": Player.query.count(),
-        "teams": TeamOwner.query.count(),
-        "sports": len(SPORTS),
-        "sold": Player.query.filter_by(sold=True).count(),
-    }
+    # One round trip instead of three.
+    players, sold, teams = db.session.query(
+        db.func.count(Player.id),
+        db.func.coalesce(db.func.sum(db.case((Player.sold.is_(True), 1), else_=0)), 0),
+        db.select(db.func.count(TeamOwner.id)).scalar_subquery(),
+    ).one()
+    stats = {"players": players, "teams": teams, "sports": len(SPORTS), "sold": int(sold)}
     return render_template("index.html", stats=stats)
 
 

@@ -66,6 +66,22 @@
           </details>
         {% endif %}
 
+        <label>
+          <span>⭐ Player of the Match (optional)</span>
+          <select name="potm_player_id">
+            <option value="">— Top performer automatically —</option>
+            {% for side, team in [('a', match.team_a), ('b', match.team_b)] %}
+              <optgroup label="{{ team.name }}">
+                {% for p in players[side] %}
+                  <option value="{{ p.id }}" {% if (form.get('potm_player_id') or match.potm_player_id)|string == p.id|string %}selected{% endif %}>
+                    {% if p.jersey_no %}#{{ p.jersey_no }} {% endif %}{{ p.name }}
+                  </option>
+                {% endfor %}
+              </optgroup>
+            {% endfor %}
+          </select>
+        </label>
+
         {% if live_events %}
           <label style="display:flex; gap:0.5rem; align-items:flex-start; background:#fff7ed; border:1px solid #fed7aa; border-radius:8px; padding:0.7rem;">
             <input type="checkbox" name="replace" value="1" checked style="margin-top:0.2rem;">
@@ -88,6 +104,33 @@
         </div>
       </form>
     </section>
+
+    {% if match.status == 'final' %}
+      <section class="sc-card">
+        <h2>⭐ Player of the Match only</h2>
+        <p class="sc-hint" style="margin-top:0;">Change just the award — the score stays exactly as it is.</p>
+        <form method="post" class="sc-form sc-form--row">
+          <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+          <input type="hidden" name="action" value="potm">
+          <label style="flex:1; min-width:220px;">
+            <span>Player</span>
+            <select name="potm_player_id">
+              <option value="">— Top performer automatically —</option>
+              {% for side, team in [('a', match.team_a), ('b', match.team_b)] %}
+                <optgroup label="{{ team.name }}">
+                  {% for p in players[side] %}
+                    <option value="{{ p.id }}" {% if match.potm_player_id == p.id %}selected{% endif %}>
+                      {% if p.jersey_no %}#{{ p.jersey_no }} {% endif %}{{ p.name }}
+                    </option>
+                  {% endfor %}
+                </optgroup>
+              {% endfor %}
+            </select>
+          </label>
+          <button class="btn btn--primary" type="submit">Save award</button>
+        </form>
+      </section>
+    {% endif %}
   </div>
 
   <script>

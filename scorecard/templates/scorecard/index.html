@@ -129,18 +129,22 @@
   {% if live %}
     <script>
       // Refresh the live block only; finished and upcoming rows cannot change.
-      setInterval(function () {
+      // Every 4 s while visible; paused when the phone is locked or the tab hidden.
+      function pollLive() {
+        if (document.hidden) return;
         fetch("{{ url_for('scorecard.api_live') }}", { headers: { "Accept": "application/json" } })
           .then(function (r) { return r.ok ? r.json() : null; })
           .then(function (data) {
             if (!data) return;
             data.matches.forEach(function (m) {
               var el = document.querySelector('[href$="/match/' + m.id + '"] .sc-row__score');
-              if (el) el.innerHTML = m.team_a.score + '<i>–</i>' + m.team_b.score;
+              if (el) el.innerHTML = Number(m.team_a.score) + '<i>–</i>' + Number(m.team_b.score);
             });
           })
           .catch(function () { /* a dropped poll is not worth surfacing */ });
-      }, 10000);
+      }
+      setInterval(pollLive, 4000);
+      document.addEventListener("visibilitychange", pollLive);
     </script>
   {% endif %}
 {% endblock %}

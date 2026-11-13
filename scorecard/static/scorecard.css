@@ -97,6 +97,10 @@ a.sc-row:hover {
   border-color: var(--gold);
 }
 
+/* Player names link to their profile, without looking like loud blue links. */
+.sc-player-link { color: inherit; text-decoration: underline; text-decoration-color: rgba(91, 31, 31, 0.35); text-underline-offset: 2px; }
+.sc-player-link:hover { text-decoration-color: currentColor; }
+
 .sc-row--static {
   cursor: default;
 }

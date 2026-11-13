@@ -62,6 +62,25 @@ def admin_secret_material():
     return f"{_ems.ADMIN_USERNAME}|{_ems.ADMIN_PASSWORD_HASH or _ems.ADMIN_PASSWORD}"
 
 
+def ems_player_card(ems_player_id):
+    """Public bits of a player's registration: photo and registration code.
+
+    Nothing private (phone, email, USN) ever leaves here.
+    """
+    if not ems_player_id:
+        return {"photo": None, "reg_code": None}
+    try:
+        record = _ems.db.session.get(_ems.Player, ems_player_id)
+    except Exception:  # noqa: BLE001 — a missing registration must not break the page
+        record = None
+    if record is None:
+        return {"photo": None, "reg_code": None}
+    return {
+        "photo": _ems.media_url(record.photo) if record.photo else None,
+        "reg_code": record.reg_code,
+    }
+
+
 def team_owner_model():
     """Fetched on demand — only the optional linking screen needs it."""
     return _ems.TeamOwner

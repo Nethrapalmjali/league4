@@ -103,7 +103,7 @@
                   </details>
 
                   <form method="post" action="{{ url_for('scorecard.admin_delete_team', team_id=team.id) }}"
-                        onsubmit="return confirm('Permanently remove team {{ team.name }}?')">
+                        onsubmit='return confirm({{ ("Permanently remove team " ~ team.name ~ "?")|tojson }})'>
                     <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
                     <button class="btn btn--danger btn--sm" type="submit" style="background:#dc2626; color:#fff; border-color:#dc2626;">Delete</button>
                   </form>

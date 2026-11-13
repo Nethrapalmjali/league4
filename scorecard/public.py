@@ -1,18 +1,19 @@
 """Public scorecard pages and the JSON the live view polls."""
 
+import threading
+import time
 from datetime import datetime
 
-from flask import jsonify, render_template
+from flask import abort, jsonify, render_template
+from sqlalchemy.orm import selectinload
 
 from . import scorecard_bp
 from .config import STATUS_FINAL, STATUS_LIVE, STATUS_SCHEDULED
-from .models import ScEvent, ScMatch
+from .models import ScMatch, event_order
 
-# Serverless cannot hold a socket open, so the page polls. Letting the CDN
-# answer for five seconds turns a hundred viewers into roughly one function
-# call per five seconds, which is the difference between this being free and
-# this being expensive on a match night.
-LIVE_CACHE = "public, s-maxage=5, stale-while-revalidate=10"
+# The page polls for new scores. A shared cache may answer for a couple of
+# seconds; scores still reach spectators within a few seconds of the tap.
+LIVE_CACHE = "public, s-maxage=2, stale-while-revalidate=5"
 
 
 def _cached(payload):
@@ -65,24 +66,50 @@ def _ordered(status, descending=False):
     return query.order_by(order, ScMatch.id.desc()).all()
 
 
+# Every spectator's phone asks for the latest score every few seconds. Answers
+# are kept for a moment and shared, so a hundred phones cost the database about
+# one query per match every CACHE_SECONDS instead of a hundred — which keeps the
+# server free for the scorers' uploads.
+CACHE_SECONDS = 2.5
+_cache = {}
+_cache_lock = threading.Lock()
+
+
+def _shared(key, build):
+    now = time.monotonic()
+    with _cache_lock:
+        hit = _cache.get(key)
+        if hit and hit[0] > now:
+            return hit[1]
+    value = build()
+    with _cache_lock:
+        _cache[key] = (now + CACHE_SECONDS, value)
+        if len(_cache) > 500:  # never grows without bound
+            for stale in [k for k, (exp, _v) in _cache.items() if exp <= now]:
+                _cache.pop(stale, None)
+    return value
+
+
 @scorecard_bp.route("/")
 def index():
-    return render_template(
-        "scorecard/index.html",
-        live=_ordered(STATUS_LIVE),
-        upcoming=_ordered(STATUS_SCHEDULED),
-        results=_ordered(STATUS_FINAL, descending=True),
+    # One query for all matches (teams joined) plus one for all their events,
+    # instead of several per match.
+    everything = (
+        ScMatch.query.options(selectinload(ScMatch.events))
+        .order_by(ScMatch.starts_at.asc(), ScMatch.id.desc()).all()
     )
+    live = [m for m in everything if m.status == STATUS_LIVE]
+    upcoming = [m for m in everything if m.status == STATUS_SCHEDULED]
+    results = [m for m in everything if m.status == STATUS_FINAL]
+    results.sort(key=lambda m: (m.starts_at is not None, m.starts_at or datetime.min, m.id), reverse=True)
+    return render_template("scorecard/index.html", live=live, upcoming=upcoming, results=results)
 
 
 @scorecard_bp.route("/match/<int:match_id>")
 def match(match_id):
-    record = ScMatch.query.get_or_404(match_id)
-    events = (
-        ScEvent.query.filter_by(match_id=record.id, voided=False)
-        .order_by(ScEvent.id.desc())
-        .all()
-    )
+    record = (ScMatch.query.options(selectinload(ScMatch.events))
+              .filter_by(id=match_id).first_or_404())
+    events = sorted((e for e in record.events if not e.voided), key=event_order, reverse=True)
     return render_template(
         "scorecard/match.html",
         match=record,
@@ -95,18 +122,24 @@ def match(match_id):
 
 @scorecard_bp.route("/api/live.json")
 def api_live():
-    return _cached({"matches": [_match_brief(m) for m in _ordered(STATUS_LIVE)]})
+    payload = _shared("live", lambda: {"matches": [_match_brief(m) for m in _ordered(STATUS_LIVE)]})
+    return _cached(payload)
 
 
 @scorecard_bp.route("/api/match/<int:match_id>.json")
 def api_match(match_id):
-    record = ScMatch.query.get_or_404(match_id)
-    events = (
-        ScEvent.query.filter_by(match_id=record.id, voided=False)
-        .order_by(ScEvent.id.desc())
-        .limit(60)
-        .all()
-    )
+    payload = _shared(("match", match_id), lambda: _match_payload(match_id))
+    if payload is None:
+        abort(404)
+    return _cached(payload)
+
+
+def _match_payload(match_id):
+    record = (ScMatch.query.options(selectinload(ScMatch.events))
+              .filter_by(id=match_id).first())
+    if record is None:
+        return None
+    events = sorted((e for e in record.events if not e.voided), key=event_order, reverse=True)[:60]
     payload = _match_brief(record)
     payload["events"] = [_event_brief(event, record) for event in events]
     payload["scorers_a"] = record.scorers_for_side("a")
@@ -118,4 +151,4 @@ def api_match(match_id):
         "points": potm["points"] if potm else 0,
         "metric_label": potm["metric_label"] if potm else "",
     } if potm else None
-    return _cached(payload)
+    return payload

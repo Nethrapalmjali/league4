@@ -65,7 +65,11 @@ def _ensure_tables():
                 text("ALTER TABLE sc_event ADD COLUMN client_id VARCHAR(40)")))
             steps.append(lambda c: "actor" in _columns(c, "sc_sync_op") or c.execute(
                 text("ALTER TABLE sc_sync_op ADD COLUMN actor VARCHAR(100)")))
+            steps.append(lambda c: "potm_player_id" in _columns(c, "sc_match") or c.execute(
+                text("ALTER TABLE sc_match ADD COLUMN potm_player_id INTEGER")))
         else:
+            steps.append(lambda c: c.execute(text(
+                "ALTER TABLE sc_match ADD COLUMN IF NOT EXISTS potm_player_id INTEGER")))
             steps.append(lambda c: c.execute(text(
                 "ALTER TABLE sc_sync_op ADD COLUMN IF NOT EXISTS actor VARCHAR(100)")))
             steps.append(lambda c: c.execute(text(

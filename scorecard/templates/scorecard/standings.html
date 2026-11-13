@@ -72,33 +72,64 @@
       {% endif %}
     </section>
 
+    {% macro who(s) %}
+      <span class="sc-leader__who">
+        <a href="{{ url_for('scorecard.player_page', player_id=s.player.id) }}" class="sc-player-link"><strong>{{ s.player.name }}</strong></a>
+        <span class="sc-leader__team">
+          {{ s.player.team.name if s.player.team else '—' }}
+          {%- if s.player.jersey_no %} · #{{ s.player.jersey_no }}{% endif %}
+          · {{ s.played }} match{{ 'es' if s.played != 1 }}
+        </span>
+      </span>
+    {% endmacro %}
+
+    {% set headline = stats.categories[0] %}
     <section class="sc-block">
-      <h2 class="sc-block__title">Leading scorers ({{ sport }} · {{ gender }})</h2>
-      {% if not leaders %}
+      <h2 class="sc-block__title">🏅 Player of the Tournament race ({{ sport }} · {{ gender }})</h2>
+      {% if not stats.tournament %}
         <p class="sc-empty">
-          Nobody has been credited with a score in {{ sport }} {{ gender }} yet. Scorers can
-          name the player when they record each point.
+          No player has been credited in {{ sport }} {{ gender }} yet. Scorers name the player
+          when they record a score, and pick a Player of the Match when a match ends.
         </p>
       {% else %}
         <ol class="sc-leaders">
-          {% for player, points, entries in leaders %}
+          {% for s in stats.tournament %}
             <li class="sc-leader">
               <span class="sc-leader__rank">{{ loop.index }}</span>
-              <span class="sc-leader__who">
-                <strong>{{ player.name }}</strong>
-                <span class="sc-leader__team">
-                  {{ player.team.name if player.team else '—' }}
-                  {%- if player.jersey_no %} · {{ player.jersey_no }}{% endif %}
-                </span>
-              </span>
+              {{ who(s) }}
               <span class="sc-leader__count">
-                <b>{{ points }}</b>
-                <span>{{ 'pt' if points == 1 else 'pts' }} · {{ entries }}×</span>
+                <b>{{ s.potm }}</b>
+                <span>⭐ Player of the Match · {{ s[headline.key] }} {{ headline.label|lower }}</span>
               </span>
             </li>
           {% endfor %}
         </ol>
+        <p class="sc-hint">Ranked by Player of the Match awards, then {{ headline.label|lower }}.</p>
       {% endif %}
     </section>
+
+    {% for board in stats.leaderboards %}
+      {% if board.rows or loop.first %}
+        <section class="sc-block">
+          <h2 class="sc-block__title">{{ board.category.label }} ({{ sport }} · {{ gender }})</h2>
+          {% if not board.rows %}
+            <p class="sc-empty">Nobody has been credited with {{ board.category.label|lower }} yet.</p>
+          {% else %}
+            <ol class="sc-leaders">
+              {% for s in board.rows %}
+                <li class="sc-leader">
+                  <span class="sc-leader__rank">{{ loop.index }}</span>
+                  {{ who(s) }}
+                  <span class="sc-leader__count">
+                    <b>{{ s[board.category.key] }}</b>
+                    <span>{{ board.category.label|lower }}</span>
+                  </span>
+                </li>
+              {% endfor %}
+            </ol>
+          {% endif %}
+        </section>
+      {% endif %}
+    {% endfor %}
   </div>
 {% endblock %}

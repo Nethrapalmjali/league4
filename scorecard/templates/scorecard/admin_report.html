@@ -326,35 +326,51 @@
     {% endfor %}
 
     <!-- SECTION 3: TOP PERFORMERS & SCORERS -->
-    <h2 class="section-title">3. Leading Scorers &amp; Top Performers</h2>
+    <h2 class="section-title">3. Player of the Tournament &amp; Top Performers</h2>
+    {% if not sport_leaders %}
+      <p>No player has been credited with a score yet.</p>
+    {% endif %}
     <div style="display:grid; grid-template-columns: 1fr 1fr; gap:1.2rem;">
-      {% for sport in sports %}
-        {% set leaders = sport_leaders.get(sport, []) %}
-        {% if leaders %}
-          <div>
-            <h4 style="margin:0.5rem 0; color:var(--maroon);">{{ sport }} Leaders</h4>
-            <table class="table" style="font-size:0.82rem;">
-              <thead>
+      {% for (sport, gender), stats in sport_leaders.items() %}
+        {% set headline = stats.categories[0] %}
+        <div>
+          <h4 style="margin:0.5rem 0; color:var(--maroon);">{{ sport }} · {{ gender }}</h4>
+          {% if stats.tournament %}
+            <p style="margin:0 0 0.4rem; font-size:0.85rem;">
+              🏅 <strong>Player of the Tournament:</strong> {{ stats.tournament[0].player.name }}
+              ({{ stats.tournament[0].player.team.tag if stats.tournament[0].player.team else '—' }}) —
+              {{ stats.tournament[0].potm }} × Player of the Match, {{ stats.tournament[0][headline.key] }} {{ headline.label|lower }}
+            </p>
+          {% endif %}
+          <table class="table" style="font-size:0.82rem;">
+            <thead>
+              <tr>
+                <th class="center" style="width:30px;">#</th>
+                <th>Player</th>
+                <th>Team</th>
+                <th class="center">{{ headline.label }}</th>
+                <th class="center">⭐</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for s in stats.players[:6] %}
                 <tr>
-                  <th class="center" style="width:30px;">#</th>
-                  <th>Player</th>
-                  <th>Team</th>
-                  <th class="center">Pts/Goals</th>
+                  <td class="center">{{ loop.index }}</td>
+                  <td class="bold">{{ s.player.name }}{% if s.player.jersey_no %} #{{ s.player.jersey_no }}{% endif %}</td>
+                  <td>{{ s.player.team.tag if s.player.team else '—' }}</td>
+                  <td class="center bold" style="color:var(--maroon);">{{ s[headline.key] }}</td>
+                  <td class="center">{{ s.potm }}</td>
                 </tr>
-              </thead>
-              <tbody>
-                {% for player, pts, entries in leaders[:6] %}
-                  <tr>
-                    <td class="center">{{ loop.index }}</td>
-                    <td class="bold">{{ player.name }}</td>
-                    <td>{{ player.team.tag if player.team else '—' }}</td>
-                    <td class="center bold" style="color:var(--maroon);">{{ pts }}</td>
-                  </tr>
-                {% endfor %}
-              </tbody>
-            </table>
-          </div>
-        {% endif %}
+              {% endfor %}
+            </tbody>
+          </table>
+          {% for board in stats.leaderboards[1:] if board.rows %}
+            <p style="margin:0.3rem 0 0; font-size:0.78rem;">
+              <strong>{{ board.category.label }}:</strong>
+              {% for s in board.rows[:3] %}{{ s.player.name }} ({{ s[board.category.key] }}){{ ', ' if not loop.last }}{% endfor %}
+            </p>
+          {% endfor %}
+        </div>
       {% endfor %}
     </div>
 

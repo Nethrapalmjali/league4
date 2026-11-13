@@ -79,7 +79,16 @@
       // public registration form and must not be able to inject markup.
       var pill = document.createElement("span");
       pill.className = "sc-scorer-pill";
-      pill.appendChild(document.createTextNode((s.icon || "⚽") + " " + s.name));
+      pill.appendChild(document.createTextNode((s.icon || "⚽") + " "));
+      if (s.player_id) {
+        var link = document.createElement("a");
+        link.href = "/scores/player/" + Number(s.player_id);
+        link.className = "sc-player-link";
+        link.textContent = s.name;
+        pill.appendChild(link);
+      } else {
+        pill.appendChild(document.createTextNode(s.name));
+      }
       if (s.clock) {
         pill.appendChild(document.createTextNode(" "));
         var small = document.createElement("small");
@@ -178,14 +187,20 @@
     }
 
     if (data.status === "final") {
-      window.clearInterval(timer);
+      page.dataset.status = "final"; // nothing more will change
+      stop();
     }
   }
 
   // Initial setup
   isInitialLoad = false;
 
-  var timer = window.setInterval(function () {
+  // New scores show within a few seconds. The server shares one answer among
+  // all viewers, so asking often is cheap. Paused while the page is hidden
+  // (phone locked, other tab) and refreshed the moment it is shown again.
+  var POLL_MS = 4000;
+  var timer = null;
+  function poll() {
     fetch(url, { headers: { Accept: "application/json" } })
       .then(function (response) {
         return response.ok ? response.json() : null;
@@ -194,5 +209,17 @@
         if (data) render(data);
       })
       .catch(function () {});
-  }, 6000);
+  }
+  function start() {
+    if (timer || page.dataset.status === "final") return;
+    timer = window.setInterval(poll, POLL_MS);
+  }
+  function stop() {
+    if (timer) window.clearInterval(timer);
+    timer = null;
+  }
+  document.addEventListener("visibilitychange", function () {
+    if (document.hidden) { stop(); } else { poll(); start(); }
+  });
+  start();
 })();

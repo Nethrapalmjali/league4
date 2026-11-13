@@ -149,7 +149,7 @@
             </a>
             {% if match.status == 'final' and match.assigned_scorer_id %}
               <form method="post" action="{{ url_for('scorecard.admin_grant_scorer_edit', match_id=match.id, sport=match.sport, gender=match.gender) }}"
-                    onsubmit="return confirm('{{ 'Remove edit-later access from' if match.scorer_can_edit_later else 'Allow edit-later access for' }} {{ scorer_map.get(match.assigned_scorer_id, 'assigned scorer') }} on this fixed fixture?');">
+                    onsubmit='return confirm({{ (("Remove edit-later access from " if match.scorer_can_edit_later else "Allow edit-later access for ") ~ scorer_map.get(match.assigned_scorer_id, "assigned scorer") ~ " on this fixed fixture?")|tojson }});'>
                 <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
                 <button class="btn btn--sm {{ 'btn--ghost' if match.scorer_can_edit_later else 'btn--primary' }}" type="submit">
                   {{ 'Revoke edit later' if match.scorer_can_edit_later else 'Allow scorer to edit later' }}

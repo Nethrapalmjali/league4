@@ -1,0 +1,87 @@
+{% extends "scorecard/_page.html" %}
+{% block title %}{{ player.name }} · {{ team.name }}{% endblock %}
+{% block description %}{{ player.name }} ({{ team.name }}, {{ team.sport }} {{ team.gender }}) — stats in {{ brand.name }}.{% endblock %}
+
+{% block content %}
+  <div class="sc-page sc-page--narrow">
+    <a class="sc-back" href="{{ url_for('scorecard.standings', sport=team.sport, gender=team.gender) }}">← {{ team.sport }} · {{ team.gender }} standings</a>
+
+    <section class="sc-card" style="display:flex; gap:1rem; align-items:center; flex-wrap:wrap;">
+      {% if card.photo %}
+        <img src="{{ card.photo }}" alt="{{ player.name }}" width="96" height="96"
+             style="width:96px; height:96px; border-radius:16px; object-fit:cover; flex-shrink:0; background:#f1e9e4;">
+      {% else %}
+        <div aria-hidden="true" style="width:96px; height:96px; border-radius:16px; flex-shrink:0; display:grid; place-items:center; background:linear-gradient(135deg,#5b1f1f,#7a2a2a); color:#e3b559; font-size:2rem; font-weight:900;">
+          {{ player.jersey_no or player.name[:1] }}
+        </div>
+      {% endif %}
+      <div style="flex:1; min-width:180px;">
+        <span class="sc-eyebrow">{{ team.sport }} · {{ team.gender }}</span>
+        <h1 style="margin:0.15rem 0;">{{ player.name }}</h1>
+        <p style="margin:0;">
+          {{ team.name }}
+          {% if player.jersey_no %} · <strong>#{{ player.jersey_no }}</strong>{% endif %}
+          {% if card.reg_code %} · <span class="sc-tag">{{ card.reg_code }}</span>{% endif %}
+          {% if not player.active %} · <span class="sc-when">No longer in the squad</span>{% endif %}
+        </p>
+      </div>
+    </section>
+
+    <section class="sc-block">
+      <h2 class="sc-block__title">Season totals</h2>
+      <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(120px, 1fr)); gap:0.6rem;">
+        <div class="sc-card" style="margin:0; text-align:center;">
+          <div style="font-size:1.8rem; font-weight:900; color:var(--maroon);">{{ games|length }}</div>
+          <div class="sc-hint" style="margin:0;">Matches</div>
+        </div>
+        <div class="sc-card" style="margin:0; text-align:center;">
+          <div style="font-size:1.8rem; font-weight:900; color:var(--maroon);">{{ potm }}</div>
+          <div class="sc-hint" style="margin:0;">⭐ Player of the Match</div>
+        </div>
+        {% for c in categories %}
+          <div class="sc-card" style="margin:0; text-align:center;">
+            <div style="font-size:1.8rem; font-weight:900; color:var(--maroon);">{{ totals[c.key] }}</div>
+            <div class="sc-hint" style="margin:0;">{{ c.label }}</div>
+          </div>
+        {% endfor %}
+      </div>
+    </section>
+
+    <section class="sc-block">
+      <h2 class="sc-block__title">Match by match</h2>
+      {% if not games %}
+        <p class="sc-empty">No stats recorded for {{ player.name }} yet.</p>
+      {% else %}
+        <div class="sc-scroll">
+          <table class="sc-table">
+            <thead>
+              <tr>
+                <th>Match</th>
+                <th>Result</th>
+                {% for c in categories %}<th>{{ c.label }}</th>{% endfor %}
+              </tr>
+            </thead>
+            <tbody>
+              {% for g in games %}
+                <tr>
+                  <td class="sc-table__team">
+                    <a href="{{ url_for('scorecard.match', match_id=g.match.id) }}">vs {{ g.opponent.name if g.opponent else '?' }}</a>
+                    <span class="sc-hint" style="display:block; margin:0;">
+                      {{ g.match.stage }}{% if g.match.starts_at %} · {{ g.match.starts_at.strftime('%d %b') }}{% endif %}
+                      {% if g.match.potm_player_id == player.id %} · ⭐{% endif %}
+                    </span>
+                  </td>
+                  <td>
+                    {% if g.outcome %}<strong>{{ g.outcome }}</strong> {{ g.us }}–{{ g.them }}
+                    {% else %}<span class="sc-live">Live</span> {{ g.us }}–{{ g.them }}{% endif %}
+                  </td>
+                  {% for c in categories %}<td>{{ g.stats[c.key] }}</td>{% endfor %}
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% endif %}
+    </section>
+  </div>
+{% endblock %}

@@ -101,13 +101,13 @@
                   {% endif %}
                   {% if player.sold %}
                   <form method="POST" action="{{ url_for('admin_reset_bid', player_id=player.id) }}"
-                        onsubmit="return confirm('Reset the bid for {{ player.name }}? The purse will be refunded to {{ player.sold_to }}.');">
+                        onsubmit='return confirm({{ ("Reset the bid for " ~ player.name ~ "? The purse will be refunded to " ~ (player.sold_to or "") ~ ".")|tojson }});'>
                     <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
                     <button type="submit" class="link-btn link-btn--warn">Reset bid</button>
                   </form>
                   {% endif %}
                   <form method="POST" action="{{ url_for('admin_delete_player', id=player.id) }}"
-                        onsubmit="return confirm('Delete {{ player.name }} permanently?');">
+                        onsubmit='return confirm({{ ("Delete " ~ player.name ~ " permanently?")|tojson }});'>
                     <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
                     <button type="submit" class="link-btn link-btn--del">Delete</button>
                   </form>
@@ -957,13 +957,13 @@
                     {% endif %}
                     {% if player.sold %}
                     <form method="POST" action="{{ url_for('admin_reset_bid', player_id=player.id) }}"
-                          onsubmit="return confirm('Reset the bid for {{ player.name }}? The purse will be refunded to {{ player.sold_to }}.');">
+                          onsubmit='return confirm({{ ("Reset the bid for " ~ player.name ~ "? The purse will be refunded to " ~ (player.sold_to or "") ~ ".")|tojson }});'>
                       <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
                       <button type="submit" class="link-btn link-btn--warn">Reset bid</button>
                     </form>
                     {% endif %}
                     <form method="POST" action="{{ url_for('admin_delete_player', id=player.id) }}"
-                          onsubmit="return confirm('Delete {{ player.name }} permanently?');">
+                          onsubmit='return confirm({{ ("Delete " ~ player.name ~ " permanently?")|tojson }});'>
                       <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
                       <button type="submit" class="link-btn link-btn--del">Delete</button>
                     </form>
@@ -1119,7 +1119,7 @@
                   <div class="row-actions" style="display:flex; gap:0.35rem; align-items:center;">
                     <a href="{{ url_for('admin_edit_team_owner', id=team.owner.id) }}" class="link-btn link-btn--edit" title="Edit franchise and team details">Edit</a>
                     <form method="POST" action="{{ url_for('admin_delete_team_sport', owner_id=team.owner.id, sport=team.sport, gender=team.gender) }}"
-                          onsubmit="return confirm('Permanently remove team {{ team.team_name }} from {{ team.sport }} ({{ team.gender }})?');">
+                          onsubmit='return confirm({{ ("Permanently remove team " ~ team.team_name ~ " from " ~ team.sport ~ " (" ~ team.gender ~ ")?")|tojson }});'>
                       <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
                       <button type="submit" class="link-btn link-btn--del" title="Delete this team from {{ team.sport }}">Delete</button>
                     </form>
@@ -1239,7 +1239,7 @@
                       </form>
                       {% endif %}
                       <form method="POST" action="{{ url_for('admin_delete_owner', id=owner.id) }}"
-                            onsubmit="return confirm('Delete {{ owner.team_name }} permanently? Players already sold to this team keep their allocation.');">
+                            onsubmit='return confirm({{ ("Delete " ~ owner.team_name ~ " permanently? Players already sold to this team keep their allocation.")|tojson }});'>
                         <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
                         <button type="submit" class="link-btn link-btn--del">Delete</button>
                       </form>

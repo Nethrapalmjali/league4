@@ -13,6 +13,12 @@ from .config import STATUS_SCHEDULED
 from .ems import db
 
 
+def event_order(event):
+    """Oldest first. Events not yet saved (no id) come last, in the order
+    they were added — the Scorer App saves a whole upload at once."""
+    return (event.id is None, event.id or 0)
+
+
 class ScTeam(db.Model):
     __tablename__ = "sc_team"
 
@@ -87,13 +93,18 @@ class ScMatch(db.Model):
     winner_team_id = db.Column(db.Integer)
     assigned_scorer_id = db.Column(db.Integer)
     scorer_can_edit_later = db.Column(db.Boolean, default=False)
+    # Chosen by the scorer or committee; when empty the top performer is used.
+    potm_player_id = db.Column(db.Integer)
     note = db.Column(db.String(200))
 
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow)
 
-    team_a = db.relationship("ScTeam", foreign_keys=[team_a_id])
-    team_b = db.relationship("ScTeam", foreign_keys=[team_b_id])
+    # Loaded in the same query as the match: every page that shows a match
+    # shows both team names, and fetching them one by one cost two extra
+    # round trips per match.
+    team_a = db.relationship("ScTeam", foreign_keys=[team_a_id], lazy="joined")
+    team_b = db.relationship("ScTeam", foreign_keys=[team_b_id], lazy="joined")
 
     events = db.relationship(
         "ScEvent", backref="match", lazy="select",
@@ -153,7 +164,7 @@ class ScMatch(db.Model):
             e for e in self.events
             if not e.voided and (e.points or 0) > 0 and e.team_id == target_team_id
         ]
-        scored.sort(key=lambda x: x.id)
+        scored.sort(key=event_order)
 
         grouped = {}
         order = []
@@ -162,6 +173,7 @@ class ScMatch(db.Model):
             if who not in grouped:
                 grouped[who] = {
                     "name": who,
+                    "player_id": e.player_id,
                     "jersey_no": e.player.jersey_no if e.player else None,
                     "clocks": [],
                     "points": 0,
@@ -239,6 +251,7 @@ class ScMatch(db.Model):
 
             res.append({
                 "name": data["name"],
+                "player_id": data["player_id"],
                 "jersey_no": data["jersey_no"],
                 "clock": clocks_text,
                 "clocks_text": clocks_text,
@@ -275,7 +288,7 @@ class ScMatch(db.Model):
         players_a = {}
         players_b = {}
 
-        for e in sorted(self.events, key=lambda x: x.id):
+        for e in sorted(self.events, key=event_order):
             if e.voided:
                 continue
             side = self.side_of(e.team_id)
@@ -391,7 +404,7 @@ class ScMatch(db.Model):
                 e for e in self.events
                 if not e.voided and e.team_id == target_team_id
             ]
-            events.sort(key=lambda x: x.id)
+            events.sort(key=event_order)
 
             wickets = sum(1 for e in events if e.kind == "Wicket")
             total_runs = sum(e.points or 0 for e in events)
@@ -482,7 +495,7 @@ class ScMatch(db.Model):
         }
 
         current_g = "Game 1"
-        for e in sorted(self.events, key=lambda x: x.id):
+        for e in sorted(self.events, key=event_order):
             if e.voided or (e.points or 0) <= 0:
                 continue
             side = self.side_of(e.team_id)
@@ -659,15 +672,26 @@ class ScMatch(db.Model):
                 }
             player_points[e.player_id]["points"] += e.points or 0
 
-        if not player_points:
-            return None
+        # The scorer's or committee's choice wins over the automatic pick.
+        if self.potm_player_id:
+            chosen = player_points.get(self.potm_player_id)
+            if chosen is None:
+                picked = db.session.get(ScPlayer, self.potm_player_id)
+                if picked is not None:
+                    chosen = {"player": picked, "team": picked.team, "points": 0}
+            if chosen is not None:
+                best = dict(chosen, chosen=True)
+                player_points = None
 
-        ranked = sorted(player_points.values(), key=lambda x: -x["points"])
-        if self.winner_team_id:
-            winner_players = [p for p in ranked if p["team"] and p["team"].id == self.winner_team_id]
-            best = winner_players[0] if winner_players else ranked[0]
-        else:
-            best = ranked[0]
+        if player_points is not None:
+            if not player_points:
+                return None
+            ranked = sorted(player_points.values(), key=lambda x: -x["points"])
+            if self.winner_team_id:
+                winner_players = [p for p in ranked if p["team"] and p["team"].id == self.winner_team_id]
+                best = winner_players[0] if winner_players else ranked[0]
+            else:
+                best = ranked[0]
 
         metric = "Goals" if self.sport == "Football" else (
             "Runs" if self.sport == "Cricket" else (
@@ -703,8 +727,10 @@ class ScEvent(db.Model):
     # makes a re-sent event impossible to store twice.
     client_id = db.Column(db.String(40), unique=True, index=True)
 
-    player = db.relationship("ScPlayer")
-    team = db.relationship("ScTeam")
+    # Joined for the same reason: scorer lists and feeds name the player and
+    # team of every event.
+    player = db.relationship("ScPlayer", lazy="joined")
+    team = db.relationship("ScTeam", lazy="joined")
 
 
 class ScSyncOp(db.Model):

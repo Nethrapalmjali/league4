@@ -47,6 +47,8 @@
     timers: load("timers", {}),          // id -> { running, base, paused }
     meta: load("meta", {}),              // { lastBundleAt, lastSyncAt }
     setup: load("setup", null),          // admins: teams, squads, rules — for new matches offline
+    prefs: load("prefs", { askPlayer: true }), // this device's choices
+    sticky: load("sticky", {}),          // Badminton: match -> side -> chosen player
     net: "unknown",                      // unknown | online | offline
     syncing: false,
     authProblem: null,
@@ -208,6 +210,8 @@
     } else if (op.type === "status") {
       m.status = p.status;
       if (p.status === "live" && !m.period) m.period = m.periods[0];
+    } else if (op.type === "potm") {
+      m.potm_player_id = p.player_id || null;
     }
   }
 
@@ -305,10 +309,11 @@
     var m = S.matches[oldId];
     if (m) { delete S.matches[oldId]; m.id = newId; S.matches[newId] = m; }
     S.outbox.forEach(function (op) { if (op.match_id === oldId) op.match_id = newId; });
-    [S.timers, S.ui.player, S.ui.clock].forEach(function (map) {
+    [S.timers, S.ui.player, S.ui.clock, S.sticky].forEach(function (map) {
       if (map[oldId] !== undefined) { map[newId] = map[oldId]; delete map[oldId]; }
     });
-    saveMatches(); saveOutbox(); saveTimers();
+    if (S.ui.sheet && S.ui.sheet.matchId === oldId) S.ui.sheet.matchId = newId;
+    saveMatches(); saveOutbox(); saveTimers(); store("sticky", S.sticky);
     if (S.view.name === "match" && S.view.matchId === oldId) {
       S.view.matchId = newId;
       history.replaceState(null, "", "#/match/" + newId);
@@ -413,6 +418,7 @@
     var h = location.hash || "";
     var mm = h.match(/^#\/match\/([\w:-]+)/);
     S.ui.menu = false;
+    S.ui.sheet = null;
     if (mm && S.matches[mm[1]]) S.view = { name: "match", matchId: /^\d+$/.test(mm[1]) ? Number(mm[1]) : mm[1] };
     else if (h === "#/new" && canCreate()) S.view = { name: "new", matchId: null };
     else S.view = { name: "list", matchId: null };
@@ -646,6 +652,93 @@
     return html;
   }
 
+  /* --------------------------------------------- who scored? (sheet) -- */
+  function findPlayer(m, side, id) {
+    var list = (m.players && m.players[side]) || [];
+    for (var i = 0; i < list.length; i++) if (String(list[i].id) === String(id)) return list[i];
+    return null;
+  }
+  function playerLabel(m, side, id) {
+    var p = findPlayer(m, side, id);
+    return p ? (p.jersey_no ? "#" + p.jersey_no + " " : "") + p.name : null;
+  }
+  // Badminton: the same player plays every rally, so ask once per side.
+  // undefined = not chosen yet, null = "no player", number = that player.
+  function stickyFor(matchId, side) {
+    var forMatch = S.sticky[matchId];
+    return forMatch && Object.prototype.hasOwnProperty.call(forMatch, side) ? forMatch[side] : undefined;
+  }
+  function setSticky(matchId, side, playerId) {
+    S.sticky[matchId] = S.sticky[matchId] || {};
+    S.sticky[matchId][side] = playerId;
+    store("sticky", S.sticky);
+  }
+
+  function pointsInMatch(m) {
+    var totals = {};
+    m.events.forEach(function (e) {
+      if (e.player_id && (e.points || 0) > 0) totals[e.player_id] = (totals[e.player_id] || 0) + e.points;
+    });
+    return totals;
+  }
+
+  function playerButtons(m, side, points) {
+    var list = ((m.players && m.players[side]) || []).slice();
+    if (points) list.sort(function (x, y) { return (points[y.id] || 0) - (points[x.id] || 0); });
+    return list.map(function (p) {
+      return '<button class="pick pick--' + side + '" data-act="pick" data-pid="' + p.id + '">' +
+        '<b>' + (p.jersey_no ? "#" + esc(p.jersey_no) : esc(p.name.charAt(0).toUpperCase())) + '</b>' +
+        '<span>' + esc(p.name) + '</span>' +
+        (points && points[p.id] ? '<i>' + points[p.id] + ' pts</i>' : '') + '</button>';
+    }).join("");
+  }
+
+  function renderSheet(m) {
+    var s = S.ui.sheet;
+    if (!s || s.matchId !== m.id) return "";
+    var title, body, skip;
+    if (s.kind === "potm") {
+      var pts = pointsInMatch(m);
+      title = "⭐ Player of the Match";
+      body = ["a", "b"].map(function (side) {
+        return '<div class="sheet__team">' + esc((side === "a" ? m.team_a : m.team_b).name) + '</div>' +
+          '<div class="sheet__grid">' + playerButtons(m, side, pts) + '</div>';
+      }).join("");
+      skip = "Let the app pick the top performer";
+    } else {
+      var team = s.side === "a" ? m.team_a : m.team_b;
+      var action = findAction(m, s.action);
+      title = s.kind === "sticky" ? "Who is playing for " + team.name + "?"
+        : "Who scored? " + (action ? action.label : "") + " · " + team.name;
+      body = '<div class="sheet__grid">' + playerButtons(m, s.side) + '</div>';
+      skip = s.kind === "sticky" ? "No particular player" : "No player — just record it";
+    }
+    return '<div class="sheet-backdrop" data-act="sheet-cancel"></div>' +
+      '<div class="sheet" role="dialog" aria-modal="true" aria-label="' + esc(title) + '">' +
+      '<div class="sheet__head"><strong>' + esc(title) + '</strong>' +
+      '<button class="sheet__close" data-act="sheet-cancel" aria-label="Cancel">✕</button></div>' +
+      body +
+      '<button class="btn btn--ghost btn--block" data-act="pick" data-pid="">' + esc(skip) + '</button>' +
+      (s.kind === "player" ? '<p class="muted small sheet__hint">Tap outside to cancel this tap — nothing is recorded.</p>' : '') +
+      '</div>';
+  }
+
+  function recordScore(m, side, actionKey, playerId, clock) {
+    var action = findAction(m, actionKey);
+    enqueue(m.id, "event", {
+      side: side, action: actionKey,
+      player_id: playerId || null,
+      clock: (clock || "").trim().slice(0, 8)
+    });
+    if (navigator.vibrate) navigator.vibrate(30);
+    var again = root.querySelector('[data-act="score"][data-side="' + side + '"][data-action="' + actionKey + '"]');
+    if (again) { again.classList.add("act--flash"); setTimeout(function () { again.classList.remove("act--flash"); }, 250); }
+    if (action) {
+      var who = playerId ? playerLabel(m, side, playerId) : null;
+      toast("Saved: " + action.label + (who ? " · " + who : "") + " · " + (side === "a" ? m.team_a.tag : m.team_b.tag));
+    }
+  }
+
   function renderMatch(m) {
     var writable = m.status !== "final" || m.can_edit_final;
     var bs = m.sport === "Badminton" ? badmintonStats(m) : null;
@@ -705,18 +798,22 @@
         html += '<div class="notice notice--ok">🏆 Match won ' + bs.games_a + '–' + bs.games_b + '. Tap <strong>End match</strong>. ' +
           'If the last point was a mistake, tap <strong>Undo last</strong> first.</div>';
       }
+      var anyPlayers = ((m.players && m.players.a) || []).length + ((m.players && m.players.b) || []).length > 0;
+      if (anyPlayers && m.sport !== "Badminton") {
+        html += '<div class="ctl ctl--slim"><span class="muted small">After each score, ask which player?</span><span class="ctl__grow"></span>' +
+          '<button class="switch' + (S.prefs.askPlayer ? " is-on" : "") + '" data-act="toggle-ask" role="switch" aria-checked="' + (S.prefs.askPlayer ? "true" : "false") + '">' +
+          '<span class="switch__knob"></span><span class="switch__text">' + (S.prefs.askPlayer ? "Ask" : "Off") + '</span></button></div>';
+      }
       html += '<div class="pads"' + (bs && bs.winner ? ' hidden' : '') + '>';
       ["a", "b"].forEach(function (side) {
         var team = side === "a" ? m.team_a : m.team_b;
         var players = (m.players && m.players[side]) || [];
-        var chosen = (S.ui.player[m.id] || {})[side] || "";
         html += '<section class="pad pad--' + side + '"><h2 class="pad__name">' + esc(team.name) + '</h2>';
-        if (players.length) {
-          html += '<select data-player="' + side + '"><option value="">— Player (optional) —</option>' +
-            players.map(function (p) {
-              return '<option value="' + p.id + '"' + (String(p.id) === String(chosen) ? " selected" : "") + '>' +
-                esc(p.name) + (p.jersey_no ? " #" + esc(p.jersey_no) : "") + '</option>';
-            }).join("") + '</select>';
+        if (m.sport === "Badminton" && players.length) {
+          var stuck = stickyFor(m.id, side);
+          var who = stuck === undefined ? null : (stuck === null ? "No player" : playerLabel(m, side, stuck));
+          html += '<button class="player-chip" data-act="change-player" data-side="' + side + '">🏸 ' +
+            (who ? esc(who) + ' <u>change</u>' : '<u>Choose player</u>') + '</button>';
         }
         html += '<div class="pad__actions">' + m.actions.map(function (a) {
           return '<button class="act' + (a.points ? " act--scores" : "") + '" data-act="score" data-side="' + side + '" data-action="' + esc(a.key) + '">' +
@@ -731,6 +828,13 @@
         (m.status !== "final" ? '<button class="btn" data-act="finish">End match</button>' : '<span class="tag tag--final">Finished — edits allowed</span>') +
         '</div>';
     }
+
+    if (m.status === "final" && ((m.players && m.players.a) || []).length + ((m.players && m.players.b) || []).length) {
+      var potmName = m.potm_player_id ? (playerLabel(m, "a", m.potm_player_id) || playerLabel(m, "b", m.potm_player_id)) : null;
+      html += '<div class="ctl"><span>⭐ Player of the Match: <strong>' + (potmName ? esc(potmName) : "top performer (automatic)") + '</strong></span>' +
+        '<span class="ctl__grow"></span><button class="btn btn--sm btn--gold" data-act="potm">' + (potmName ? "Change" : "Choose") + '</button></div>';
+    }
+    html += renderSheet(m);
 
     var pend = pendingIds();
     var recent = m.events.slice(-40).reverse();
@@ -811,7 +915,40 @@
       if (!window.confirm("End this match?\n\nFinal score: " + scoreLine + "\n\nIt shows as finished on the public scoreboard once uploaded.")) return;
       var t = timerOf(m.id);
       if (t.running) { t.paused = elapsedSec(m.id); t.running = false; S.timers[m.id] = t; saveTimers(); }
-      return enqueue(m.id, "status", { status: "final" });
+      enqueue(m.id, "status", { status: "final" });
+      // Straight on to the award while everyone is still there.
+      if (((m.players && m.players.a) || []).length + ((m.players && m.players.b) || []).length) {
+        S.ui.sheet = { kind: "potm", matchId: m.id };
+        render();
+      }
+      return;
+    }
+    if (act === "potm") { S.ui.sheet = { kind: "potm", matchId: m.id }; return render(); }
+    if (act === "toggle-ask") {
+      S.prefs.askPlayer = !S.prefs.askPlayer;
+      store("prefs", S.prefs);
+      toast(S.prefs.askPlayer ? "Will ask which player after each score." : "Scores are recorded without asking for a player.");
+      return render();
+    }
+    if (act === "change-player") {
+      S.ui.sheet = { kind: "sticky", matchId: m.id, side: btn.dataset.side };
+      return render();
+    }
+    if (act === "sheet-cancel") { S.ui.sheet = null; return render(); }
+    if (act === "pick") {
+      var sheet = S.ui.sheet;
+      if (!sheet || sheet.matchId !== m.id) return;
+      var pid = btn.dataset.pid ? Number(btn.dataset.pid) : null;
+      S.ui.sheet = null;
+      if (sheet.kind === "potm") {
+        enqueue(m.id, "potm", { player_id: pid });
+        toast(pid ? "⭐ Player of the Match saved." : "The top performer will be shown as Player of the Match.");
+        return;
+      }
+      if (sheet.kind === "sticky") { setSticky(m.id, sheet.side, pid); return render(); }
+      if (m.sport === "Badminton") setSticky(m.id, sheet.side, pid);
+      render();
+      return recordScore(m, sheet.side, sheet.action, pid, sheet.clock);
     }
     if (act === "undo") {
       var last = m.events[m.events.length - 1];
@@ -824,24 +961,24 @@
         return toast("Match already won — tap End match, or Undo last first.");
       }
       var side = btn.dataset.side;
-      var picker = root.querySelector('[data-player="' + side + '"]');
-      // Worked out before the point is added: for Badminton the stamp is the
-      // game this rally belongs to, not the one it may start.
+      var actionKey = btn.dataset.action;
+      var action = findAction(m, actionKey);
+      // Worked out at the tap: for Badminton the stamp is the game this
+      // rally belongs to, and the clock minute is the moment it happened.
       var clock = S.ui.clock[m.id] !== undefined ? S.ui.clock[m.id] : autoClock(m);
       delete S.ui.clock[m.id];
-      var action = findAction(m, btn.dataset.action);
-      enqueue(m.id, "event", {
-        side: side, action: btn.dataset.action,
-        player_id: picker && picker.value ? Number(picker.value) : null,
-        clock: (clock || "").trim().slice(0, 8)
-      });
-      // The next score is usually someone else's — start the picker fresh so a
-      // forgotten selection cannot credit the wrong player.
-      if (S.ui.player[m.id]) { delete S.ui.player[m.id][side]; render(); }
-      if (navigator.vibrate) navigator.vibrate(30);
-      var again = root.querySelector('[data-act="score"][data-side="' + side + '"][data-action="' + btn.dataset.action + '"]');
-      if (again) { again.classList.add("act--flash"); setTimeout(function () { again.classList.remove("act--flash"); }, 250); }
-      if (action) toast("Saved: " + action.label + " · " + (side === "a" ? m.team_a.tag : m.team_b.tag));
+      var squad = (m.players && m.players[side]) || [];
+      if (m.sport === "Badminton" && squad.length) {
+        var stuck = stickyFor(m.id, side);
+        if (stuck !== undefined) return recordScore(m, side, actionKey, stuck, clock);
+        S.ui.sheet = { kind: "player", matchId: m.id, side: side, action: actionKey, clock: clock };
+        return render();
+      }
+      if (S.prefs.askPlayer && squad.length && action && !action.team) {
+        S.ui.sheet = { kind: "player", matchId: m.id, side: side, action: actionKey, clock: clock };
+        return render();
+      }
+      return recordScore(m, side, actionKey, null, clock);
     }
   }
 

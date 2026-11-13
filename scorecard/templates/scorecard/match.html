@@ -36,7 +36,7 @@
           {% endif %}
           <div class="sc-side__scorers" data-scorers-a>
             {% for s in team_a_scorers %}
-              <span class="sc-scorer-pill">{{ s.icon or "⚽" }} {{ s.name }}{% if s.clock %} <small>{{ s.clock }}</small>{% endif %}</span>
+              <span class="sc-scorer-pill">{{ s.icon or "⚽" }} {% if s.player_id %}<a href="{{ url_for('scorecard.player_page', player_id=s.player_id) }}" class="sc-player-link">{{ s.name }}</a>{% else %}{{ s.name }}{% endif %}{% if s.clock %} <small>{{ s.clock }}</small>{% endif %}</span>
             {% endfor %}
           </div>
         </div>
@@ -62,7 +62,7 @@
           {% endif %}
           <div class="sc-side__scorers sc-side__scorers--b" data-scorers-b>
             {% for s in team_b_scorers %}
-              <span class="sc-scorer-pill">{{ s.icon or "⚽" }} {{ s.name }}{% if match.sport == 'Cricket' and match.period == 'Innings 2' %}*{% endif %}{% if s.clock %} <small>{{ s.clock }}</small>{% endif %}</span>
+              <span class="sc-scorer-pill">{{ s.icon or "⚽" }} {% if s.player_id %}<a href="{{ url_for('scorecard.player_page', player_id=s.player_id) }}" class="sc-player-link">{{ s.name }}</a>{% else %}{{ s.name }}{% endif %}{% if match.sport == 'Cricket' and match.period == 'Innings 2' %}*{% endif %}{% if s.clock %} <small>{{ s.clock }}</small>{% endif %}</span>
             {% endfor %}
           </div>
         </div>
@@ -77,7 +77,7 @@
           </div>
           <div class="sc-potm__content">
             <div class="sc-potm__info">
-              <span class="sc-potm__name">{{ potm.player.name }}</span>
+              <a href="{{ url_for('scorecard.player_page', player_id=potm.player.id) }}" class="sc-potm__name sc-player-link">{{ potm.player.name }}</a>
               <span class="sc-potm__team">{{ potm.team.name if potm.team else '' }}{% if potm.player.jersey_no %} · #{{ potm.player.jersey_no }}{% endif %}</span>
             </div>
             <div class="sc-potm__stat">
@@ -424,7 +424,7 @@
             <span class="sc-feed__clock">{{ event.clock or '—' }}</span>
             <span class="sc-feed__what">
               <strong>{{ event.kind }}</strong>
-              {% if event.player %}<span class="sc-feed__who">{{ event.player.name }}{% if event.player.jersey_no %} ({{ event.player.jersey_no }}){% endif %}</span>{% endif %}
+              {% if event.player %}<span class="sc-feed__who"><a href="{{ url_for('scorecard.player_page', player_id=event.player.id) }}" class="sc-player-link">{{ event.player.name }}</a>{% if event.player.jersey_no %} ({{ event.player.jersey_no }}){% endif %}</span>{% endif %}
             </span>
             <span class="sc-feed__team">{{ event.team.tag if event.team else '' }}</span>
           </li>
