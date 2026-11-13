@@ -8,6 +8,7 @@
       <h1>Teams</h1>
       <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem; margin-top:0.75rem;">
         <p style="margin:0;">
+          <a href="{{ url_for('admin_dashboard') }}" style="color:var(--maroon); font-weight:700;">← Committee Dashboard</a> ·
           <a href="{{ url_for('scorecard.admin_matches') }}">Fixtures</a> ·
           <a href="{{ url_for('scorecard.admin_scorers') }}">Scorers</a> ·
           <a href="{{ url_for('scorecard.admin_link') }}">Link to auction</a>

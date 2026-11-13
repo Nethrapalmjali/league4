@@ -138,49 +138,117 @@
   </div>
 
   <nav class="sidebar__nav">
-    <div class="sidebar__label">Current scenario</div>
-    <button type="button" class="nav-item is-active" data-target="overview">Overview</button>
-    <button type="button" class="nav-item" data-target="matches-stage">Matches stage</button>
-
-    <details class="sidebar__more" style="margin-top:0.75rem;">
-      <summary class="sidebar__label" style="cursor:pointer; list-style:none; display:flex; align-items:center; justify-content:space-between; gap:0.4rem;">
-        <span>More options &amp; inputs</span><span style="font-size:0.7rem; opacity:0.8;">(tools panel)</span>
-      </summary>
-      <div style="margin-top:0.35rem;">
-        <div class="sidebar__label">Live scorecard</div>
-        <a class="nav-item icon-text" href="{{ url_for('scorecard.admin_matches') }}">{{ ico.icon('trophy', 16) }} Fixtures &amp; scoring</a>
-        <a class="nav-item icon-text" href="{{ url_for('scorecard.admin_teams') }}">{{ ico.icon('shield', 16) }} Scorecard teams</a>
-        <a class="nav-item icon-text" href="{{ url_for('scorecard.admin_scorers') }}">{{ ico.icon('user', 16) }} Scorers</a>
-
-        <div class="sidebar__label">College Analytics</div>
-        <button type="button" class="nav-item" data-target="institutions" data-inst-filter="all"><span>All Colleges</span><span class="nav-item__count">{{ total_players }}</span></button>
-        <button type="button" class="nav-item nav-item--sub" data-target="institutions" data-inst-filter="gmu"><span style="display:flex; align-items:center; gap:0.4rem;"><span class="dot dot--gmu"></span>GM University</span><span class="nav-item__count badge-pill-gmu">{{ inst_counts.gmu }}</span></button>
-        <button type="button" class="nav-item nav-item--sub" data-target="institutions" data-inst-filter="gmit"><span style="display:flex; align-items:center; gap:0.4rem;"><span class="dot dot--gmit"></span>GMIT</span><span class="nav-item__count badge-pill-gmit">{{ inst_counts.gmit }}</span></button>
-        <button type="button" class="nav-item nav-item--sub" data-target="institutions" data-inst-filter="other"><span style="display:flex; align-items:center; gap:0.4rem;"><span class="dot dot--other"></span>Others / Foreign</span><span class="nav-item__count badge-pill-other">{{ inst_counts.other }}</span></button>
-
-        <div class="sidebar__label">Player data by sport</div>
-        {% for sport in sports %}
-          <button type="button" class="nav-item" data-target="{{ sport|lower }}"><span>{{ sport }}</span><span class="nav-item__count">{{ players_by_sport[sport]|length }}</span></button>
-        {% endfor %}
-
-        <div class="sidebar__label">League</div>
-        <button type="button" class="nav-item" data-target="owners"><span>Team owners &amp; Squads</span><span class="nav-item__count">{{ owners|length }} / {{ sport_teams|length }}</span></button>
-        <button type="button" class="nav-item" data-target="mail">Email automation</button>
-
-        <div class="sidebar__label">Exports</div>
-        <a class="nav-item icon-text" href="{{ url_for('export_all_summaries') }}">{{ ico.icon('download', 16) }} All summaries</a>
-        <a class="nav-item icon-text" href="{{ url_for('export_institution', category='all') }}">{{ ico.icon('download', 16) }} College breakdown</a>
-        <a class="nav-item icon-text" href="{{ url_for('export_owners') }}">{{ ico.icon('download', 16) }} Team owners</a>
-
-        <div class="sidebar__label">Live auction desk</div>
-        {% for sport in sports %}
-          <a class="nav-item icon-text" href="{{ url_for('bidding', sport=sport|lower, gender='male') }}">{{ ico.icon('gavel', 15) }} Bid {{ sport }} (M)</a>
-          {% if sport not in mens_only_sports %}
-          <a class="nav-item icon-text" href="{{ url_for('bidding', sport=sport|lower, gender='female') }}">{{ ico.icon('gavel', 15) }} Bid {{ sport }} (W)</a>
-          {% endif %}
-        {% endfor %}
+    <!-- Tournament Live Status -->
+    <div style="padding: 0.4rem 0.65rem 0.6rem; display: flex; flex-direction: column; gap: 0.4rem; border-bottom: 1px solid rgba(255, 255, 255, 0.08); margin-bottom: 0.4rem;">
+      <div style="display: flex; gap: 0.4rem; align-items: center; flex-wrap: wrap;">
+        <span class="badge-pill-live"><span class="pulse-dot"></span> MATCHES LIVE</span>
+        <span class="badge-pill-gold">AUCTION CLOSED</span>
       </div>
-    </details>
+    </div>
+
+    <!-- Group 1: Command Center -->
+    <div class="sidebar__label">Command Center</div>
+    <button type="button" class="nav-item is-active" data-target="overview">
+      <span style="display:flex; align-items:center; gap:0.55rem;">{{ ico.icon('home', 16) }} Overview</span>
+      <span class="badge-pill-gold" style="font-size:0.64rem;">Live Hub</span>
+    </button>
+    <button type="button" class="nav-item" data-target="matches-stage">
+      <span style="display:flex; align-items:center; gap:0.55rem;">{{ ico.icon('trophy', 16) }} Matches stage</span>
+      <span class="badge-pill-live" style="font-size:0.6rem; padding:0.1rem 0.45rem;">LIVE</span>
+    </button>
+
+    <!-- Group 2: Match Center & EMS Scoring -->
+    <div class="sidebar__label" style="display:flex; justify-content:space-between; align-items:center;">
+      <span>Match Center &amp; Scoring</span>
+      <span style="font-size:0.65rem; color:#f87171; font-weight:800;">ACTIVE</span>
+    </div>
+    <a class="nav-item icon-text" href="{{ url_for('scorecard.admin_matches') }}">
+      {{ ico.icon('calendar', 16) }} Fixtures &amp; scoring
+    </a>
+    <a class="nav-item icon-text" href="{{ url_for('scorecard.admin_teams') }}">
+      {{ ico.icon('shield', 16) }} Scorecard teams
+    </a>
+    <a class="nav-item icon-text" href="{{ url_for('scorecard.admin_scorers') }}">
+      {{ ico.icon('user', 16) }} Scorer passcodes
+    </a>
+    <a class="nav-item icon-text" href="{{ url_for('scorecard.tournament_report') }}" target="_blank">
+      {{ ico.icon('table', 16) }} Tournament report
+    </a>
+    <a class="nav-item icon-text" href="{{ url_for('scorecard.index') }}" target="_blank">
+      {{ ico.icon('external-link', 16) }} Public scoreboard
+    </a>
+
+    <!-- Group 3: Auction Completed & Rosters -->
+    <div class="sidebar__label" style="display:flex; justify-content:space-between; align-items:center;">
+      <span>Auction Completed · Rosters</span>
+      <span style="font-size:0.65rem; color:var(--gold-light); font-weight:800;">LOCKED</span>
+    </div>
+    <a class="nav-item icon-text" href="{{ url_for('auction_squads') }}">
+      {{ ico.icon('check_circle', 16) }} Final Squads &amp; Rosters
+    </a>
+    <button type="button" class="nav-item" data-target="owners">
+      <span style="display:flex; align-items:center; gap:0.55rem;">{{ ico.icon('business', 16) }} Franchise Wallets</span>
+      <span class="nav-item__count">{{ owners|length }} / {{ sport_teams|length }}</span>
+    </button>
+
+    <!-- Group 4: College Analytics -->
+    <div class="sidebar__label">College Analytics</div>
+    <button type="button" class="nav-item" data-target="institutions" data-inst-filter="all">
+      <span>All Colleges</span>
+      <span class="nav-item__count">{{ total_players }}</span>
+    </button>
+    <button type="button" class="nav-item nav-item--sub" data-target="institutions" data-inst-filter="gmu">
+      <span style="display:flex; align-items:center; gap:0.4rem;"><span class="dot dot--gmu"></span>GM University</span>
+      <span class="nav-item__count badge-pill-gmu">{{ inst_counts.gmu }}</span>
+    </button>
+    <button type="button" class="nav-item nav-item--sub" data-target="institutions" data-inst-filter="gmit">
+      <span style="display:flex; align-items:center; gap:0.4rem;"><span class="dot dot--gmit"></span>GMIT</span>
+      <span class="nav-item__count badge-pill-gmit">{{ inst_counts.gmit }}</span>
+    </button>
+    <button type="button" class="nav-item nav-item--sub" data-target="institutions" data-inst-filter="other">
+      <span style="display:flex; align-items:center; gap:0.4rem;"><span class="dot dot--other"></span>Others / Foreign</span>
+      <span class="nav-item__count badge-pill-other">{{ inst_counts.other }}</span>
+    </button>
+
+    <!-- Group 5: Player Data by Sport -->
+    <div class="sidebar__label">Athlete Pool by Sport</div>
+    {% for sport in sports %}
+      <button type="button" class="nav-item" data-target="{{ sport|lower }}">
+        <span>{{ sport }}</span>
+        <span class="nav-item__count">{{ players_by_sport[sport]|length }}</span>
+      </button>
+    {% endfor %}
+
+    <!-- Group 6: Auction Desk (Archived / Re-run) -->
+    <div class="sidebar__label">Auction Desks (Archived)</div>
+    {% for sport in sports %}
+      <a class="nav-item icon-text" href="{{ url_for('bidding', sport=sport|lower, gender='male') }}">
+        {{ ico.icon('gavel', 15) }} {{ sport }} (Men)
+      </a>
+      {% if sport not in mens_only_sports %}
+      <a class="nav-item icon-text" href="{{ url_for('bidding', sport=sport|lower, gender='female') }}">
+        {{ ico.icon('gavel', 15) }} {{ sport }} (Women)
+      </a>
+      {% endif %}
+    {% endfor %}
+
+    <!-- Group 7: League Tools & Data Exports -->
+    <div class="sidebar__label">Data &amp; Exports</div>
+    <a class="nav-item icon-text" href="{{ url_for('scorecard.export_tournament_excel') }}" style="color:var(--gold-light); font-weight:700;">
+      {{ ico.icon('download', 16) }} Tournament Excel
+    </a>
+    <a class="nav-item icon-text" href="{{ url_for('export_all_summaries') }}">
+      {{ ico.icon('download', 16) }} All summaries
+    </a>
+    <a class="nav-item icon-text" href="{{ url_for('export_institution', category='all') }}">
+      {{ ico.icon('download', 16) }} College breakdown
+    </a>
+    <a class="nav-item icon-text" href="{{ url_for('export_owners') }}">
+      {{ ico.icon('download', 16) }} Team owners
+    </a>
+    <button type="button" class="nav-item" data-target="mail">
+      <span style="display:flex; align-items:center; gap:0.55rem;">{{ ico.icon('email', 16) }} Email automation</span>
+    </button>
   </nav>
 
   <div class="sidebar__foot">
@@ -216,148 +284,163 @@
 
   <!-- ============================== OVERVIEW ============================== -->
   <section id="overview" class="section is-active" style="padding-top:0;">
-    <!-- Section header -->
-    <div class="section-header" style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:0.75rem; margin-bottom:1.5rem;">
-      <div>
-        <div class="section-eyebrow" style="font-size:0.75rem; font-weight:800; text-transform:uppercase; letter-spacing:0.08em; color:var(--maroon); margin-bottom:0.2rem;">GM League S4</div>
-        <h2 class="section-title" style="font-size:1.5rem; font-weight:800; color:var(--deep-maroon); margin:0 0 0.25rem; line-height:1.2;">Overview</h2>
-        <p class="section-lead" style="font-size:0.88rem; color:var(--muted); margin:0;">League health at a glance — registrations, signings, franchises, and purse.</p>
+    <!-- Championship Command Hero -->
+    <div class="hero-command">
+      <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:1rem; position:relative; z-index:1;">
+        <div style="max-width:760px;">
+          <div style="display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap; margin-bottom:0.5rem;">
+            <span class="badge-pill-live"><span class="pulse-dot"></span> MATCHES ARE LIVE NOW</span>
+            <span class="badge-pill-gold">🔨 AUCTION COMPLETED &amp; ROSTERS LOCKED</span>
+          </div>
+          <h2 class="hero-command__title">Season 4 Tournament Command Center</h2>
+          <p class="hero-command__sub">
+            All <strong>{{ sold_players|length }}</strong> players have been drafted across <strong>{{ owners|length }}</strong> franchises. Live scoring, fixtures, and umpire assignments are active across Football, Basketball, Kabaddi, and Badminton.
+          </p>
+        </div>
+        <div style="display:flex; flex-direction:column; gap:0.5rem; align-items:flex-start;">
+          <a href="{{ url_for('scorecard.admin_matches') }}" class="btn btn--gold" style="font-weight:800; padding:0.65rem 1.25rem;">
+            {{ ico.icon('calendar', 16) }} Fixtures &amp; Live Scoring
+          </a>
+          <div style="display:flex; gap:0.4rem; flex-wrap:wrap;">
+            <a href="{{ url_for('auction_squads') }}" class="btn btn--ghost btn--sm" style="background:rgba(255,255,255,0.12); color:#fff; border-color:rgba(255,255,255,0.28);">
+              {{ ico.icon('check_circle', 14) }} Final Rosters
+            </a>
+            <a href="{{ url_for('scorecard.export_tournament_excel') }}" class="btn btn--ghost btn--sm" style="background:rgba(255,255,255,0.12); color:var(--gold-light); border-color:rgba(227,181,89,0.35);">
+              {{ ico.icon('download', 14) }} Master Excel
+            </a>
+          </div>
+        </div>
       </div>
-      <a href="{{ url_for('auction_squads') }}" class="btn btn--gold" style="font-weight:700;">{{ ico.icon('open_in_new', 16) }} View auction results</a>
+    </div>
+
+    <!-- Live Matches Command Center Grid -->
+    <div style="margin-bottom:0.75rem; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.5rem;">
+      <div style="font-size:0.78rem; font-weight:800; letter-spacing:0.08em; text-transform:uppercase; color:var(--maroon);">
+        🔴 Match Operations · Active Phase
+      </div>
+      <a href="{{ url_for('scorecard.index') }}" target="_blank" style="font-size:0.8rem; font-weight:700; color:var(--info); display:inline-flex; align-items:center; gap:0.3rem;">
+        {{ ico.icon('external-link', 14) }} Public Live Scoreboard
+      </a>
+    </div>
+
+    <div class="command-grid">
+      <a href="{{ url_for('scorecard.admin_matches') }}" class="command-tile command-tile--live">
+        <div class="command-tile__icon-wrap">
+          {{ ico.icon('calendar', 20) }}
+        </div>
+        <h3 class="command-tile__title">Fixtures &amp; Live Scoring</h3>
+        <p class="command-tile__desc">Schedule upcoming matches, start live sets/innings, record points, and assign ground scorers.</p>
+        <span class="command-tile__action">Launch console {{ ico.icon('arrow-right', 14) }}</span>
+      </a>
+
+      <a href="{{ url_for('scorecard.admin_teams') }}" class="command-tile command-tile--gold">
+        <div class="command-tile__icon-wrap">
+          {{ ico.icon('shield', 20) }}
+        </div>
+        <h3 class="command-tile__title">Scorecard Teams &amp; Sync</h3>
+        <p class="command-tile__desc">Inspect verified squads synced from auction draft, assign playing captains, and manage jerseys.</p>
+        <span class="command-tile__action">Verify teams {{ ico.icon('arrow-right', 14) }}</span>
+      </a>
+
+      <a href="{{ url_for('scorecard.admin_scorers') }}" class="command-tile">
+        <div class="command-tile__icon-wrap">
+          {{ ico.icon('user', 20) }}
+        </div>
+        <h3 class="command-tile__title">Scorer &amp; Official Passcodes</h3>
+        <p class="command-tile__desc">Generate, re-issue, and revoke 6-digit access passcodes for table scorers and match officials.</p>
+        <span class="command-tile__action">Manage scorers {{ ico.icon('arrow-right', 14) }}</span>
+      </a>
+
+      <a href="{{ url_for('scorecard.tournament_report') }}" target="_blank" class="command-tile">
+        <div class="command-tile__icon-wrap">
+          {{ ico.icon('table', 20) }}
+        </div>
+        <h3 class="command-tile__title">Official Tournament Report</h3>
+        <p class="command-tile__desc">Generate comprehensive PDF and print-ready report of all matches, point tables, and top scorers.</p>
+        <span class="command-tile__action">Print / PDF report {{ ico.icon('external-link', 14) }}</span>
+      </a>
+    </div>
+
+    <!-- Auction Completed Spotlight & Financial Ledger -->
+    <div style="margin-bottom:0.75rem; margin-top:1.6rem; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.5rem;">
+      <div style="font-size:0.78rem; font-weight:800; letter-spacing:0.08em; text-transform:uppercase; color:var(--gold-dim);">
+        🔨 Auction Completed Spotlight &amp; Financial Ledger
+      </div>
+      <a href="{{ url_for('auction_squads') }}" style="font-size:0.8rem; font-weight:700; color:var(--deep-maroon); display:inline-flex; align-items:center; gap:0.3rem;">
+        {{ ico.icon('check_circle', 14) }} View Full Auction Squads
+      </a>
     </div>
 
     <!-- Key metrics row -->
-    <div class="stat-row" style="display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:0.9rem; margin-bottom:1.5rem;">
-      <div class="stat-card" style="border:1px solid var(--line); border-radius:10px; padding:1rem 1rem; background:#fff; display:flex; flex-direction:column; gap:0.35rem;">
-        <div style="display:flex; align-items:center; gap:0.5rem;">
-          <div style="width:28px; height:28px; border-radius:8px; background:#eef2f7; color:#475569; display:flex; align-items:center; justify-content:center; font-size:0.95rem;">{{ ico.icon('people', 16) }}</div>
-          <div class="stat-card__label" style="font-size:0.72rem; font-weight:800; color:var(--muted); text-transform:uppercase; letter-spacing:0.04em;">Total players</div>
-        </div>
-        <div class="stat-card__value" style="font-size:1.5rem; font-weight:800; color:var(--deep-maroon); margin-top:0.2rem; line-height:1.1;">{{ total_players }}</div>
-        <div style="font-size:0.72rem; color:var(--muted); margin-top:0.2rem;">across {{ sports|length }} sports</div>
-      </div>
-      <div class="stat-card" style="border:1px solid var(--line); border-radius:10px; padding:1rem 1rem; background:#fff; display:flex; flex-direction:column; gap:0.35rem;">
+    <div class="stat-row" style="display:grid; grid-template-columns:repeat(auto-fit,minmax(175px,1fr)); gap:0.9rem; margin-bottom:1.5rem;">
+      <div class="stat-card" style="border:1px solid var(--line); border-radius:12px; padding:1.1rem 1rem; background:#fff; display:flex; flex-direction:column; gap:0.35rem; border-top:4px solid var(--gold);">
         <div style="display:flex; align-items:center; gap:0.5rem;">
           <div style="width:28px; height:28px; border-radius:8px; background:#eef7f0; color:#1b8751; display:flex; align-items:center; justify-content:center; font-size:0.95rem;">{{ ico.icon('check_circle', 16) }}</div>
-          <div class="stat-card__label" style="font-size:0.72rem; font-weight:800; color:var(--muted); text-transform:uppercase; letter-spacing:0.04em;">Players signed</div>
+          <div class="stat-card__label" style="font-size:0.72rem; font-weight:800; color:var(--muted); text-transform:uppercase; letter-spacing:0.04em;">Drafted Athletes</div>
         </div>
-        <div class="stat-card__value" style="font-size:1.5rem; font-weight:800; color:var(--deep-maroon); margin-top:0.2rem; line-height:1.1;">{{ sold_players|length }}</div>
-        <div style="font-size:0.72rem; color:var(--muted); margin-top:0.2rem;">{{ total_players - sold_players|length }} still in the pool</div>
+        <div class="stat-card__value" style="font-size:1.6rem; font-weight:800; color:var(--deep-maroon); margin-top:0.2rem; line-height:1.1; font-family:var(--font-mono);">{{ sold_players|length }}</div>
+        <div style="font-size:0.74rem; color:var(--muted); margin-top:0.2rem;">of {{ total_players }} registered athletes</div>
       </div>
-      <div class="stat-card" style="border:1px solid var(--line); border-radius:10px; padding:1rem 1rem; background:#fff; display:flex; flex-direction:column; gap:0.35rem;">
+
+      <div class="stat-card" style="border:1px solid var(--line); border-radius:12px; padding:1.1rem 1rem; background:#fff; display:flex; flex-direction:column; gap:0.35rem; border-top:4px solid #1b8751;">
         <div style="display:flex; align-items:center; gap:0.5rem;">
-          <div style="width:28px; height:28px; border-radius:8px; background:#fdf3d7; color:#856404; display:flex; align-items:center; justify-content:center; font-size:0.95rem;">{{ ico.icon('business', 16) }}</div>
-          <div class="stat-card__label" style="font-size:0.72rem; font-weight:800; color:var(--muted); text-transform:uppercase; letter-spacing:0.04em;">Franchise owners</div>
+          <div style="width:28px; height:28px; border-radius:8px; background:#eef7f0; color:#1b8751; display:flex; align-items:center; justify-content:center; font-size:0.95rem;">{{ ico.icon('account_balance_wallet', 16) }}</div>
+          <div class="stat-card__label" style="font-size:0.72rem; font-weight:800; color:var(--muted); text-transform:uppercase; letter-spacing:0.04em;">Total Purse Spent</div>
         </div>
-        <div class="stat-card__value" style="font-size:1.5rem; font-weight:800; color:var(--deep-maroon); margin-top:0.2rem; line-height:1.1;">{{ owners|length }}</div>
-        <div style="font-size:0.72rem; color:var(--muted); margin-top:0.2rem;">registered franchises</div>
+        <div class="stat-card__value" style="font-size:1.6rem; font-weight:800; color:var(--deep-maroon); margin-top:0.2rem; line-height:1.1; font-family:var(--font-mono);">{{ spent|inr }}</div>
+        <div style="font-size:0.74rem; color:var(--muted); margin-top:0.2rem;">deployed across franchises</div>
       </div>
-      <div class="stat-card" style="border:1px solid var(--line); border-radius:10px; padding:1rem 1rem; background:#fff; display:flex; flex-direction:column; gap:0.35rem;">
-        <div style="display:flex; align-items:center; gap:0.5rem;">
-          <div style="width:28px; height:28px; border-radius:8px; background:#ffe8e6; color:#ba1a1a; display:flex; align-items:center; justify-content:center; font-size:0.95rem;">{{ ico.icon('trophy', 16) }}</div>
-          <div class="stat-card__label" style="font-size:0.72rem; font-weight:800; color:var(--muted); text-transform:uppercase; letter-spacing:0.04em;">Competing teams</div>
-        </div>
-        <div class="stat-card__value" style="font-size:1.5rem; font-weight:800; color:#b45309; margin-top:0.2rem; line-height:1.1;">{{ sport_teams|length }}</div>
-        <div style="font-size:0.72rem; color:var(--muted); margin-top:0.2rem;">fielded across all sports</div>
-      </div>
-      <div class="stat-card" style="border:1px solid var(--line); border-radius:10px; padding:1rem 1rem; background:#fff; display:flex; flex-direction:column; gap:0.35rem;">
+
+      <div class="stat-card" style="border:1px solid var(--line); border-radius:12px; padding:1.1rem 1rem; background:#fff; display:flex; flex-direction:column; gap:0.35rem; border-top:4px solid var(--gold);">
         <div style="display:flex; align-items:center; gap:0.5rem;">
           <div style="width:28px; height:28px; border-radius:8px; background:#fdf3d7; color:#856404; display:flex; align-items:center; justify-content:center; font-size:0.95rem;">{{ ico.icon('account_balance_wallet', 16) }}</div>
-          <div class="stat-card__label" style="font-size:0.72rem; font-weight:800; color:var(--muted); text-transform:uppercase; letter-spacing:0.04em;">Purse spent</div>
+          <div class="stat-card__label" style="font-size:0.72rem; font-weight:800; color:var(--muted); text-transform:uppercase; letter-spacing:0.04em;">Remaining Purse</div>
         </div>
-        <div class="stat-card__value" style="font-size:1.5rem; font-weight:800; color:var(--deep-maroon); margin-top:0.2rem; line-height:1.1;">{{ spent|inr }}</div>
-        <div style="font-size:0.72rem; color:var(--muted); margin-top:0.2rem;">{{ remaining|inr }} remaining</div>
+        <div class="stat-card__value" style="font-size:1.6rem; font-weight:800; color:var(--deep-maroon); margin-top:0.2rem; line-height:1.1; font-family:var(--font-mono);">{{ remaining|inr }}</div>
+        <div style="font-size:0.74rem; color:var(--muted); margin-top:0.2rem;">unspent franchise reserve</div>
       </div>
-      <div class="stat-card {{ 'stat-card--alert' if missing_email else '' }}" style="border:1px solid {{ '#fecaca' if missing_email else 'var(--line)' }}; border-radius:10px; padding:1rem 1rem; background:#fff; display:flex; flex-direction:column; gap:0.35rem;">
+
+      <div class="stat-card" style="border:1px solid var(--line); border-radius:12px; padding:1.1rem 1rem; background:#fff; display:flex; flex-direction:column; gap:0.35rem; border-top:4px solid var(--maroon);">
         <div style="display:flex; align-items:center; gap:0.5rem;">
-          <div style="width:28px; height:28px; border-radius:8px; background:{{ '#fdecea' if missing_email else '#eef2f7' }}; color:{{ '#8e2119' if missing_email else '#475569' }}; display:flex; align-items:center; justify-content:center; font-size:0.95rem;">{{ ico.icon('email', 16) }}</div>
-          <div class="stat-card__label" style="font-size:0.72rem; font-weight:800; color:var(--muted); text-transform:uppercase; letter-spacing:0.04em;">Missing email</div>
+          <div style="width:28px; height:28px; border-radius:8px; background:#fdf3d7; color:#856404; display:flex; align-items:center; justify-content:center; font-size:0.95rem;">{{ ico.icon('business', 16) }}</div>
+          <div class="stat-card__label" style="font-size:0.72rem; font-weight:800; color:var(--muted); text-transform:uppercase; letter-spacing:0.04em;">Franchise Owners</div>
         </div>
-        <div class="stat-card__value" style="font-size:1.5rem; font-weight:800; color:var(--deep-maroon); margin-top:0.2rem; line-height:1.1;">{{ missing_email }}</div>
-        <div style="font-size:0.72rem; color:{{ '#ba1a1a' if missing_email else 'var(--muted)' }}; margin-top:0.2rem;">{{ 'these players get no mail' if missing_email else 'everyone is reachable' }}</div>
+        <div class="stat-card__value" style="font-size:1.6rem; font-weight:800; color:var(--deep-maroon); margin-top:0.2rem; line-height:1.1; font-family:var(--font-mono);">{{ owners|length }}</div>
+        <div style="font-size:0.74rem; color:var(--muted); margin-top:0.2rem;">participating franchises</div>
       </div>
-    </div>
 
-    <!-- Institutional representation -->
-    <div class="card" style="border:1px solid var(--line); border-radius:12px; background:#fff; margin-bottom:1.5rem; overflow:hidden;">
-      <div class="card__head" style="background:#fdfbf7; border-bottom:1px solid var(--line); padding:1rem 1.25rem; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.6rem;">
-        <div>
-          <div class="card__title" style="display:flex; align-items:center; gap:0.5rem; font-size:1rem; font-weight:800; color:var(--deep-maroon); margin:0;">
-            <span>🏛️</span> Institutional Athlete Representation
-          </div>
-          <div style="font-size:0.78rem; color:var(--muted); margin-top:0.2rem;">Registered athletes by college category</div>
+      <div class="stat-card" style="border:1px solid var(--line); border-radius:12px; padding:1.1rem 1rem; background:#fff; display:flex; flex-direction:column; gap:0.35rem; border-top:4px solid #b45309;">
+        <div style="display:flex; align-items:center; gap:0.5rem;">
+          <div style="width:28px; height:28px; border-radius:8px; background:#ffe8e6; color:#ba1a1a; display:flex; align-items:center; justify-content:center; font-size:0.95rem;">{{ ico.icon('trophy', 16) }}</div>
+          <div class="stat-card__label" style="font-size:0.72rem; font-weight:800; color:var(--muted); text-transform:uppercase; letter-spacing:0.04em;">Fielded Teams</div>
         </div>
-        <button type="button" class="btn btn--gold btn--sm" onclick="window.activateInstFilter && window.activateInstFilter('all');" style="font-size:0.78rem;">{{ ico.icon('open_in_new', 14) }} College analytics</button>
+        <div class="stat-card__value" style="font-size:1.6rem; font-weight:800; color:#b45309; margin-top:0.2rem; line-height:1.1; font-family:var(--font-mono);">{{ sport_teams|length }}</div>
+        <div style="font-size:0.74rem; color:var(--muted); margin-top:0.2rem;">across {{ sports|length }} sports</div>
       </div>
-      <div class="card__body" style="padding:1rem 1.25rem;">
-        <div style="display:flex; flex-direction:column; gap:0.75rem;">
-          <div style="display:flex; align-items:center; gap:0.9rem; padding:0.85rem 1rem; border:1px solid #fae8c8; border-radius:10px; background:#fdfbf7; cursor:pointer;" onclick="window.activateInstFilter && window.activateInstFilter('gmu');">
-            <div style="width:34px; height:34px; border-radius:8px; background:#fef3c7; color:#92400e; display:flex; align-items:center; justify-content:center; font-size:1rem; flex-shrink:0;">🏛️</div>
-            <div style="flex:1;">
-              <div style="font-size:0.72rem; font-weight:800; color:#855800; text-transform:uppercase; letter-spacing:0.04em;">GM University (GMU)</div>
-              <div style="font-size:1.25rem; font-weight:800; color:var(--deep-maroon); margin-top:0.1rem;">{{ inst_counts.gmu }}</div>
-            </div>
-            <div style="font-size:0.78rem; font-weight:700; color:#92400e;">{{ '%.1f'|format((inst_counts.gmu / total_players * 100) if total_players else 0) }}%</div>
-          </div>
-          <div style="display:flex; align-items:center; gap:0.9rem; padding:0.85rem 1rem; border:1px solid #e0f2fe; border-radius:10px; background:#f0f9ff; cursor:pointer;" onclick="window.activateInstFilter && window.activateInstFilter('gmit');">
-            <div style="width:34px; height:34px; border-radius:8px; background:#e0f2fe; color:#0369a1; display:flex; align-items:center; justify-content:center; font-size:1rem; flex-shrink:0;">🎓</div>
-            <div style="flex:1;">
-              <div style="font-size:0.72rem; font-weight:800; color:#0369a1; text-transform:uppercase; letter-spacing:0.04em;">GMIT (Technology)</div>
-              <div style="font-size:1.25rem; font-weight:800; color:var(--deep-maroon); margin-top:0.1rem;">{{ inst_counts.gmit }}</div>
-            </div>
-            <div style="font-size:0.78rem; font-weight:700; color:#0369a1;">{{ '%.1f'|format((inst_counts.gmit / total_players * 100) if total_players else 0) }}%</div>
-          </div>
-          <div style="display:flex; align-items:center; gap:0.9rem; padding:0.85rem 1rem; border:1px solid #f3e8ff; border-radius:10px; background:#faf5ff; cursor:pointer;" onclick="window.activateInstFilter && window.activateInstFilter('other');">
-            <div style="width:34px; height:34px; border-radius:8px; background:#f3e8ff; color:#6b21a8; display:flex; align-items:center; justify-content:center; font-size:1rem; flex-shrink:0;">🌍</div>
-            <div style="flex:1;">
-              <div style="font-size:0.72rem; font-weight:800; color:#6b21a8; text-transform:uppercase; letter-spacing:0.04em;">Others / Foreign</div>
-              <div style="font-size:1.25rem; font-weight:800; color:var(--deep-maroon); margin-top:0.1rem;">{{ inst_counts.other }}</div>
-            </div>
-            <div style="font-size:0.78rem; font-weight:700; color:#6b21a8;">{{ '%.1f'|format((inst_counts.other / total_players * 100) if total_players else 0) }}%</div>
-          </div>
+
+      <div class="stat-card" style="border:1px solid var(--line); border-radius:12px; padding:1.1rem 1rem; background:#fff; display:flex; flex-direction:column; gap:0.35rem; border-top:4px solid #92400e;">
+        <div style="display:flex; align-items:center; gap:0.5rem;">
+          <div style="width:28px; height:28px; border-radius:8px; background:#fff5dc; color:#b45309; display:flex; align-items:center; justify-content:center; font-size:0.95rem;">⭐</div>
+          <div class="stat-card__label" style="font-size:0.72rem; font-weight:800; color:var(--muted); text-transform:uppercase; letter-spacing:0.04em;">Top Signing</div>
+        </div>
+        <div class="stat-card__value" style="font-size:1.6rem; font-weight:800; color:var(--deep-maroon); margin-top:0.2rem; line-height:1.1; font-family:var(--font-mono);">
+          {{ (sold_players[0].bid_amount or 0)|inr if sold_players else '₹0' }}
+        </div>
+        <div style="font-size:0.74rem; color:var(--muted); margin-top:0.2rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="{{ sold_players[0].name if sold_players else 'None' }}">
+          {{ sold_players[0].name if sold_players else 'No sales' }}
         </div>
       </div>
     </div>
 
+    <!-- Dual Championship Tables -->
     <div class="grid-2" style="margin-bottom:1.5rem;">
+      <!-- Left Column: Top 10 Signings -->
       <div class="card" style="border:1px solid var(--line); border-radius:12px; background:#fff;">
         <div class="card__head" style="border-bottom:1px solid var(--line); padding:1rem 1.25rem;">
-          <div class="card__title" style="font-size:1rem; font-weight:800; color:var(--deep-maroon); margin:0; display:flex; align-items:center; gap:0.5rem;">{{ ico.icon('table', 16) }} Registrations by sport</div>
-        </div>
-        <div class="card__body card__body--flush">
-          <div class="table-wrap">
-            <table style="width:100%; border-collapse:collapse;">
-              <thead>
-                <tr style="border-bottom:1px solid var(--line);">
-                  <th style="text-align:left; padding:0.75rem 1rem; font-size:0.75rem; font-weight:800; color:var(--muted); text-transform:uppercase;">Sport</th>
-                  <th style="text-align:left; padding:0.75rem 1rem; font-size:0.75rem; font-weight:800; color:var(--muted); text-transform:uppercase;">Registered</th>
-                  <th style="text-align:left; padding:0.75rem 1rem; font-size:0.75rem; font-weight:800; color:var(--muted); text-transform:uppercase;">Men</th>
-                  <th style="text-align:left; padding:0.75rem 1rem; font-size:0.75rem; font-weight:800; color:var(--muted); text-transform:uppercase;">Women</th>
-                  <th style="text-align:left; padding:0.75rem 1rem; font-size:0.75rem; font-weight:800; color:var(--muted); text-transform:uppercase;">Signed</th>
-                  <th style="text-align:right; padding:0.75rem 1rem; font-size:0.75rem; font-weight:800; color:var(--muted); text-transform:uppercase;"></th>
-                </tr>
-              </thead>
-              <tbody>
-                {% for sport in sports %}
-                  {% set group = players_by_sport[sport] %}
-                  <tr style="border-bottom:1px solid #f1f5f9;">
-                    <td class="cell-strong" style="padding:0.75rem 1rem; font-size:0.88rem; color:var(--text);">{{ sport }}</td>
-                    <td style="padding:0.75rem 1rem; font-size:0.88rem; color:var(--on-surface-variant);">{{ group|length }}</td>
-                    <td style="padding:0.75rem 1rem; font-size:0.88rem; color:var(--on-surface-variant);">{{ group|selectattr('gender', 'equalto', 'Male')|list|length }}</td>
-                    <td style="padding:0.75rem 1rem; font-size:0.88rem; color:var(--on-surface-variant);">{{ group|selectattr('gender', 'equalto', 'Female')|list|length if sport not in mens_only_sports else '—' }}</td>
-                    <td style="padding:0.75rem 1rem; font-size:0.88rem; font-weight:700; color:var(--deep-maroon);">{{ group|selectattr('sold')|list|length }}</td>
-                    <td style="text-align:right; padding:0.75rem 1rem;"><a href="{{ url_for('export_summary', sport=sport) }}" class="link-btn link-btn--edit" style="font-size:0.78rem;">Export</a></td>
-                  </tr>
-                {% endfor %}
-              </tbody>
-            </table>
+          <div class="card__title" style="font-size:1rem; font-weight:800; color:var(--deep-maroon); margin:0; display:flex; align-items:center; gap:0.5rem;">
+            <span>⭐</span> Top 10 Auction Signings · Marquee Athletes
           </div>
-        </div>
-      </div>
-
-      <div class="card" style="border:1px solid var(--line); border-radius:12px; background:#fff;">
-        <div class="card__head" style="border-bottom:1px solid var(--line); padding:1rem 1.25rem;">
-          <div class="card__title" style="font-size:1rem; font-weight:800; color:var(--deep-maroon); margin:0; display:flex; align-items:center; gap:0.5rem;">{{ ico.icon('local_fire_department', 16) }} Top signings</div>
+          <a href="{{ url_for('auction_squads') }}" class="link-btn link-btn--warn" style="font-size:0.78rem; font-weight:700;">View all rosters →</a>
         </div>
         <div class="card__body card__body--flush">
           {% if sold_players %}
@@ -365,19 +448,34 @@
               <table style="width:100%; border-collapse:collapse;">
                 <thead>
                   <tr style="border-bottom:1px solid var(--line);">
-                    <th style="text-align:left; padding:0.75rem 1rem; font-size:0.75rem; font-weight:800; color:var(--muted); text-transform:uppercase;">Player</th>
-                    <th style="text-align:left; padding:0.75rem 1rem; font-size:0.75rem; font-weight:800; color:var(--muted); text-transform:uppercase;">Sport</th>
-                    <th style="text-align:left; padding:0.75rem 1rem; font-size:0.75rem; font-weight:800; color:var(--muted); text-transform:uppercase;">Team</th>
-                    <th style="text-align:right; padding:0.75rem 1rem; font-size:0.75rem; font-weight:800; color:var(--muted); text-transform:uppercase;">Bid</th>
+                    <th style="width:36px; text-align:center; padding:0.75rem 0.5rem; font-size:0.72rem; font-weight:800; color:var(--gold-light);">#</th>
+                    <th style="text-align:left; padding:0.75rem 0.8rem; font-size:0.72rem; font-weight:800; color:var(--gold-light); text-transform:uppercase;">Athlete</th>
+                    <th style="text-align:left; padding:0.75rem 0.8rem; font-size:0.72rem; font-weight:800; color:var(--gold-light); text-transform:uppercase;">Sport</th>
+                    <th style="text-align:left; padding:0.75rem 0.8rem; font-size:0.72rem; font-weight:800; color:var(--gold-light); text-transform:uppercase;">Franchise</th>
+                    <th style="text-align:right; padding:0.75rem 1rem; font-size:0.72rem; font-weight:800; color:var(--gold-light); text-transform:uppercase;">Winning Bid</th>
                   </tr>
                 </thead>
                 <tbody>
                   {% for player in sold_players[:10] %}
                   <tr style="border-bottom:1px solid #f1f5f9;">
-                    <td class="cell-strong" style="padding:0.75rem 1rem; font-size:0.88rem; color:var(--text);">{{ player.name }}</td>
-                    <td style="padding:0.75rem 1rem; font-size:0.88rem; color:var(--on-surface-variant);">{{ player.sport }}</td>
-                    <td style="padding:0.75rem 1rem; font-size:0.88rem; color:var(--on-surface-variant);">{{ player.sold_to }}</td>
-                    <td style="text-align:right; padding:0.75rem 1rem; font-size:0.88rem; font-weight:800; color:var(--deep-maroon);">{{ (player.bid_amount or 0)|inr }}</td>
+                    <td style="text-align:center; padding:0.7rem 0.5rem;">
+                      <span class="rank-badge {{ 'rank-badge--1' if loop.index == 1 else ('rank-badge--2' if loop.index == 2 else ('rank-badge--3' if loop.index == 3 else '')) }}">
+                        {{ loop.index }}
+                      </span>
+                    </td>
+                    <td style="padding:0.7rem 0.8rem;">
+                      <div class="cell-strong" style="font-size:0.88rem; color:var(--ink);">{{ player.name }}</div>
+                      <div style="font-size:0.72rem; color:var(--muted);">{{ player.college_name or player.branch or '—' }}</div>
+                    </td>
+                    <td style="padding:0.7rem 0.8rem; font-size:0.84rem; color:var(--on-surface-variant);">
+                      {{ player.sport }} <span style="font-size:0.72rem; color:var(--muted);">({{ 'W' if player.gender == 'Female' else 'M' }})</span>
+                    </td>
+                    <td style="padding:0.7rem 0.8rem; font-size:0.84rem; font-weight:600; color:var(--maroon);">
+                      {{ player.sold_to }}
+                    </td>
+                    <td style="text-align:right; padding:0.7rem 1rem; font-size:0.92rem; font-weight:800; color:var(--deep-maroon); font-family:var(--font-mono);">
+                      {{ (player.bid_amount or 0)|inr }}
+                    </td>
                   </tr>
                   {% endfor %}
                 </tbody>
@@ -387,26 +485,145 @@
             <div class="empty" style="text-align:center; padding:2rem 1rem;">
               <div style="font-size:2rem; margin-bottom:0.5rem;">🏏</div>
               <p style="margin:0 0 0.75rem; color:var(--muted); font-size:0.88rem;">No players have been sold yet.</p>
-              <a href="{{ url_for('bidding', sport='football', gender='male') }}" class="btn btn--maroon btn--sm">{{ ico.icon('gavel', 14) }} Open bidding room</a>
+            </div>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Right Column: Franchise Wallets & Squad Status -->
+      <div class="card" style="border:1px solid var(--line); border-radius:12px; background:#fff;">
+        <div class="card__head" style="border-bottom:1px solid var(--line); padding:1rem 1.25rem;">
+          <div class="card__title" style="font-size:1rem; font-weight:800; color:var(--deep-maroon); margin:0; display:flex; align-items:center; gap:0.5rem;">
+            <span>💼</span> Franchise Spending &amp; Squad Capacity
+          </div>
+          <button type="button" class="link-btn link-btn--edit" onclick="document.querySelector('.nav-item[data-target=\'owners\']').click()" style="font-size:0.78rem; font-weight:700;">Manage wallets →</button>
+        </div>
+        <div class="card__body card__body--flush">
+          {% if owners %}
+            <div class="table-wrap">
+              <table style="width:100%; border-collapse:collapse;">
+                <thead>
+                  <tr style="border-bottom:1px solid var(--line);">
+                    <th style="text-align:left; padding:0.75rem 1rem; font-size:0.72rem; font-weight:800; color:var(--gold-light); text-transform:uppercase;">Franchise</th>
+                    <th style="text-align:left; padding:0.75rem 0.8rem; font-size:0.72rem; font-weight:800; color:var(--gold-light); text-transform:uppercase;">Teams</th>
+                    <th style="text-align:right; padding:0.75rem 0.8rem; font-size:0.72rem; font-weight:800; color:var(--gold-light); text-transform:uppercase;">Spent</th>
+                    <th style="text-align:right; padding:0.75rem 1rem; font-size:0.72rem; font-weight:800; color:var(--gold-light); text-transform:uppercase;">Remaining</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for o in owners[:10] %}
+                  {% set o_spent = (o.wallets|map(attribute='spent')|sum) if o.wallets else 0 %}
+                  {% set o_total = (o.wallets|map(attribute='allocated_budget')|sum) if o.wallets else (o.budget or 0) %}
+                  {% set pct = ((o_spent / o_total) * 100)|round if o_total > 0 else 0 %}
+                  <tr style="border-bottom:1px solid #f1f5f9;">
+                    <td style="padding:0.7rem 1rem;">
+                      <div class="cell-strong" style="font-size:0.88rem; color:var(--ink);">{{ o.team_name }}</div>
+                      <div style="font-size:0.72rem; color:var(--muted);">{{ o.manager_name or 'Owner' }}</div>
+                      <div class="purse-bar" title="{{ pct }}% purse spent">
+                        <div class="purse-bar__fill" style="width:{{ pct }}%;"></div>
+                      </div>
+                    </td>
+                    <td style="padding:0.7rem 0.8rem; font-size:0.84rem; color:var(--on-surface-variant);">
+                      {{ o.wallets|length if o.wallets else 1 }} <span style="font-size:0.72rem; color:var(--muted);">squads</span>
+                    </td>
+                    <td style="text-align:right; padding:0.7rem 0.8rem; font-size:0.86rem; font-weight:700; color:var(--maroon); font-family:var(--font-mono);">
+                      {{ o_spent|inr }}
+                    </td>
+                    <td style="text-align:right; padding:0.7rem 1rem; font-size:0.86rem; font-weight:800; color:var(--deep-maroon); font-family:var(--font-mono);">
+                      {{ (o.budget or 0)|inr }}
+                    </td>
+                  </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          {% else %}
+            <div class="empty" style="text-align:center; padding:2rem 1rem;">
+              <p style="margin:0; color:var(--muted); font-size:0.88rem;">No team owners registered.</p>
             </div>
           {% endif %}
         </div>
       </div>
     </div>
 
-    <!-- Quick actions -->
-    <div class="card" style="border:1px solid var(--line); border-radius:12px; background:#fff;">
-      <div class="card__head" style="border-bottom:1px solid var(--line); padding:1rem 1.25rem;">
-        <div class="card__title" style="font-size:1rem; font-weight:800; color:var(--deep-maroon); margin:0; display:flex; align-items:center; gap:0.5rem;">{{ ico.icon('rocket_launch', 16) }} Quick actions</div>
+    <!-- Institutional Representation -->
+    <div class="card" style="border:1px solid var(--line); border-radius:12px; background:#fff; margin-bottom:1.5rem; overflow:hidden;">
+      <div class="card__head" style="background:#fdfbf7; border-bottom:1px solid var(--line); padding:1rem 1.25rem; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.6rem;">
+        <div>
+          <div class="card__title" style="display:flex; align-items:center; gap:0.5rem; font-size:1rem; font-weight:800; color:var(--deep-maroon); margin:0;">
+            <span>🏛️</span> Institutional Athlete Representation
+          </div>
+          <div style="font-size:0.78rem; color:var(--muted); margin-top:0.2rem;">Registered athletes classified by college category</div>
+        </div>
+        <button type="button" class="btn btn--gold btn--sm" onclick="window.activateInstFilter && window.activateInstFilter('all');" style="font-size:0.78rem; font-weight:700;">{{ ico.icon('open_in_new', 14) }} Full College Analytics</button>
       </div>
       <div class="card__body" style="padding:1rem 1.25rem;">
-        <div style="display:flex; flex-wrap:wrap; gap:0.75rem;">
-          {% for sport in sports %}
-            <a href="{{ url_for('bidding', sport=sport|lower, gender='male') }}" class="btn btn--maroon btn--sm" style="font-weight:700;">{{ ico.icon('gavel', 14) }} {{ sport }} (Men)</a>
-            {% if sport not in mens_only_sports %}
-              <a href="{{ url_for('bidding', sport=sport|lower, gender='female') }}" class="btn btn--ghost btn--sm">{{ ico.icon('gavel', 14) }} {{ sport }} (Women)</a>
-            {% endif %}
-          {% endfor %}
+        <div style="display:flex; flex-direction:column; gap:0.75rem;">
+          <div style="display:flex; align-items:center; gap:0.9rem; padding:0.85rem 1rem; border:1px solid #fae8c8; border-radius:10px; background:#fdfbf7; cursor:pointer;" onclick="window.activateInstFilter && window.activateInstFilter('gmu');">
+            <div style="width:34px; height:34px; border-radius:8px; background:#fef3c7; color:#92400e; display:flex; align-items:center; justify-content:center; font-size:1rem; flex-shrink:0;">🏛️</div>
+            <div style="flex:1;">
+              <div style="font-size:0.72rem; font-weight:800; color:#855800; text-transform:uppercase; letter-spacing:0.04em;">GM University (GMU)</div>
+              <div style="font-size:1.25rem; font-weight:800; color:var(--deep-maroon); margin-top:0.1rem; font-family:var(--font-mono);">{{ inst_counts.gmu }}</div>
+            </div>
+            <div style="font-size:0.82rem; font-weight:800; color:#92400e; font-family:var(--font-mono);">{{ '%.1f'|format((inst_counts.gmu / total_players * 100) if total_players else 0) }}%</div>
+          </div>
+          <div style="display:flex; align-items:center; gap:0.9rem; padding:0.85rem 1rem; border:1px solid #e0f2fe; border-radius:10px; background:#f0f9ff; cursor:pointer;" onclick="window.activateInstFilter && window.activateInstFilter('gmit');">
+            <div style="width:34px; height:34px; border-radius:8px; background:#e0f2fe; color:#0369a1; display:flex; align-items:center; justify-content:center; font-size:1rem; flex-shrink:0;">🎓</div>
+            <div style="flex:1;">
+              <div style="font-size:0.72rem; font-weight:800; color:#0369a1; text-transform:uppercase; letter-spacing:0.04em;">GMIT (Technology)</div>
+              <div style="font-size:1.25rem; font-weight:800; color:var(--deep-maroon); margin-top:0.1rem; font-family:var(--font-mono);">{{ inst_counts.gmit }}</div>
+            </div>
+            <div style="font-size:0.82rem; font-weight:800; color:#0369a1; font-family:var(--font-mono);">{{ '%.1f'|format((inst_counts.gmit / total_players * 100) if total_players else 0) }}%</div>
+          </div>
+          <div style="display:flex; align-items:center; gap:0.9rem; padding:0.85rem 1rem; border:1px solid #f3e8ff; border-radius:10px; background:#faf5ff; cursor:pointer;" onclick="window.activateInstFilter && window.activateInstFilter('other');">
+            <div style="width:34px; height:34px; border-radius:8px; background:#f3e8ff; color:#6b21a8; display:flex; align-items:center; justify-content:center; font-size:1rem; flex-shrink:0;">🌍</div>
+            <div style="flex:1;">
+              <div style="font-size:0.72rem; font-weight:800; color:#6b21a8; text-transform:uppercase; letter-spacing:0.04em;">Others / Foreign</div>
+              <div style="font-size:1.25rem; font-weight:800; color:var(--deep-maroon); margin-top:0.1rem; font-family:var(--font-mono);">{{ inst_counts.other }}</div>
+            </div>
+            <div style="font-size:0.82rem; font-weight:800; color:#6b21a8; font-family:var(--font-mono);">{{ '%.1f'|format((inst_counts.other / total_players * 100) if total_players else 0) }}%</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Registrations & Pool by Sport -->
+    <div class="card" style="border:1px solid var(--line); border-radius:12px; background:#fff; margin-bottom:1.5rem;">
+      <div class="card__head" style="border-bottom:1px solid var(--line); padding:1rem 1.25rem;">
+        <div class="card__title" style="font-size:1rem; font-weight:800; color:var(--deep-maroon); margin:0; display:flex; align-items:center; gap:0.5rem;">
+          {{ ico.icon('table', 16) }} Athlete Registration &amp; Drafted Status by Sport
+        </div>
+        <a href="{{ url_for('export_all_summaries') }}" class="btn btn--gold btn--sm">{{ ico.icon('download', 14) }} Export All Summaries</a>
+      </div>
+      <div class="card__body card__body--flush">
+        <div class="table-wrap">
+          <table style="width:100%; border-collapse:collapse;">
+            <thead>
+              <tr style="border-bottom:1px solid var(--line);">
+                <th style="text-align:left; padding:0.75rem 1rem; font-size:0.72rem; font-weight:800; color:var(--gold-light); text-transform:uppercase;">Sport</th>
+                <th style="text-align:left; padding:0.75rem 1rem; font-size:0.72rem; font-weight:800; color:var(--gold-light); text-transform:uppercase;">Registered</th>
+                <th style="text-align:left; padding:0.75rem 1rem; font-size:0.72rem; font-weight:800; color:var(--gold-light); text-transform:uppercase;">Men</th>
+                <th style="text-align:left; padding:0.75rem 1rem; font-size:0.72rem; font-weight:800; color:var(--gold-light); text-transform:uppercase;">Women</th>
+                <th style="text-align:left; padding:0.75rem 1rem; font-size:0.72rem; font-weight:800; color:var(--gold-light); text-transform:uppercase;">Signed (Sold)</th>
+                <th style="text-align:right; padding:0.75rem 1rem; font-size:0.72rem; font-weight:800; color:var(--gold-light); text-transform:uppercase;">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for sport in sports %}
+                {% set group = players_by_sport[sport] %}
+                <tr style="border-bottom:1px solid #f1f5f9;">
+                  <td class="cell-strong" style="padding:0.75rem 1rem; font-size:0.88rem; color:var(--ink);">{{ sport }}</td>
+                  <td style="padding:0.75rem 1rem; font-size:0.88rem; color:var(--on-surface-variant); font-family:var(--font-mono);">{{ group|length }}</td>
+                  <td style="padding:0.75rem 1rem; font-size:0.88rem; color:var(--on-surface-variant); font-family:var(--font-mono);">{{ group|selectattr('gender', 'equalto', 'Male')|list|length }}</td>
+                  <td style="padding:0.75rem 1rem; font-size:0.88rem; color:var(--on-surface-variant); font-family:var(--font-mono);">{{ group|selectattr('gender', 'equalto', 'Female')|list|length if sport not in mens_only_sports else '—' }}</td>
+                  <td style="padding:0.75rem 1rem; font-size:0.88rem; font-weight:800; color:var(--deep-maroon); font-family:var(--font-mono);">{{ group|selectattr('sold')|list|length }}</td>
+                  <td style="text-align:right; padding:0.75rem 1rem;">
+                    <a href="{{ url_for('export_summary', sport=sport) }}" class="link-btn link-btn--edit" style="font-size:0.78rem;">Export Excel</a>
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
         </div>
       </div>
     </div>
@@ -417,8 +634,8 @@
     <div class="card" style="margin-bottom:1.25rem; border:2px solid var(--gold, #d4af37); background:linear-gradient(135deg,#fffdf6 0%,#fff8e6 100%);">
       <div class="card__head" style="border-bottom:1px solid #fae8c8;">
         <div>
-          <div class="card__title" style="font-size:1.15rem; display:flex; align-items:center; gap:0.5rem;">{{ ico.icon('trophy', 18) }} Matches stage · Current scenario</div>
-          <div style="font-size:0.84rem; color:var(--muted); margin-top:0.25rem;">Primary focus now: fixtures, live scoring, teams, and scorer management. Other admin inputs are in the side panel under “More options &amp; inputs”.</div>
+          <div class="card__title" style="font-size:1.15rem; display:flex; align-items:center; gap:0.5rem;">{{ ico.icon('trophy', 18) }} Matches stage · Live Tournament Operations</div>
+          <div style="font-size:0.84rem; color:var(--muted); margin-top:0.25rem;">Active championship match operations: fixtures, real-time ball-by-ball &amp; point-by-point scoring, squad validation, and official assignments.</div>
         </div>
       </div>
       <div class="card__body">
