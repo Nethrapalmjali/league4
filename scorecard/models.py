@@ -698,5 +698,28 @@ class ScEvent(db.Model):
     voided = db.Column(db.Boolean, default=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
+    # Set when the event was recorded in the offline Scorer App: the id the
+    # device gave it. Lets a later "undo" from the same device find it, and
+    # makes a re-sent event impossible to store twice.
+    client_id = db.Column(db.String(40), unique=True, index=True)
+
     player = db.relationship("ScPlayer")
     team = db.relationship("ScTeam")
+
+
+class ScSyncOp(db.Model):
+    """One row per change the offline Scorer App has pushed.
+
+    The app re-sends anything it has not seen acknowledged, so the same change
+    can arrive twice (a dropped reply on a weak signal). The primary key on the
+    device-generated id is what turns the second arrival into a no-op.
+    """
+
+    __tablename__ = "sc_sync_op"
+
+    op_id = db.Column(db.String(40), primary_key=True)
+    match_id = db.Column(db.Integer, index=True)
+    kind = db.Column(db.String(12))
+    result = db.Column(db.String(12))
+    device_at = db.Column(db.DateTime)
+    applied_at = db.Column(db.DateTime, default=datetime.utcnow)

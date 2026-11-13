@@ -171,6 +171,9 @@
     <a class="nav-item icon-text" href="{{ url_for('scorecard.admin_scorers') }}">
       {{ ico.icon('user', 16) }} Scorer passcodes
     </a>
+    <a class="nav-item icon-text" href="{{ url_for('scorecard.scorer_app') }}" target="_blank">
+      {{ ico.icon('download', 16) }} Scorer App (offline)
+    </a>
     <a class="nav-item icon-text" href="{{ url_for('scorecard.tournament_report') }}" target="_blank">
       {{ ico.icon('table', 16) }} Tournament report
     </a>
@@ -331,6 +334,15 @@
         <h3 class="command-tile__title">Fixtures &amp; Live Scoring</h3>
         <p class="command-tile__desc">Schedule upcoming matches, start live sets/innings, record points, and assign ground scorers.</p>
         <span class="command-tile__action">Launch console {{ ico.icon('arrow-right', 14) }}</span>
+      </a>
+
+      <a href="{{ url_for('scorecard.scorer_app') }}" target="_blank" class="command-tile command-tile--live">
+        <div class="command-tile__icon-wrap">
+          {{ ico.icon('download', 20) }}
+        </div>
+        <h3 class="command-tile__title">Scorer App (works offline)</h3>
+        <p class="command-tile__desc">Install on scorers’ phones or the ground laptop. Scores save on the device with no internet and upload automatically when the signal returns.</p>
+        <span class="command-tile__action">Open &amp; install {{ ico.icon('arrow-right', 14) }}</span>
       </a>
 
       <a href="{{ url_for('scorecard.admin_teams') }}" class="command-tile command-tile--gold">

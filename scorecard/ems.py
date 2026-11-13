@@ -42,6 +42,19 @@ for _s in SPORT_RULES.keys():
 SPORTS = _base_sports
 
 
+def admin_credentials_ok(username, password):
+    """The committee login check, for the Scorer App's admin sign-in."""
+    import secrets
+
+    try:
+        return (
+            secrets.compare_digest(str(username).encode(), str(_ems.ADMIN_USERNAME).encode())
+            and _ems.admin_password_ok(password)
+        )
+    except TypeError:  # compare_digest refuses non-ASCII str — treat as a mismatch
+        return False
+
+
 def team_owner_model():
     """Fetched on demand — only the optional linking screen needs it."""
     return _ems.TeamOwner

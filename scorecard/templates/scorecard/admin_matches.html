@@ -16,6 +16,18 @@
       </p>
     </header>
 
+    <div style="background:linear-gradient(135deg,#5b1f1f,#7a2a2a); color:#fff; border-radius:10px; padding:0.9rem 1.1rem; margin-bottom:1rem; display:flex; gap:1rem; align-items:center; flex-wrap:wrap;">
+      <div style="flex:1; min-width:220px;">
+        <strong style="font-size:1.02rem;">📲 Scorer App — scores without internet</strong>
+        <div style="font-size:0.86rem; opacity:0.9; margin-top:0.2rem;">
+          Install it on each scorer’s phone or the ground laptop. Sign in once with internet; after that every tap is
+          saved on the device and uploads by itself when the signal returns. Add the day’s fixtures here first.
+        </div>
+      </div>
+      <a class="btn btn--sm" href="{{ url_for('scorecard.scorer_app') }}" target="_blank"
+         style="background:#e3b559; color:#5b1f1f; font-weight:800;">Open &amp; install app</a>
+    </div>
+
     <!-- Sport & Category filter bar -->
     <div style="background:#fff; border:1px solid var(--sc-border, #e2e8f0); border-radius:8px; padding:0.75rem 1rem; margin-bottom:1rem; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.75rem;">
       <div style="display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap;">
@@ -122,6 +134,10 @@
             <a class="btn btn--sm {{ 'btn--ghost' if match.status == 'final' else 'btn--primary' }}"
                href="{{ url_for('scorecard.console', match_id=match.id) }}">
               {{ 'Review' if match.status == 'final' else 'Open scoring' }}
+            </a>
+            <a class="btn btn--sm btn--ghost" href="{{ url_for('scorecard.admin_enter_result', match_id=match.id) }}"
+               title="Type in the final score of a match that was not scored live">
+              {{ 'Correct result' if match.status == 'final' else 'Enter result' }}
             </a>
             {% if match.status == 'final' and match.assigned_scorer_id %}
               <form method="post" action="{{ url_for('scorecard.admin_grant_scorer_edit', match_id=match.id, sport=match.sport, gender=match.gender) }}"

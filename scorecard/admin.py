@@ -349,6 +349,131 @@ def admin_grant_scorer_edit(match_id):
     return redirect(url_for("scorecard.admin_matches", sport=sport, gender=gender))
 
 
+def _int_field(value, low=0, high=999):
+    try:
+        number = int(str(value).strip())
+    except (TypeError, ValueError):
+        return None
+    return number if low <= number <= high else None
+
+
+@scorecard_bp.route("/admin/matches/<int:match_id>/result", methods=["GET", "POST"])
+@admin_required
+def admin_enter_result(match_id):
+    """Type in the final result of a match that was not scored live.
+
+    For when the console could not be used (no signal at the ground, the site
+    down). The result is stored as ordinary events — one per player who is
+    credited, one for any remainder — so standings, leaderboards, the public
+    match page and later corrections all work exactly as for a live-scored
+    match. Anything already recorded is voided first (kept, not deleted) when
+    the committee asks for a clean replace.
+    """
+    match = ScMatch.query.get_or_404(match_id)
+    rules = rules_for(match.sport)
+    players = {
+        "a": ScPlayer.query.filter_by(team_id=match.team_a_id).order_by(ScPlayer.name).all(),
+        "b": ScPlayer.query.filter_by(team_id=match.team_b_id).order_by(ScPlayer.name).all(),
+    }
+    live_events = [e for e in match.events if not e.voided]
+    back = url_for("scorecard.admin_matches", sport=match.sport, gender=match.gender)
+
+    if request.method == "POST":
+        new_events = []
+        errors = []
+
+        if match.sport == "Badminton":
+            last_game = None
+            for n in (1, 2, 3):
+                raw_a = request.form.get(f"g{n}a", "").strip()
+                raw_b = request.form.get(f"g{n}b", "").strip()
+                if not raw_a and not raw_b:
+                    continue
+                pa, pb = _int_field(raw_a or 0, 0, 30), _int_field(raw_b or 0, 0, 30)
+                if pa is None or pb is None:
+                    errors.append(f"Game {n}: points must be between 0 and 30.")
+                    continue
+                for side, pts in (("a", pa), ("b", pb)):
+                    if pts:
+                        new_events.append({"side": side, "points": pts, "player_id": None, "clock": f"Game {n}"})
+                last_game = f"Game {n}"
+            if not new_events and not errors:
+                errors.append("Enter at least one game score.")
+            final_period = last_game or rules["periods"][0]
+        else:
+            scores = {}
+            for side in ("a", "b"):
+                total = _int_field(request.form.get(f"score_{side}"), 0, 999)
+                if total is None:
+                    errors.append(f"Enter a valid final score for {match.team_a.name if side == 'a' else match.team_b.name}.")
+                    continue
+                scores[side] = total
+                valid_ids = {p.id for p in players[side]}
+                credited = 0
+                for pid, pts in zip(request.form.getlist(f"player_{side}"), request.form.getlist(f"pts_{side}")):
+                    if not pid and not pts:
+                        continue
+                    player_id = _int_field(pid, 1, 10**9)
+                    points = _int_field(pts, 1, 999)
+                    if player_id not in valid_ids or points is None:
+                        errors.append("Each credited player needs a player from that team and points above 0.")
+                        continue
+                    credited += points
+                    new_events.append({"side": side, "points": points, "player_id": player_id, "clock": "Result"})
+                if credited > total:
+                    errors.append(
+                        f"Players credited with {credited} for "
+                        f"{match.team_a.name if side == 'a' else match.team_b.name}, but the final score is {total}."
+                    )
+                elif total - credited > 0:
+                    new_events.append({"side": side, "points": total - credited, "player_id": None, "clock": "Result"})
+            final_period = rules["periods"][-1] if match.sport != "Basketball" else "Q4"
+
+        if errors:
+            for message in errors:
+                flash(message, "error")
+            return render_template(
+                "scorecard/admin_result.html", match=match, rules=rules,
+                players=players, live_events=live_events, form=request.form, back=back,
+            )
+
+        if request.form.get("replace") == "1":
+            for event in live_events:
+                event.voided = True
+
+        for item in new_events:
+            db.session.add(ScEvent(
+                match_id=match.id,
+                team_id=match.team_a_id if item["side"] == "a" else match.team_b_id,
+                player_id=item["player_id"],
+                clock=item["clock"],
+                kind="Result entry",
+                points=item["points"],
+            ))
+        db.session.flush()
+        db.session.refresh(match)
+
+        match.status = "final"
+        match.period = final_period
+        match.recalculate()
+        a, b = match.score_a or 0, match.score_b or 0
+        match.winner_team_id = match.team_a_id if a > b else (match.team_b_id if b > a else None)
+        if not match.note:
+            match.note = "Result entered by the committee after the match."
+        db.session.commit()
+        flash(
+            f"Result saved: {match.team_a.name} {a} – {b} {match.team_b.name}. "
+            "Standings and the public scoreboard are updated.",
+            "success",
+        )
+        return redirect(back)
+
+    return render_template(
+        "scorecard/admin_result.html", match=match, rules=rules,
+        players=players, live_events=live_events, form={}, back=back,
+    )
+
+
 # ----------------------------------------------------------------- scorers --
 @scorecard_bp.route("/admin/scorers", methods=["GET", "POST"])
 @admin_required

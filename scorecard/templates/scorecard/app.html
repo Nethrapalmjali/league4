@@ -1,0 +1,28 @@
+{# The offline Scorer App. Deliberately standalone and free of any per-user
+   data: the service worker stores this exact page on the device, and the app
+   fills itself in from what it has saved locally. #}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="robots" content="noindex">
+  <title>GML Scorer</title>
+  <meta name="theme-color" content="#5b1f1f">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="GML Scorer">
+  <link rel="manifest" href="/scores/app.webmanifest">
+  <link rel="icon" type="image/png" href="/scores/static/app/icon-192.png">
+  <link rel="apple-touch-icon" href="/scores/static/app/icon-192.png">
+  <link rel="stylesheet" href="/scores/static/app/app.css">
+</head>
+<body>
+  <div id="app" data-version="{{ app_version }}">
+    <div class="boot">Loading GML Scorer…</div>
+  </div>
+  <noscript>The Scorer App needs JavaScript switched on.</noscript>
+  <script src="/scores/static/app/app.js"></script>
+</body>
+</html>

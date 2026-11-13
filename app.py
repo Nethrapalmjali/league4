@@ -724,6 +724,10 @@ def csrf_token():
 def protect_against_csrf():
     if request.method not in {"POST", "PUT", "PATCH", "DELETE"}:
         return None
+    # The offline Scorer App authenticates with a bearer token, never a cookie,
+    # so a cross-site request cannot ride on it — CSRF does not apply there.
+    if request.path.startswith("/scores/api/app/"):
+        return None
     sent = request.form.get("_csrf_token") or request.headers.get("X-CSRF-Token", "")
     expected = session.get("_csrf_token", "")
 

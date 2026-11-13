@@ -48,24 +48,39 @@ def _ensure_tables():
         from .ems import db
 
         db.create_all()
-        # Lightweight bootstrap for new sc_match columns on existing databases.
-        try:
-            engine = db.engine
-            dialect = engine.dialect.name
-            with engine.begin() as conn:
-                if dialect == "sqlite":
-                    cols = {r[1] for r in conn.execute(text("PRAGMA table_info(sc_match)")).fetchall()}
-                    if "scorer_can_edit_later" not in cols:
-                        conn.execute(text("ALTER TABLE sc_match ADD COLUMN scorer_can_edit_later BOOLEAN DEFAULT 0"))
-                else:
-                    conn.execute(text(
-                        "ALTER TABLE sc_match ADD COLUMN IF NOT EXISTS scorer_can_edit_later BOOLEAN DEFAULT FALSE"
-                    ))
-        except Exception as exc:  # noqa: BLE001
-            current_app.logger.warning("Scorecard column bootstrap skipped: %s", exc)
+        # Lightweight bootstrap for new columns on existing databases. Each
+        # statement runs in its own transaction: on Postgres one failure would
+        # otherwise abort every statement after it.
+        engine = db.engine
+        dialect = engine.dialect.name
+
+        def _columns(conn, table):
+            return {r[1] for r in conn.execute(text(f"PRAGMA table_info({table})")).fetchall()}
+
+        steps = []
+        if dialect == "sqlite":
+            steps.append(lambda c: "scorer_can_edit_later" in _columns(c, "sc_match") or c.execute(
+                text("ALTER TABLE sc_match ADD COLUMN scorer_can_edit_later BOOLEAN DEFAULT 0")))
+            steps.append(lambda c: "client_id" in _columns(c, "sc_event") or c.execute(
+                text("ALTER TABLE sc_event ADD COLUMN client_id VARCHAR(40)")))
+        else:
+            steps.append(lambda c: c.execute(text(
+                "ALTER TABLE sc_match ADD COLUMN IF NOT EXISTS scorer_can_edit_later BOOLEAN DEFAULT FALSE")))
+            steps.append(lambda c: c.execute(text(
+                "ALTER TABLE sc_event ADD COLUMN IF NOT EXISTS client_id VARCHAR(40)")))
+        # Unique index: NULLs never collide, so web-console events are unaffected.
+        steps.append(lambda c: c.execute(text(
+            "CREATE UNIQUE INDEX IF NOT EXISTS ix_sc_event_client_id ON sc_event (client_id)")))
+
+        for step in steps:
+            try:
+                with engine.begin() as conn:
+                    step(conn)
+            except Exception as exc:  # noqa: BLE001
+                current_app.logger.warning("Scorecard column bootstrap step skipped: %s", exc)
     except Exception as exc:  # noqa: BLE001 — never take the site down over this
         current_app.logger.exception("Scorecard table setup failed: %s", exc)
 
 
 # Imported for their side effects — each module hangs routes off the blueprint.
-from . import admin, public, scorer, stats  # noqa: E402,F401
+from . import admin, app_api, public, scorer, stats  # noqa: E402,F401

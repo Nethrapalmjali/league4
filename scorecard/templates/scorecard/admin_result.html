@@ -1,0 +1,104 @@
+{% extends "scorecard/_page.html" %}
+{% block title %}Enter result{% endblock %}
+
+{% block content %}
+  <div class="sc-page sc-page--narrow">
+    <header class="sc-page__head">
+      <span class="sc-eyebrow">{{ match.sport }} · {{ match.gender }} · {{ match.stage }}</span>
+      <h1>Enter final result</h1>
+      <p>
+        <a href="{{ back }}">← Back to fixtures</a>
+      </p>
+    </header>
+
+    <section class="sc-card">
+      <h2>{{ match.team_a.name }} <span style="color:#94a3b8;">vs</span> {{ match.team_b.name }}</h2>
+      <p class="sc-hint" style="margin-top:0.25rem;">
+        Use this for a match that was played but not scored live. Saving marks the
+        match <strong>finished</strong> and updates standings, leaderboards and the
+        public scoreboard straight away.
+      </p>
+
+      <form method="post" class="sc-form" id="result-form">
+        <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+
+        {% if match.sport == 'Badminton' %}
+          <p style="margin:0.5rem 0 0; font-weight:700;">Game scores (leave Game 3 blank if it was not played)</p>
+          {% for n in [1, 2, 3] %}
+            <div style="display:grid; grid-template-columns:5rem 1fr 1fr; gap:0.6rem; align-items:end;">
+              <strong style="padding-bottom:0.6rem;">Game {{ n }}</strong>
+              <label><span>{{ match.team_a.tag }}</span>
+                <input type="number" min="0" max="30" inputmode="numeric" name="g{{ n }}a" value="{{ form.get('g%da' % n, '') }}"></label>
+              <label><span>{{ match.team_b.tag }}</span>
+                <input type="number" min="0" max="30" inputmode="numeric" name="g{{ n }}b" value="{{ form.get('g%db' % n, '') }}"></label>
+            </div>
+          {% endfor %}
+        {% else %}
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.8rem;">
+            <label><span>{{ match.team_a.name }} — final score</span>
+              <input type="number" min="0" max="999" inputmode="numeric" name="score_a" required value="{{ form.get('score_a', '') }}"></label>
+            <label><span>{{ match.team_b.name }} — final score</span>
+              <input type="number" min="0" max="999" inputmode="numeric" name="score_b" required value="{{ form.get('score_b', '') }}"></label>
+          </div>
+
+          <details style="margin-top:0.5rem;" {% if form.get('player_a') or form.get('player_b') %}open{% endif %}>
+            <summary style="font-weight:700; cursor:pointer;">
+              Optional: credit players ({{ 'goals' if match.sport == 'Football' else 'points' }}) for the leaderboard
+            </summary>
+            <p class="sc-hint">Anything not credited to a player still counts for the team.</p>
+            {% for side, team in [('a', match.team_a), ('b', match.team_b)] %}
+              <div style="margin:0.6rem 0;">
+                <strong>{{ team.name }}</strong>
+                <div data-rows="{{ side }}">
+                  {% for i in range(3) %}
+                    <div style="display:grid; grid-template-columns:1fr 6rem; gap:0.5rem; margin-top:0.4rem;">
+                      <select name="player_{{ side }}">
+                        <option value="">— Player —</option>
+                        {% for p in players[side] %}<option value="{{ p.id }}">{{ p.name }}{% if p.jersey_no %} #{{ p.jersey_no }}{% endif %}</option>{% endfor %}
+                      </select>
+                      <input type="number" min="1" max="999" inputmode="numeric" name="pts_{{ side }}" placeholder="{{ 'Goals' if match.sport == 'Football' else 'Pts' }}">
+                    </div>
+                  {% endfor %}
+                </div>
+                <button type="button" class="btn btn--ghost btn--sm" style="margin-top:0.4rem;" data-add-row="{{ side }}">+ Add player</button>
+              </div>
+            {% endfor %}
+          </details>
+        {% endif %}
+
+        {% if live_events %}
+          <label style="display:flex; gap:0.5rem; align-items:flex-start; background:#fff7ed; border:1px solid #fed7aa; border-radius:8px; padding:0.7rem;">
+            <input type="checkbox" name="replace" value="1" checked style="margin-top:0.2rem;">
+            <span style="font-weight:600;">
+              Replace the {{ live_events|length }} event(s) already recorded for this match
+              (currently {{ match.score_a or 0 }}–{{ match.score_b or 0 }}). They are hidden, not deleted.
+              Untick to add this result on top of them.
+            </span>
+          </label>
+        {% else %}
+          <input type="hidden" name="replace" value="1">
+        {% endif %}
+
+        <div class="sc-form__buttons">
+          <button class="btn btn--primary" type="submit"
+                  onclick="return confirm('Save this as the final result? The match will show as finished.');">
+            Save final result
+          </button>
+          <a class="btn btn--ghost" href="{{ back }}">Cancel</a>
+        </div>
+      </form>
+    </section>
+  </div>
+
+  <script>
+    document.querySelectorAll('[data-add-row]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var box = document.querySelector('[data-rows="' + btn.dataset.addRow + '"]');
+        var first = box.firstElementChild;
+        var copy = first.cloneNode(true);
+        copy.querySelectorAll('select, input').forEach(function (el) { el.value = ''; });
+        box.appendChild(copy);
+      });
+    });
+  </script>
+{% endblock %}
