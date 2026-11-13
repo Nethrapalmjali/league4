@@ -2,6 +2,7 @@
 .env
 .env.*
 !.env.example
+!.env.college_vm_example
 
 # Databases & SQLite
 instance/
