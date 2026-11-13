@@ -132,217 +132,24 @@ a { color: var(--maroon); }
   font-size: 0.65rem;
   font-weight: 800;
   letter-spacing: 0.06em;
-  padding: 0.18rem 0.55rem;
+  padding: 0.15rem 0.5rem;
   border-radius: 100px;
   background: #dc2626;
   color: #fff;
   display: inline-flex;
   align-items: center;
-  gap: 0.35rem;
-  box-shadow: 0 0 12px rgba(220, 38, 38, 0.45);
-}
-
-.pulse-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: #ffffff;
-  display: inline-block;
-  animation: pulse-dot-anim 1.4s ease-in-out infinite;
-}
-
-@keyframes pulse-dot-anim {
-  0%, 100% { transform: scale(1); opacity: 1; }
-  50% { transform: scale(1.6); opacity: 0.5; }
+  gap: 0.25rem;
+  box-shadow: 0 0 10px rgba(220, 38, 38, 0.5);
 }
 
 .badge-pill-gold {
   font-size: 0.7rem;
   font-weight: 800;
-  padding: 0.15rem 0.5rem;
+  padding: 0.1rem 0.45rem;
   border-radius: 100px;
   background: rgba(227, 181, 89, 0.25);
   color: var(--gold-light);
   border: 1px solid rgba(227, 181, 89, 0.4);
-  letter-spacing: 0.04em;
-}
-
-.sidebar::-webkit-scrollbar {
-  width: 5px;
-}
-
-.sidebar::-webkit-scrollbar-thumb {
-  background: rgba(227, 181, 89, 0.25);
-  border-radius: 10px;
-}
-
-/* Stitch MCP Admin Command Cards & Hero Elements */
-.hero-command {
-  background: linear-gradient(135deg, #3d0d12 0%, #5c181f 50%, #421116 100%);
-  border: 1.5px solid rgba(227, 181, 89, 0.45);
-  border-radius: var(--radius-lg);
-  padding: 1.6rem 1.8rem;
-  color: #ffffff;
-  box-shadow: 0 12px 36px rgba(51, 18, 18, 0.16);
-  position: relative;
-  overflow: hidden;
-  margin-bottom: 1.6rem;
-}
-
-.hero-command::before {
-  content: "";
-  position: absolute;
-  top: 0; right: 0; bottom: 0;
-  width: 320px;
-  background: radial-gradient(circle at 80% 20%, rgba(227, 181, 89, 0.18), transparent 70%);
-  pointer-events: none;
-}
-
-.hero-command__title {
-  font-family: var(--font-heading);
-  font-size: clamp(1.4rem, 2.8vw, 1.85rem);
-  font-weight: 800;
-  color: var(--gold-light);
-  margin: 0.25rem 0 0.4rem;
-  line-height: 1.2;
-}
-
-.hero-command__sub {
-  font-size: 0.92rem;
-  color: rgba(255, 255, 255, 0.84);
-  max-width: 680px;
-  line-height: 1.55;
-  margin: 0;
-}
-
-.command-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
-  gap: 1rem;
-  margin-bottom: 1.6rem;
-}
-
-.command-tile {
-  background: var(--surface);
-  border: 1.5px solid var(--line);
-  border-radius: var(--radius);
-  padding: 1.2rem;
-  text-decoration: none;
-  color: inherit;
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  transition: all var(--ease);
-  position: relative;
-  box-shadow: var(--shadow-sm);
-}
-
-.command-tile:hover {
-  transform: translateY(-3px);
-  border-color: var(--gold);
-  box-shadow: var(--shadow);
-  background: #ffffff;
-}
-
-.command-tile__icon-wrap {
-  width: 42px;
-  height: 42px;
-  border-radius: 10px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1.25rem;
-  background: rgba(72, 7, 14, 0.08);
-  color: var(--primary);
-  border: 1px solid rgba(72, 7, 14, 0.12);
-}
-
-.command-tile--live .command-tile__icon-wrap {
-  background: rgba(220, 38, 38, 0.1);
-  color: #dc2626;
-  border-color: rgba(220, 38, 38, 0.25);
-}
-
-.command-tile--gold .command-tile__icon-wrap {
-  background: rgba(227, 181, 89, 0.15);
-  color: #855800;
-  border-color: rgba(227, 181, 89, 0.35);
-}
-
-.command-tile__title {
-  font-family: var(--font-heading);
-  font-size: 1.05rem;
-  font-weight: 700;
-  color: var(--deep-maroon);
-  margin: 0;
-}
-
-.command-tile__desc {
-  font-size: 0.82rem;
-  color: var(--muted);
-  line-height: 1.45;
-  margin: 0;
-}
-
-.command-tile__action {
-  font-size: 0.8rem;
-  font-weight: 700;
-  color: var(--primary);
-  margin-top: auto;
-  display: flex;
-  align-items: center;
-  gap: 0.35rem;
-}
-
-/* Rank Badges */
-.rank-badge {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 26px;
-  height: 26px;
-  border-radius: 50%;
-  font-family: var(--font-mono);
-  font-size: 0.72rem;
-  font-weight: 800;
-  background: #ede8e3;
-  color: #4a403b;
-}
-
-.rank-badge--1 {
-  background: linear-gradient(135deg, #ffd700, #e2b458);
-  color: #3d1400;
-  box-shadow: 0 0 10px rgba(227, 181, 89, 0.5);
-  border: 1px solid #b8860b;
-}
-
-.rank-badge--2 {
-  background: linear-gradient(135deg, #e6e8eb, #c3c7cb);
-  color: #1e293b;
-  border: 1px solid #94a3b8;
-}
-
-.rank-badge--3 {
-  background: linear-gradient(135deg, #e0a96d, #cd7f32);
-  color: #2b1200;
-  border: 1px solid #a0522d;
-}
-
-/* Purse Progress Meter */
-.purse-bar {
-  width: 100%;
-  height: 6px;
-  background: #ede8e3;
-  border-radius: 100px;
-  overflow: hidden;
-  margin-top: 0.35rem;
-}
-
-.purse-bar__fill {
-  height: 100%;
-  border-radius: 100px;
-  background: linear-gradient(90deg, #1b8751, var(--gold));
-  transition: width 0.4s ease;
 }
 
 .sidebar__foot { margin-top: auto; padding: 0.9rem 0.7rem 1.4rem; }
