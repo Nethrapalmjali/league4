@@ -1,65 +1,90 @@
 {% extends "base.html" %}
 
-{% block title %}{{ brand.name }} · {{ brand.university }}{% endblock %}
+{% block title %}{{ brand.name }}{% endblock %}
 
 {% block hero %}
 <section class="hero">
   <div class="hero__inner">
     <div class="hero__content">
       <span class="hero__badge">
-        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"
-          stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px; vertical-align: middle;">
-          <circle cx="12" cy="8" r="7"></circle>
-          <polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"></polyline>
-        </svg>
-        {{ brand.season }}
+        <span class="hero__pulse-dot"></span>
+        {{ brand.season }} · Championship Tournament
       </span>
       <h1>{{ brand.name }} <br><em>Where Legends Are Born</em></h1>
-      <p class="hero__lead">{{ brand.tagline }}. Join the ultimate inter-collegiate league. Register now to showcase
-        your talent in the player auction.</p>
+      <p class="hero__lead">{{ brand.tagline }}. The premier inter-collegiate sports championship of {{ brand.university }}. Track live scores, follow ongoing match fixtures, and explore the complete franchise rosters.</p>
       <div class="hero__actions">
-        <a href="#register" class="btn btn--primary">Register as Player</a>
-        <a href="{{ url_for('team_owner_registration') }}" class="btn btn--ghost">Own a Franchise</a>
+        <a href="{{ url_for('scorecard.index') }}" class="btn btn--primary">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" style="margin-right: 6px;"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+          Live Match Center
+        </a>
+        <a href="{{ url_for('auction_squads') }}" class="btn btn--ghost">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 6px;"><circle cx="12" cy="8" r="7"></circle><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"></polyline></svg>
+          Auction Squads
+        </a>
       </div>
     </div>
     <div class="hero__stats">
       <div class="stat-grid">
-        <div class="stat">
-          <span class="stat__num">{{ stats.players }}</span>
-          <span class="stat__label">Players Registered</span>
-        </div>
-        <div class="stat">
+        <a href="{{ url_for('auction_squads') }}" class="stat stat--clickable" title="View signed player rosters">
+          <span class="stat__num">{{ stats.sold }}</span>
+          <span class="stat__label">Drafted Athletes</span>
+        </a>
+        <a href="{{ url_for('auction_squads') }}" class="stat stat--clickable" title="View participating franchises">
           <span class="stat__num">{{ stats.teams }}</span>
           <span class="stat__label">Franchises</span>
-        </div>
-        <div class="stat">
-          <span class="stat__num">{{ stats.sold }}</span>
-          <span class="stat__label">Players Drafted</span>
-        </div>
-        <div class="stat">
+        </a>
+        <a href="#sports" class="stat stat--clickable" title="View championship sports">
           <span class="stat__num">{{ stats.sports }}</span>
-          <span class="stat__label">Sports Categories</span>
-        </div>
+          <span class="stat__label">Sports Disciplines</span>
+        </a>
+        <a href="{{ url_for('scorecard.index') }}" class="stat stat--clickable" title="View live match scorecard">
+          <span class="stat__num">{{ stats.players }}</span>
+          <span class="stat__label">Athletes Pool</span>
+        </a>
       </div>
     </div>
   </div>
 </section>
+
+<!-- Live Tournament Status Strip -->
+<div class="tournament-strip">
+  <div class="tournament-strip__inner">
+    <div class="tournament-strip__item">
+      <span class="tournament-strip__dot"></span>
+      <strong>Tournament Stage:</strong> Matches &amp; Fixtures Live
+    </div>
+    <span class="tournament-strip__divider" aria-hidden="true">•</span>
+    <div class="tournament-strip__item">
+      <span>🏆</span> 4 Competing Disciplines: Football · Basketball · Kabaddi · Badminton
+    </div>
+    <span class="tournament-strip__divider" aria-hidden="true">•</span>
+    <div class="tournament-strip__item">
+      <a href="{{ url_for('scorecard.index') }}" class="tournament-strip__link">
+        Follow Live Scoreboard &rarr;
+      </a>
+    </div>
+  </div>
+</div>
 {% endblock %}
 
 {% block content %}
-<section id="register" class="content-section" style="padding-top: 1rem;">
+<section id="sports" class="content-section" style="padding-top: 2rem;">
   <div class="section-title">
-    <span class="eyebrow">Choose Your Arena</span>
-    <h2>Player Registration</h2>
-    <p>Select a sport to register. Once registered, your profile will be added to the live draft pool for team owners to
-      bid on.</p>
+    <span class="eyebrow">Tournament Arenas</span>
+    <h2>Championship Sports</h2>
+    <p>Four premier sports competing across men's and women's divisions for GM University championship glory.</p>
   </div>
 
   <div class="card-grid">
     {% for sport in ['Football', 'Basketball', 'Kabaddi', 'Badminton'] %}
-    <div class="sport-card">
+    <div class="sport-card sport-card--{{ sport.lower() }}">
       <div class="sport-card__media">
-        <span style="font-size: 3rem;">
+        <span class="sport-card__badge">
+          {% if sport in ['Football', 'Kabaddi'] %}Men's Division
+          {% else %}Men &amp; Women
+          {% endif %}
+        </span>
+        <span class="sport-card__glyph">
           {% if sport == 'Football' %}⚽
           {% elif sport == 'Basketball' %}🏀
           {% elif sport == 'Kabaddi' %}🤼
@@ -71,17 +96,23 @@
         <h3 class="sport-card__title">{{ sport }}</h3>
         <p class="sport-card__desc">
           {% if sport == 'Football' %}
-          Men's category. The beautiful game on the big field.
+          Men's category. Tactical play, fast counter-attacks, and 11v11 intensity on the university main grounds.
           {% elif sport == 'Basketball' %}
-          Men's and Women's categories. Fast breaks, buzzer beaters, and high-flying court action.
+          Men's &amp; Women's divisions. Fast breaks, precision three-pointers, and high-flying court action.
           {% elif sport == 'Kabaddi' %}
-          Men's category. Strength, raids, and mat strategy.
+          Men's category. Super raids, ankle holds, agility, and power under the stadium floodlights.
           {% elif sport == 'Badminton' %}
-          Men's and Women's categories. Rapid rallies, precision, and speed.
+          Men's &amp; Women's divisions. Lightning-fast rallies, razor-sharp drop shots, and intense court speed.
           {% endif %}
         </p>
-        <a href="{{ url_for('register_player', sport=sport.lower()) }}" class="btn btn--dark btn--block">Register
-          now</a>
+        <div class="sport-card__actions">
+          <a href="{{ url_for('auction_squads', sport=sport.lower()) }}" class="btn btn--gold btn--sm" style="font-size:0.75rem; padding:0.5rem 0.6rem;">
+            View Squads
+          </a>
+          <a href="{{ url_for('scorecard.index') }}" class="btn btn--ghost btn--sm" style="font-size:0.75rem; padding:0.5rem 0.6rem;">
+            Live Scores
+          </a>
+        </div>
       </div>
     </div>
     {% endfor %}

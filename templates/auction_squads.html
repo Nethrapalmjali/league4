@@ -89,20 +89,23 @@
 
       <div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1rem;">
         {% for p in top_signings %}
-          <div style="background:#ffffff; border:1px solid var(--line); border-left:4px solid var(--gold); border-radius:8px; padding:1rem 1.25rem; display:flex; align-items:center; gap:1rem; box-shadow:0 2px 6px rgba(0,0,0,0.03);">
-            <div style="width:48px; height:48px; border-radius:50%; overflow:hidden; background:var(--bg-warm); display:flex; align-items:center; justify-content:center; flex-shrink:0; border:1px solid var(--line);">
+          <div style="background:#ffffff; border:1px solid var(--line); border-left:4px solid var(--gold); border-radius:10px; padding:1rem 1.25rem; display:flex; align-items:center; gap:0.9rem; box-shadow:0 4px 12px rgba(0,0,0,0.04); position:relative;">
+            <div style="position:absolute; top:8px; right:12px; font-size:0.7rem; font-weight:800; color:var(--gold-dim); background:rgba(236,195,92,0.15); padding:0.15rem 0.45rem; border-radius:100px;">
+              #{{ loop.index }}
+            </div>
+            <div style="width:50px; height:50px; border-radius:50%; overflow:hidden; background:var(--bg-warm); display:flex; align-items:center; justify-content:center; flex-shrink:0; border:2px solid var(--gold);">
               {% if p.photo %}
                 <img src="{{ media_url(p.photo) }}" alt="{{ p.name }}" style="width:100%; height:100%; object-fit:cover;">
               {% else %}
                 <span style="font-weight:800; color:var(--maroon); font-size:1.1rem;">{{ p.name[:2]|upper }}</span>
               {% endif %}
             </div>
-            <div style="flex:1; min-width:0;">
-              <div style="font-weight:700; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">{{ p.name }}</div>
-              <div style="font-size:0.78rem; color:var(--muted);">{{ p.sport }} · {{ p.sold_to }}</div>
-            </div>
-            <div style="font-weight:800; color:var(--maroon); font-size:1.05rem; white-space:nowrap;">
-              {{ (p.bid_amount or 0)|inr }}
+            <div style="flex:1; min-width:0; padding-right:1.5rem;">
+              <div style="font-weight:700; color:var(--text); font-size:0.95rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">{{ p.name }}</div>
+              <div style="font-size:0.78rem; color:var(--muted); margin-top:0.1rem;">{{ p.sport }} · {{ p.sold_to }}</div>
+              <div style="font-weight:800; color:var(--maroon); font-size:1.05rem; margin-top:0.25rem;">
+                {{ (p.bid_amount or 0)|inr }}
+              </div>
             </div>
           </div>
         {% endfor %}
@@ -112,7 +115,7 @@
 
   <!-- Franchise Squad Cards -->
   <div class="section-title">
-    <span class="eyebrow">Post-auction Â· League Franchises</span>
+    <span class="eyebrow">Post-auction · League Franchises</span>
     <h2>Team Squads {% if selected_sport %}— {{ selected_sport }}{% endif %}</h2>
     <p>Official post-auction rosters of players acquired through the bidding process.</p>
   </div>

@@ -30,5 +30,4 @@ static/owner_photos/*
 # Deployment & Serverless Caches
 .netlify/
 .vercel/
-
-.vercel
+inspect_storage.py

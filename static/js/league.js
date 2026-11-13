@@ -1,5 +1,37 @@
 // GM League Season 4 — Interactive Scripts
 document.addEventListener("DOMContentLoaded", () => {
+  // Mobile Navigation Drawer Toggle
+  const navToggle = document.getElementById("navToggle");
+  const siteNav = document.getElementById("siteNav");
+  if (navToggle && siteNav) {
+    navToggle.addEventListener("click", () => {
+      const isOpen = siteNav.classList.toggle("is-open");
+      navToggle.classList.toggle("is-active", isOpen);
+      navToggle.setAttribute("aria-expanded", isOpen ? "true" : "false");
+      document.body.classList.toggle("nav-open", isOpen);
+    });
+
+    // Close mobile nav when clicking any nav link
+    siteNav.querySelectorAll("a").forEach(link => {
+      link.addEventListener("click", () => {
+        siteNav.classList.remove("is-open");
+        navToggle.classList.remove("is-active");
+        navToggle.setAttribute("aria-expanded", "false");
+        document.body.classList.remove("nav-open");
+      });
+    });
+
+    // Close mobile nav when clicking outside
+    document.addEventListener("click", (e) => {
+      if (!siteNav.contains(e.target) && !navToggle.contains(e.target) && siteNav.classList.contains("is-open")) {
+        siteNav.classList.remove("is-open");
+        navToggle.classList.remove("is-active");
+        navToggle.setAttribute("aria-expanded", "false");
+        document.body.classList.remove("nav-open");
+      }
+    });
+  }
+
   // Sticky header elevation on scroll
   const header = document.querySelector(".site-header");
   if (header) {

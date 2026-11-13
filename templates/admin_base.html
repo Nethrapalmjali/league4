@@ -22,24 +22,37 @@
     <div class="sidebar__nav">
       <span class="sidebar__label">Manage League</span>
       <a href="{{ url_for('admin_dashboard') }}" class="nav-item {{ 'is-active' if request.endpoint == 'admin_dashboard' else '' }}">
-        Dashboard
+        <span>Dashboard</span>
+      </a>
+      <a href="{{ url_for('scorecard.admin_matches') }}" class="nav-item {{ 'is-active' if request.endpoint == 'scorecard.admin_matches' else '' }}">
+        <span>Fixtures &amp; Scoring</span>
+      </a>
+      <a href="{{ url_for('scorecard.admin_teams') }}" class="nav-item {{ 'is-active' if request.endpoint == 'scorecard.admin_teams' else '' }}">
+        <span>Scorecard Teams</span>
+      </a>
+      <a href="{{ url_for('scorecard.admin_scorers') }}" class="nav-item {{ 'is-active' if request.endpoint == 'scorecard.admin_scorers' else '' }}">
+        <span>Scorers Access</span>
+      </a>
+      <a href="{{ url_for('auction_squads') }}" class="nav-item {{ 'is-active' if request.endpoint == 'auction_squads' else '' }}">
+        <span>Auction Squads</span>
       </a>
       <a href="{{ url_for('admin_institutions') }}" class="nav-item {{ 'is-active' if request.endpoint == 'admin_institutions' else '' }}">
-        College Analytics
+        <span>College Analytics</span>
       </a>
-      <span class="sidebar__label">Live Desk</span>
+      <span class="sidebar__label">Live Auction Desk</span>
       {% for s in sports %}
       <a href="{{ url_for('bidding', sport=s.lower(), gender='male') }}" class="nav-item {{ 'is-active' if (sport and sport.lower() == s.lower() and gender and gender.lower() == 'male') else '' }}">
-        Bid {{ s }} (M)
+        <span>Bid {{ s }} (M)</span>
       </a>
       {% if s not in mens_only_sports %}
       <a href="{{ url_for('bidding', sport=s.lower(), gender='female') }}" class="nav-item {{ 'is-active' if (sport and sport.lower() == s.lower() and gender and gender.lower() == 'female') else '' }}">
-        Bid {{ s }} (W)
+        <span>Bid {{ s }} (W)</span>
       </a>
       {% endif %}
       {% endfor %}
-      <a href="{{ url_for('scorecard.index') }}" class="nav-item">
-        Live Scorecard
+      <span class="sidebar__label">Public Portals</span>
+      <a href="{{ url_for('scorecard.index') }}" class="nav-item" target="_blank" rel="noopener">
+        <span>Live Scorecard ↗</span>
       </a>
     </div>
     <div class="sidebar__foot">

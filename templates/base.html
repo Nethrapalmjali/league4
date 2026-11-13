@@ -33,13 +33,25 @@
           </span>
         </span>
       </a>
-      <nav class="site-nav" aria-label="Primary">
-        <a href="{{ url_for('index') }}#register">Players</a>
-        <a href="{{ url_for('auction_squads') }}">Auction</a>
-        <a href="{{ url_for('scorecard.index') }}">Scores</a>
-        <a href="{{ url_for('index') }}#committee">Committee</a>
-        <a href="{{ url_for('terms') }}">Rules</a>
-        <a href="{{ url_for('team_owner_registration') }}" class="is-cta">Own a Franchise</a>
+      <button class="nav-toggle" id="navToggle" type="button" aria-expanded="false" aria-controls="siteNav" aria-label="Toggle navigation menu">
+        <span class="nav-toggle__bar"></span>
+        <span class="nav-toggle__bar"></span>
+        <span class="nav-toggle__bar"></span>
+      </button>
+
+      <nav class="site-nav" id="siteNav" aria-label="Primary">
+        <a href="{{ url_for('index') }}" class="nav-link {{ 'is-active' if request.endpoint == 'index' else '' }}">Home</a>
+        <a href="{{ url_for('auction_squads') }}" class="nav-link {{ 'is-active' if request.endpoint == 'auction_squads' else '' }}">Auction Squads</a>
+        <a href="{{ url_for('scorecard.index') }}" class="nav-link nav-link--scores {{ 'is-active' if request.blueprint == 'scorecard' else '' }}">
+          <span class="nav-scores-badge"><span class="nav-scores-dot"></span>Live Scores</span>
+        </a>
+        <a href="{{ url_for('index') }}#committee" class="nav-link">Committee</a>
+        <a href="{{ url_for('terms') }}" class="nav-link {{ 'is-active' if request.endpoint == 'terms' else '' }}">Rules</a>
+        {% if session.get('admin_logged_in') %}
+          <a href="{{ url_for('admin_dashboard') }}" class="is-cta is-cta--admin">Admin Panel</a>
+        {% else %}
+          <a href="{{ url_for('team_owner_registration') }}" class="is-cta">Franchises</a>
+        {% endif %}
       </nav>
     </div>
   </header>

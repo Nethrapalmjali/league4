@@ -761,9 +761,35 @@ def set_security_headers(response):
     return response
 
 
+def make_svg_avatar(text_label, bg1="#48070e", bg2="#7a2529", stroke="#e3b559", text_color="#ffffff"):
+    """Generate high-res SVG monogram data-URI for players/teams with no local photo."""
+    words = [w for w in re.split(r"[_\s\-]+", str(text_label or "")) if w and not w.isdigit()]
+    initials = "GM"
+    if len(words) >= 2:
+        initials = (words[0][0] + words[1][0]).upper()
+    elif len(words) == 1 and len(words[0]) >= 2:
+        initials = words[0][:2].upper()
+    elif len(words) == 1:
+        initials = words[0][0].upper()
+
+    svg = (
+        f"<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 120' width='100%' height='100%'>"
+        f"<defs><linearGradient id='g' x1='0%' y1='0%' x2='100%' y2='100%'>"
+        f"<stop offset='0%' stop-color='{bg1}'/><stop offset='100%' stop-color='{bg2}'/>"
+        f"</linearGradient></defs>"
+        f"<rect width='100%' height='100%' rx='16' fill='url(#g)'/>"
+        f"<circle cx='60' cy='60' r='46' fill='none' stroke='{stroke}' stroke-width='2' stroke-dasharray='4 2' opacity='0.6'/>"
+        f"<text x='50%' y='54%' dominant-baseline='middle' text-anchor='middle' fill='{text_color}' "
+        f"font-family='system-ui, -apple-system, sans-serif' font-weight='800' font-size='38' letter-spacing='1.5'>{initials}</text>"
+        f"</svg>"
+    )
+    import urllib.parse
+    return f"data:image/svg+xml;utf8,{urllib.parse.quote(svg)}"
+
+
 def media_url(path):
     if not path:
-        return ""
+        return make_svg_avatar("GM")
     if path.startswith("http://") or path.startswith("https://"):
         # If the file was downloaded locally to static/, serve it locally to bypass cloud limits
         filename = path.split("/")[-1].split("?")[0]
@@ -771,8 +797,14 @@ def media_url(path):
             local_check = os.path.join(app.root_path, "static", subfolder, filename)
             if os.path.exists(local_check):
                 return url_for("static", filename=f"{subfolder}/{filename}")
-        return path
-    return url_for("static", filename=path)
+        # If cloud storage is restricted by provider, avoid 402 errors and return sleek SVG monogram
+        stem = filename.rsplit(".", 1)[0]
+        stem = re.sub(r"_\d{14}_[a-f0-9]+$", "", stem)
+        return make_svg_avatar(stem)
+    local_check = os.path.join(app.root_path, "static", path)
+    if os.path.exists(local_check):
+        return url_for("static", filename=path)
+    return make_svg_avatar(path)
 
 
 def parse_highlights(text):
