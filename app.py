@@ -131,7 +131,7 @@ if not _secret_key:
 
 
 def resolve_database_uri():
-    """Determine database URI with automatic, resilient fallback to SQLite."""
+    """Determine database URI. Prefer configured DATABASE_URL (e.g. Supabase/Postgres)."""
     raw_url = env_str("DATABASE_URL")
     if raw_url:
         normalized = normalise_database_url(raw_url)
@@ -145,20 +145,19 @@ def resolve_database_uri():
                 with test_engine.connect() as conn:
                     conn.execute(text("SELECT 1"))
                 app.logger.info("Database: connected successfully to PostgreSQL.")
-                return normalized
             except Exception as exc:
-                app.logger.warning(
-                    "Database: PostgreSQL connection failed (%s). "
-                    "Falling back to SQLite to maintain zero downtime.",
+                app.logger.error(
+                    "Database: PostgreSQL connection probe failed (%s). "
+                    "Continuing with configured DATABASE_URL (no SQLite fallback).",
                     exc,
                 )
-        else:
             return normalized
+        return normalized
 
     instance_dir = os.path.join(app.root_path, "instance")
     os.makedirs(instance_dir, exist_ok=True)
     fallback = f"sqlite:///{os.path.join(instance_dir, 'league.db').replace(os.sep, '/')}"
-    app.logger.info("Database: using SQLite (%s).", fallback)
+    app.logger.info("Database: DATABASE_URL not set; using SQLite (%s).", fallback)
     return fallback
 
 
@@ -766,6 +765,12 @@ def media_url(path):
     if not path:
         return ""
     if path.startswith("http://") or path.startswith("https://"):
+        # If the file was downloaded locally to static/, serve it locally to bypass cloud limits
+        filename = path.split("/")[-1].split("?")[0]
+        for subfolder in ("player_photos", "team_logos", "owner_photos"):
+            local_check = os.path.join(app.root_path, "static", subfolder, filename)
+            if os.path.exists(local_check):
+                return url_for("static", filename=f"{subfolder}/{filename}")
         return path
     return url_for("static", filename=path)
 
