@@ -55,9 +55,13 @@ def scorer_required(view):
 
 
 def may_score(match):
-    """A signed-in scorer scores their assigned matches or unassigned ones. An admin can score any match."""
+    """A signed-in scorer scores their assigned matches or unassigned ones.
+    A scorer granted edit-later can manage their assigned match even after final.
+    An admin can score any match."""
     scorer_id = current_scorer_id()
     if scorer_id:
+        if match.assigned_scorer_id == scorer_id and getattr(match, "scorer_can_edit_later", False):
+            return True
         return match.assigned_scorer_id in (None, scorer_id)
     if is_admin():
         return True

@@ -518,6 +518,28 @@
     padding: 0.15rem 0;
   }
 
+
+  /* Auction Call Focus Strip: First / Further / Now */
+  .auction-call-strip {
+    background: linear-gradient(135deg, #2b0b0e 0%, #4a151b 55%, #651e21 100%);
+    border: 1px solid rgba(227, 181, 89, 0.55);
+    border-radius: 12px;
+    padding: 1rem 1.25rem;
+    box-shadow: 0 8px 24px rgba(72, 7, 14, 0.18);
+  }
+  .auction-call-strip__head { display:flex; justify-content:space-between; align-items:center; gap:.75rem; margin-bottom:.75rem; flex-wrap:wrap; }
+  .auction-call-strip__title { font-family:'Source Serif 4', Georgia, serif; font-size:1rem; font-weight:800; color:#f7e7b0; letter-spacing:.08em; text-transform:uppercase; margin:0; }
+  .auction-call-strip__hint { font-size:.78rem; color:rgba(255,255,255,.72); font-weight:600; }
+  .auction-call-stages { display:grid; grid-template-columns:repeat(3,1fr); gap:.75rem; }
+  .auction-call-stage { appearance:none; border:2px solid rgba(227,181,89,.35); background:rgba(255,255,255,.06); color:rgba(255,255,255,.82); border-radius:10px; padding:.85rem .75rem; text-align:center; cursor:pointer; transition:all .18s ease; }
+  .auction-call-stage:hover { border-color:rgba(227,181,89,.7); background:rgba(255,255,255,.1); }
+  .auction-call-stage__label { display:block; font-family:'Source Serif 4', Georgia, serif; font-size:1.45rem; font-weight:800; letter-spacing:.04em; line-height:1.1; }
+  .auction-call-stage__sub { display:block; margin-top:.2rem; font-size:.72rem; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:rgba(255,255,255,.62); }
+  .auction-call-stage.is-active { background:linear-gradient(180deg,#ecc35c 0%,#d4a843 100%); border-color:#f7e7b0; color:#3b1014; box-shadow:0 0 0 2px rgba(247,231,176,.25), 0 8px 18px rgba(227,181,89,.35); transform:translateY(-1px); }
+  .auction-call-stage.is-active .auction-call-stage__sub { color:rgba(59,16,20,.72); }
+  .auction-secondary { opacity:.97; }
+  .auction-secondary .stitch-card-head h4 { font-size:1.05rem; }
+  @media (max-width:640px){ .auction-call-stages{grid-template-columns:1fr;} .auction-call-stage__label{font-size:1.25rem;} }
   /* Stitch Bidding Console (Deep Maroon Card) */
   .bidding-console-card {
     background: var(--deep-maroon);
@@ -1296,6 +1318,18 @@
             </section>
 
             <!-- 2. Digital Bidding Console Card (Stitch Deep Maroon Theme) -->
+              <!-- Auction Call Focus: First / Further / Now -->
+              <section class="auction-call-strip" data-call-strip>
+                <div class="auction-call-strip__head">
+                  <h4 class="auction-call-strip__title">Auction Call</h4>
+                  <span class="auction-call-strip__hint">Focus: First · Further · Now</span>
+                </div>
+                <div class="auction-call-stages" role="group" aria-label="Auction call stages">
+                  <button type="button" class="auction-call-stage is-active" data-call-stage="first"><span class="auction-call-stage__label">First</span><span class="auction-call-stage__sub">First Call</span></button>
+                  <button type="button" class="auction-call-stage" data-call-stage="further"><span class="auction-call-stage__label">Further</span><span class="auction-call-stage__sub">Further Call</span></button>
+                  <button type="button" class="auction-call-stage" data-call-stage="now"><span class="auction-call-stage__label">Now</span><span class="auction-call-stage__sub">Final Call</span></button>
+                </div>
+              </section>
             <section class="bidding-console-card">
               <div class="console-top-row">
                 <!-- Hammer Price Header -->
@@ -1426,7 +1460,7 @@
     </div>
 
     <!-- ---------------- Right Column: Bid History & Remaining Purses ---------------- -->
-    <div class="arena-right">
+    <div class="arena-right auction-secondary">
 
       <!-- 1. Bid History (Stitch Design) -->
       <div class="stitch-card">
@@ -1697,6 +1731,24 @@
     }
   });
 
+  // ---------------- Auction Call Stages: First / Further / Now ----------------
+  function setCallStage(block, stage) {
+    if (!block) return;
+    block.querySelectorAll('[data-call-stage]').forEach(function(btn){
+      btn.classList.toggle('is-active', btn.dataset.callStage === stage);
+    });
+  }
+  function callStageForRemaining(sec) {
+    if (sec > 10) return 'first';
+    if (sec > 5) return 'further';
+    return 'now';
+  }
+  document.addEventListener('click', function(e) {
+    var btn = e.target.closest('[data-call-stage]');
+    if (!btn) return;
+    var block = btn.closest('.lot-block') || lotBlocks[currentLotIdx];
+    setCallStage(block, btn.dataset.callStage);
+  });
   // ---------------- Interactive 15-Second Timer ----------------
   const timerStates = new Map();
 
@@ -1764,6 +1816,7 @@
     });
 
     timerStates.set(block, { start, pause, reset });
+    setCallStage(block, 'first');
   }
 
   function resetTimerForBlock(block) {

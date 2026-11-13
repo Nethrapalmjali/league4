@@ -286,20 +286,25 @@ def admin_matches():
 
     # Teams available for selection, grouped by (sport, gender).
     teams = ScTeam.query.order_by(ScTeam.sport, ScTeam.gender, ScTeam.name).all()
-    scorers = ScScorer.query.filter_by(active=True).order_by(ScScorer.name).all()
+    scorer_rows = ScScorer.query.order_by(ScScorer.name).all()
+    scorer_map = {s.id: s.name for s in scorer_rows}
+    scorers = [
+        {"id": s.id, "name": s.name, "gender": s.gender}
+        for s in scorer_rows if s.active
+    ]
 
     # The template serialises these with |tojson, so hand it plain dicts.
     teams = [
         {"id": t.id, "name": t.name, "sport": t.sport, "gender": t.gender}
         for t in teams
     ]
-    scorers = [{"id": s.id, "name": s.name, "gender": s.gender} for s in scorers]
 
     return render_template(
         "scorecard/admin_matches.html",
         matches=matches,
         teams=teams,
         scorers=scorers,
+        scorer_map=scorer_map,
         sports=SPORTS,
         genders=GENDERS,
         stages=STAGES,
@@ -317,6 +322,30 @@ def admin_delete_match(match_id):
     db.session.delete(match)
     db.session.commit()
     flash("Fixture removed.", "success")
+    return redirect(url_for("scorecard.admin_matches", sport=sport, gender=gender))
+
+
+@scorecard_bp.route("/admin/matches/<int:match_id>/grant_edit", methods=["POST"])
+@admin_required
+def admin_grant_scorer_edit(match_id):
+    """Community admin (EMS admin) grants the assigned scorer permission to edit this fixture later."""
+    match = ScMatch.query.get_or_404(match_id)
+    sport = match.sport
+    gender = match.gender
+    if not match.assigned_scorer_id:
+        flash("Assign a scorer to this fixture before granting edit-later access.", "error")
+        return redirect(url_for("scorecard.admin_matches", sport=sport, gender=gender))
+    if match.status != "final":
+        flash("Fix/finalize the fixture first, then grant edit-later access.", "error")
+        return redirect(url_for("scorecard.admin_matches", sport=sport, gender=gender))
+    match.scorer_can_edit_later = not bool(getattr(match, "scorer_can_edit_later", False))
+    db.session.commit()
+    scorer = ScScorer.query.get(match.assigned_scorer_id)
+    scorer_name = scorer.name if scorer else "the assigned scorer"
+    if match.scorer_can_edit_later:
+        flash(f"{scorer_name} can now edit this fixture later using their scorer login.", "success")
+    else:
+        flash(f"Edit-later access removed for {scorer_name} on this fixture.", "info")
     return redirect(url_for("scorecard.admin_matches", sport=sport, gender=gender))
 
 

@@ -44,9 +44,25 @@ def _ensure_tables():
         return
     _tables_ready = True  # set first: a failure must not retry on every request
     try:
+        from sqlalchemy import text
         from .ems import db
 
         db.create_all()
+        # Lightweight bootstrap for new sc_match columns on existing databases.
+        try:
+            engine = db.engine
+            dialect = engine.dialect.name
+            with engine.begin() as conn:
+                if dialect == "sqlite":
+                    cols = {r[1] for r in conn.execute(text("PRAGMA table_info(sc_match)")).fetchall()}
+                    if "scorer_can_edit_later" not in cols:
+                        conn.execute(text("ALTER TABLE sc_match ADD COLUMN scorer_can_edit_later BOOLEAN DEFAULT 0"))
+                else:
+                    conn.execute(text(
+                        "ALTER TABLE sc_match ADD COLUMN IF NOT EXISTS scorer_can_edit_later BOOLEAN DEFAULT FALSE"
+                    ))
+        except Exception as exc:  # noqa: BLE001
+            current_app.logger.warning("Scorecard column bootstrap skipped: %s", exc)
     except Exception as exc:  # noqa: BLE001 — never take the site down over this
         current_app.logger.exception("Scorecard table setup failed: %s", exc)
 

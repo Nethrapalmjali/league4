@@ -86,6 +86,7 @@ class ScMatch(db.Model):
 
     winner_team_id = db.Column(db.Integer)
     assigned_scorer_id = db.Column(db.Integer)
+    scorer_can_edit_later = db.Column(db.Boolean, default=False)
     note = db.Column(db.String(200))
 
     created_at = db.Column(db.DateTime, default=datetime.utcnow)

@@ -95,14 +95,23 @@ def scorer_logout():
 @scorer_required
 def scorer_home():
     scorer_id = current_scorer_id()
-    query = ScMatch.query.filter(ScMatch.status.in_([STATUS_SCHEDULED, STATUS_LIVE]))
     if scorer_id:
-        query = query.filter(
+        query = ScMatch.query.filter(
+            db.or_(
+                ScMatch.status.in_([STATUS_SCHEDULED, STATUS_LIVE]),
+                db.and_(
+                    ScMatch.status == STATUS_FINAL,
+                    ScMatch.assigned_scorer_id == scorer_id,
+                    ScMatch.scorer_can_edit_later.is_(True),
+                ),
+            ),
             db.or_(
                 ScMatch.assigned_scorer_id.is_(None),
                 ScMatch.assigned_scorer_id == scorer_id,
-            )
+            ),
         )
+    else:
+        query = ScMatch.query.filter(ScMatch.status.in_([STATUS_SCHEDULED, STATUS_LIVE]))
     matches = query.order_by(ScMatch.starts_at.asc(), ScMatch.id.desc()).all()
     return render_template(
         "scorecard/scorer_home.html",
@@ -141,7 +150,14 @@ def _guard(match_id):
     if not may_score(match):
         return None, (jsonify({"error": "This match is assigned to another scorer."}), 403)
     if match.status == STATUS_FINAL:
-        return None, (jsonify({"error": "This match is finished."}), 400)
+        scorer_id = current_scorer_id()
+        granted = (
+            scorer_id
+            and match.assigned_scorer_id == scorer_id
+            and getattr(match, "scorer_can_edit_later", False)
+        )
+        if not (granted or is_admin()):
+            return None, (jsonify({"error": "This match is finished."}), 400)
     return match, None
 
 
@@ -265,6 +281,15 @@ def set_status(match_id):
     match = ScMatch.query.get_or_404(match_id)
     if not may_score(match):
         return jsonify({"error": "This match is assigned to another scorer."}), 403
+    if match.status == STATUS_FINAL:
+        scorer_id = current_scorer_id()
+        granted = (
+            scorer_id
+            and match.assigned_scorer_id == scorer_id
+            and getattr(match, "scorer_can_edit_later", False)
+        )
+        if not (granted or is_admin()):
+            return jsonify({"error": "This match is finished."}), 400
 
     wanted = request.form.get("status")
     if wanted not in (STATUS_LIVE, STATUS_FINAL):

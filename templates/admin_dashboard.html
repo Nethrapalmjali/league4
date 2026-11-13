@@ -138,71 +138,49 @@
   </div>
 
   <nav class="sidebar__nav">
+    <div class="sidebar__label">Current scenario</div>
     <button type="button" class="nav-item is-active" data-target="overview">Overview</button>
+    <button type="button" class="nav-item" data-target="matches-stage">Matches stage</button>
 
-    <div class="sidebar__label">College Analytics</div>
-    <button type="button" class="nav-item" data-target="institutions" data-inst-filter="all">
-      <span>All Colleges</span>
-      <span class="nav-item__count">{{ total_players }}</span>
-    </button>
-    <button type="button" class="nav-item nav-item--sub" data-target="institutions" data-inst-filter="gmu">
-      <span style="display:flex; align-items:center; gap:0.4rem;">
-        <span class="dot dot--gmu"></span>
-        GM University
-      </span>
-      <span class="nav-item__count badge-pill-gmu">{{ inst_counts.gmu }}</span>
-    </button>
-    <button type="button" class="nav-item nav-item--sub" data-target="institutions" data-inst-filter="gmit">
-      <span style="display:flex; align-items:center; gap:0.4rem;">
-        <span class="dot dot--gmit"></span>
-        GMIT
-      </span>
-      <span class="nav-item__count badge-pill-gmit">{{ inst_counts.gmit }}</span>
-    </button>
-    <button type="button" class="nav-item nav-item--sub" data-target="institutions" data-inst-filter="other">
-      <span style="display:flex; align-items:center; gap:0.4rem;">
-        <span class="dot dot--other"></span>
-        Others / Foreign
-      </span>
-      <span class="nav-item__count badge-pill-other">{{ inst_counts.other }}</span>
-    </button>
+    <details class="sidebar__more" style="margin-top:0.75rem;">
+      <summary class="sidebar__label" style="cursor:pointer; list-style:none; display:flex; align-items:center; justify-content:space-between; gap:0.4rem;">
+        <span>More options &amp; inputs</span><span style="font-size:0.7rem; opacity:0.8;">(tools panel)</span>
+      </summary>
+      <div style="margin-top:0.35rem;">
+        <div class="sidebar__label">Live scorecard</div>
+        <a class="nav-item icon-text" href="{{ url_for('scorecard.admin_matches') }}">{{ ico.icon('trophy', 16) }} Fixtures &amp; scoring</a>
+        <a class="nav-item icon-text" href="{{ url_for('scorecard.admin_teams') }}">{{ ico.icon('shield', 16) }} Scorecard teams</a>
+        <a class="nav-item icon-text" href="{{ url_for('scorecard.admin_scorers') }}">{{ ico.icon('user', 16) }} Scorers</a>
 
-    <div class="sidebar__label">Player data by sport</div>
-    {% for sport in sports %}
-      <button type="button" class="nav-item" data-target="{{ sport|lower }}">
-        <span>{{ sport }}</span>
-        <span class="nav-item__count">{{ players_by_sport[sport]|length }}</span>
-      </button>
-    {% endfor %}
+        <div class="sidebar__label">College Analytics</div>
+        <button type="button" class="nav-item" data-target="institutions" data-inst-filter="all"><span>All Colleges</span><span class="nav-item__count">{{ total_players }}</span></button>
+        <button type="button" class="nav-item nav-item--sub" data-target="institutions" data-inst-filter="gmu"><span style="display:flex; align-items:center; gap:0.4rem;"><span class="dot dot--gmu"></span>GM University</span><span class="nav-item__count badge-pill-gmu">{{ inst_counts.gmu }}</span></button>
+        <button type="button" class="nav-item nav-item--sub" data-target="institutions" data-inst-filter="gmit"><span style="display:flex; align-items:center; gap:0.4rem;"><span class="dot dot--gmit"></span>GMIT</span><span class="nav-item__count badge-pill-gmit">{{ inst_counts.gmit }}</span></button>
+        <button type="button" class="nav-item nav-item--sub" data-target="institutions" data-inst-filter="other"><span style="display:flex; align-items:center; gap:0.4rem;"><span class="dot dot--other"></span>Others / Foreign</span><span class="nav-item__count badge-pill-other">{{ inst_counts.other }}</span></button>
 
-    <div class="sidebar__label">League</div>
-    <button type="button" class="nav-item" data-target="owners">
-      <span>Team owners &amp; Squads</span>
-      <span class="nav-item__count" title="{{ owners|length }} franchises · {{ sport_teams|length }} competing teams">{{ owners|length }} / {{ sport_teams|length }}</span>
-    </button>
-    <button type="button" class="nav-item" data-target="mail">Email automation</button>
+        <div class="sidebar__label">Player data by sport</div>
+        {% for sport in sports %}
+          <button type="button" class="nav-item" data-target="{{ sport|lower }}"><span>{{ sport }}</span><span class="nav-item__count">{{ players_by_sport[sport]|length }}</span></button>
+        {% endfor %}
 
-    <div class="sidebar__label">Exports</div>
-    <a class="nav-item icon-text" href="{{ url_for('export_all_summaries') }}">{{ ico.icon('download', 16) }} All summaries</a>
-    <a class="nav-item icon-text" href="{{ url_for('export_institution', category='all') }}">{{ ico.icon('download', 16) }} College breakdown</a>
-    <a class="nav-item icon-text" href="{{ url_for('export_owners') }}">{{ ico.icon('download', 16) }} Team owners</a>
+        <div class="sidebar__label">League</div>
+        <button type="button" class="nav-item" data-target="owners"><span>Team owners &amp; Squads</span><span class="nav-item__count">{{ owners|length }} / {{ sport_teams|length }}</span></button>
+        <button type="button" class="nav-item" data-target="mail">Email automation</button>
 
-    <div class="sidebar__label">Live auction desk</div>
-    {% for sport in sports %}
-      <a class="nav-item icon-text" href="{{ url_for('bidding', sport=sport|lower, gender='male') }}">
-        {{ ico.icon('gavel', 15) }} Bid {{ sport }} (M)
-      </a>
-      {% if sport not in mens_only_sports %}
-      <a class="nav-item icon-text" href="{{ url_for('bidding', sport=sport|lower, gender='female') }}">
-        {{ ico.icon('gavel', 15) }} Bid {{ sport }} (W)
-      </a>
-      {% endif %}
-    {% endfor %}
+        <div class="sidebar__label">Exports</div>
+        <a class="nav-item icon-text" href="{{ url_for('export_all_summaries') }}">{{ ico.icon('download', 16) }} All summaries</a>
+        <a class="nav-item icon-text" href="{{ url_for('export_institution', category='all') }}">{{ ico.icon('download', 16) }} College breakdown</a>
+        <a class="nav-item icon-text" href="{{ url_for('export_owners') }}">{{ ico.icon('download', 16) }} Team owners</a>
 
-    <div class="sidebar__label">Live scorecard</div>
-    <a class="nav-item icon-text" href="{{ url_for('scorecard.admin_matches') }}">{{ ico.icon('trophy', 16) }} Fixtures &amp; scoring</a>
-    <a class="nav-item icon-text" href="{{ url_for('scorecard.admin_teams') }}">{{ ico.icon('shield', 16) }} Scorecard teams</a>
-    <a class="nav-item icon-text" href="{{ url_for('scorecard.admin_scorers') }}">{{ ico.icon('user', 16) }} Scorers</a>
+        <div class="sidebar__label">Live auction desk</div>
+        {% for sport in sports %}
+          <a class="nav-item icon-text" href="{{ url_for('bidding', sport=sport|lower, gender='male') }}">{{ ico.icon('gavel', 15) }} Bid {{ sport }} (M)</a>
+          {% if sport not in mens_only_sports %}
+          <a class="nav-item icon-text" href="{{ url_for('bidding', sport=sport|lower, gender='female') }}">{{ ico.icon('gavel', 15) }} Bid {{ sport }} (W)</a>
+          {% endif %}
+        {% endfor %}
+      </div>
+    </details>
   </nav>
 
   <div class="sidebar__foot">
@@ -375,6 +353,50 @@
     </div>
   </section>
 
+  <!-- ============================== MATCHES STAGE (Current scenario) ============================== -->
+  <section id="matches-stage" class="section">
+    <div class="card" style="margin-bottom:1.25rem; border:2px solid var(--gold, #d4af37); background:linear-gradient(135deg,#fffdf6 0%,#fff8e6 100%);">
+      <div class="card__head" style="border-bottom:1px solid #fae8c8;">
+        <div>
+          <div class="card__title" style="font-size:1.15rem; display:flex; align-items:center; gap:0.5rem;">{{ ico.icon('trophy', 18) }} Matches stage Â· Current scenario</div>
+          <div style="font-size:0.84rem; color:var(--muted); margin-top:0.25rem;">Primary focus now: fixtures, live scoring, teams, and scorer management. Other admin inputs are in the side panel under “More options &amp; inputs”.</div>
+        </div>
+      </div>
+      <div class="card__body">
+        <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:0.9rem;">
+          <a href="{{ url_for('scorecard.admin_matches') }}" class="btn btn--maroon" style="justify-content:center; padding:0.9rem 1rem; font-weight:800;">{{ ico.icon('calendar', 16) }} Fixtures &amp; scoring</a>
+          <a href="{{ url_for('scorecard.admin_teams') }}" class="btn btn--gold" style="justify-content:center; padding:0.9rem 1rem; font-weight:800;">{{ ico.icon('shield', 16) }} Scorecard teams</a>
+          <a href="{{ url_for('scorecard.admin_scorers') }}" class="btn btn--ghost" style="justify-content:center; padding:0.9rem 1rem; font-weight:800; border:1px solid var(--line);">{{ ico.icon('user', 16) }} Scorers</a>
+          <a href="{{ url_for('scorecard.index') }}" class="btn btn--ghost" style="justify-content:center; padding:0.9rem 1rem; font-weight:800; border:1px solid var(--line);">{{ ico.icon('external-link', 16) }} Public scorecard</a>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid-2">
+      <div class="card">
+        <div class="card__head"><div class="card__title">Matches quick view</div></div>
+        <div class="card__body">
+          <p style="margin:0 0 0.75rem; color:var(--muted); font-size:0.88rem;">Open Fixtures &amp; scoring to create/schedule matches, assign scorers, start live scoring, and manage fixed fixtures (including “Allow scorer to edit later” for assigned scorers).</p>
+          <ul style="margin:0; padding-left:1.1rem; color:var(--text); font-size:0.9rem; line-height:1.5;">
+            <li><strong>Fixtures &amp; scoring</strong> â€” match schedule, status, and scorer assignment</li>
+            <li><strong>Scorecard teams</strong> â€” teams, squads, and sync</li>
+            <li><strong>Scorers</strong> â€” issue/manage scorer passcodes and access</li>
+          </ul>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card__head"><div class="card__title">Overview snapshot</div></div>
+        <div class="card__body">
+          <div style="display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:0.6rem;">
+            <div style="padding:0.7rem 0.8rem; border:1px solid var(--line); border-radius:8px;"><div style="font-size:0.72rem; color:var(--muted); text-transform:uppercase; font-weight:700;">Registered players</div><div style="font-size:1.3rem; font-weight:800; color:var(--maroon);">{{ total_players }}</div></div>
+            <div style="padding:0.7rem 0.8rem; border:1px solid var(--line); border-radius:8px;"><div style="font-size:0.72rem; color:var(--muted); text-transform:uppercase; font-weight:700;">Players signed</div><div style="font-size:1.3rem; font-weight:800; color:var(--maroon);">{{ sold_players|length }}</div></div>
+            <div style="padding:0.7rem 0.8rem; border:1px solid var(--line); border-radius:8px;"><div style="font-size:0.72rem; color:var(--muted); text-transform:uppercase; font-weight:700;">Competing teams</div><div style="font-size:1.3rem; font-weight:800; color:var(--maroon);">{{ sport_teams|length }}</div></div>
+            <div style="padding:0.7rem 0.8rem; border:1px solid var(--line); border-radius:8px;"><div style="font-size:0.72rem; color:var(--muted); text-transform:uppercase; font-weight:700;">Purse spent</div><div style="font-size:1.05rem; font-weight:800; color:var(--maroon);">{{ spent|inr }}</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
   <!-- ============================== INSTITUTIONS & COLLEGES ============================== -->
   <section id="institutions" class="section">
     <!-- Header banner -->

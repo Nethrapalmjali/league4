@@ -15,9 +15,9 @@
         </svg>
         Official Auction Roster
       </span>
-      <h1>Franchise Squads <br><em>&amp; Live Auction Results</em></h1>
+      <h1>Franchise Squads <br><em>&amp; Final Auction Results</em></h1>
       <p class="hero__lead">
-        Explore signed player rosters, hammer prices, and remaining purse balances across all {{ brand.name }} franchises.
+        Post-auction focus: signed player rosters, final hammer prices, and remaining purse balances across all {{ brand.name }} franchises.
       </p>
       {% if session.get('admin_logged_in') %}
         <div class="hero__actions" style="margin-top: 1rem;">
@@ -83,8 +83,8 @@
   {% if top_signings %}
     <div style="margin-bottom: 3rem;">
       <div class="section-title" style="margin-bottom: 1.25rem;">
-        <span class="eyebrow">Marquee Deals</span>
-        <h2 style="font-size:1.6rem; margin-bottom:0.25rem;">Highest Auction Signings</h2>
+        <span class="eyebrow">Post-auction Highlights</span>
+        <h2 style="font-size:1.6rem; margin-bottom:0.25rem;">Top Final Signings</h2>
       </div>
 
       <div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1rem;">
@@ -112,9 +112,9 @@
 
   <!-- Franchise Squad Cards -->
   <div class="section-title">
-    <span class="eyebrow">League Franchises</span>
+    <span class="eyebrow">Post-auction Â· League Franchises</span>
     <h2>Team Squads {% if selected_sport %}— {{ selected_sport }}{% endif %}</h2>
-    <p>Official rosters of players acquired through the live bidding process.</p>
+    <p>Official post-auction rosters of players acquired through the bidding process.</p>
   </div>
 
   <div style="display:flex; flex-direction:column; gap:2.5rem; margin-top:1.5rem;">
