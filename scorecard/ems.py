@@ -45,3 +45,8 @@ SPORTS = _base_sports
 def team_owner_model():
     """Fetched on demand — only the optional linking screen needs it."""
     return _ems.TeamOwner
+
+
+def team_wallet_model():
+    """One row per (franchise, sport, gender) the owner registered for."""
+    return _ems.TeamWallet

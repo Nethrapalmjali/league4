@@ -15,7 +15,7 @@ from werkzeug.security import generate_password_hash
 
 from . import scorecard_bp
 from .config import STAGES, STATUS_LIVE, STATUS_SCHEDULED, rules_for, GENDERS
-from .ems import SPORTS, admin_required, db, team_owner_model
+from .ems import SPORTS, admin_required, db, team_owner_model, team_wallet_model
 from .models import ScEvent, ScMatch, ScPlayer, ScScorer, ScTeam
 
 
@@ -67,12 +67,71 @@ def admin_teams():
     )
 
 
+def _short_tag(name):
+    """'DVG BULLDOZERS' -> 'DB', 'Agni squad' -> 'AS', 'Venom' -> 'VENO'."""
+    words = ["".join(ch for ch in w if ch.isalnum()) for w in name.split()]
+    words = [w for w in words if w]
+    if len(words) >= 2:
+        return "".join(w[0] for w in words)[:4].upper()
+    return (words[0][:4] if words else name[:4]).upper()
+
+
+def import_franchise_teams():
+    """Create a scorecard team for every franchise registered in the auction.
+
+    Every TeamWallet row is one (owner, sport, gender) the franchise entered,
+    so each becomes one ScTeam linked by ems_owner_id. Existing teams are
+    matched (by link or by name) and only linked, never duplicated.
+    Returns (teams_created, teams_linked).
+    """
+    TeamWallet = team_wallet_model()
+    created = linked = 0
+    for wallet in TeamWallet.query.all():
+        owner = wallet.team_owner if hasattr(wallet, "team_owner") else None
+        if owner is None:
+            owner = team_owner_model().query.get(wallet.team_owner_id)
+        if owner is None or wallet.sport not in SPORTS or wallet.gender not in GENDERS:
+            continue
+        name = (owner.team_name or "").strip()
+        if not name:
+            continue
+        team = ScTeam.query.filter(
+            ScTeam.sport == wallet.sport,
+            ScTeam.gender == wallet.gender,
+            db.or_(
+                ScTeam.ems_owner_id == owner.id,
+                db.func.lower(ScTeam.name) == name.lower(),
+            ),
+        ).first()
+        if team is None:
+            db.session.add(ScTeam(
+                name=name[:100],
+                short_name=_short_tag(name),
+                sport=wallet.sport,
+                gender=wallet.gender,
+                ems_owner_id=owner.id,
+                logo=owner.team_logo or owner.team_owner_photo,
+            ))
+            created += 1
+        elif team.ems_owner_id != owner.id:
+            team.ems_owner_id = owner.id
+            linked += 1
+    db.session.commit()
+    return created, linked
+
+
 @scorecard_bp.route("/admin/sync_squads", methods=["POST"])
 @admin_required
 def admin_sync_squads():
+    """Import every auction franchise as a scorecard team, then fill squads."""
     from .sync import sync_all_auction_squads
+    created, linked = import_franchise_teams()
     count = sync_all_auction_squads()
-    flash(f"Successfully synchronised {count} auctioned player(s) into tournament team rosters.", "success")
+    flash(
+        f"Imported {created} new franchise team(s), linked {linked} existing team(s), "
+        f"and synced {count} auctioned player(s) into squads.",
+        "success",
+    )
     return redirect(request.referrer or url_for("scorecard.admin_teams"))
 
 
@@ -229,6 +288,13 @@ def admin_matches():
     teams = ScTeam.query.order_by(ScTeam.sport, ScTeam.gender, ScTeam.name).all()
     scorers = ScScorer.query.filter_by(active=True).order_by(ScScorer.name).all()
 
+    # The template serialises these with |tojson, so hand it plain dicts.
+    teams = [
+        {"id": t.id, "name": t.name, "sport": t.sport, "gender": t.gender}
+        for t in teams
+    ]
+    scorers = [{"id": s.id, "name": s.name, "gender": s.gender} for s in scorers]
+
     return render_template(
         "scorecard/admin_matches.html",
         matches=matches,
@@ -274,7 +340,7 @@ def admin_scorers():
         ).first():
             flash(f"There is already a {gender} scorer called {name}.", "error")
         else:
-            db.add(ScScorer(name=name, passcode_hash=generate_password_hash(passcode), gender=gender))
+            db.session.add(ScScorer(name=name, passcode_hash=generate_password_hash(passcode), gender=gender))
             db.session.commit()
             flash(f"{name} ({gender}) can now sign in and score.", "success")
         return redirect(url_for("scorecard.admin_scorers", gender=filter_gender))
