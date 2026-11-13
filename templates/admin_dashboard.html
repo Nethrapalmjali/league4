@@ -215,95 +215,138 @@
   {% endwith %}
 
   <!-- ============================== OVERVIEW ============================== -->
-  <section id="overview" class="section is-active">
-    <div class="stat-row">
-      <div class="stat-card">
-        <div class="stat-card__label">Total players</div>
-        <div class="stat-card__value">{{ total_players }}</div>
-        <div class="stat-card__note">across {{ sports|length }} sports</div>
+  <section id="overview" class="section is-active" style="padding-top:0;">
+    <!-- Section header -->
+    <div class="section-header" style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:0.75rem; margin-bottom:1.5rem;">
+      <div>
+        <div class="section-eyebrow" style="font-size:0.75rem; font-weight:800; text-transform:uppercase; letter-spacing:0.08em; color:var(--maroon); margin-bottom:0.2rem;">GM League S4</div>
+        <h2 class="section-title" style="font-size:1.5rem; font-weight:800; color:var(--deep-maroon); margin:0 0 0.25rem; line-height:1.2;">Overview</h2>
+        <p class="section-lead" style="font-size:0.88rem; color:var(--muted); margin:0;">League health at a glance — registrations, signings, franchises, and purse.</p>
       </div>
-      <div class="stat-card">
-        <div class="stat-card__label">Players signed</div>
-        <div class="stat-card__value">{{ sold_players|length }}</div>
-        <div class="stat-card__note">{{ total_players - sold_players|length }} still in the pool</div>
+      <a href="{{ url_for('auction_squads') }}" class="btn btn--gold" style="font-weight:700;">{{ ico.icon('open_in_new', 16) }} View auction results</a>
+    </div>
+
+    <!-- Key metrics row -->
+    <div class="stat-row" style="display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:0.9rem; margin-bottom:1.5rem;">
+      <div class="stat-card" style="border:1px solid var(--line); border-radius:10px; padding:1rem 1rem; background:#fff; display:flex; flex-direction:column; gap:0.35rem;">
+        <div style="display:flex; align-items:center; gap:0.5rem;">
+          <div style="width:28px; height:28px; border-radius:8px; background:#eef2f7; color:#475569; display:flex; align-items:center; justify-content:center; font-size:0.95rem;">{{ ico.icon('people', 16) }}</div>
+          <div class="stat-card__label" style="font-size:0.72rem; font-weight:800; color:var(--muted); text-transform:uppercase; letter-spacing:0.04em;">Total players</div>
+        </div>
+        <div class="stat-card__value" style="font-size:1.5rem; font-weight:800; color:var(--deep-maroon); margin-top:0.2rem; line-height:1.1;">{{ total_players }}</div>
+        <div style="font-size:0.72rem; color:var(--muted); margin-top:0.2rem;">across {{ sports|length }} sports</div>
       </div>
-      <div class="stat-card">
-        <div class="stat-card__label">Franchise Owners</div>
-        <div class="stat-card__value">{{ owners|length }}</div>
-        <div class="stat-card__note">registered franchises</div>
+      <div class="stat-card" style="border:1px solid var(--line); border-radius:10px; padding:1rem 1rem; background:#fff; display:flex; flex-direction:column; gap:0.35rem;">
+        <div style="display:flex; align-items:center; gap:0.5rem;">
+          <div style="width:28px; height:28px; border-radius:8px; background:#eef7f0; color:#1b8751; display:flex; align-items:center; justify-content:center; font-size:0.95rem;">{{ ico.icon('check_circle', 16) }}</div>
+          <div class="stat-card__label" style="font-size:0.72rem; font-weight:800; color:var(--muted); text-transform:uppercase; letter-spacing:0.04em;">Players signed</div>
+        </div>
+        <div class="stat-card__value" style="font-size:1.5rem; font-weight:800; color:var(--deep-maroon); margin-top:0.2rem; line-height:1.1;">{{ sold_players|length }}</div>
+        <div style="font-size:0.72rem; color:var(--muted); margin-top:0.2rem;">{{ total_players - sold_players|length }} still in the pool</div>
       </div>
-      <div class="stat-card" style="border-top-color: var(--gold);">
-        <div class="stat-card__label">Competing Teams</div>
-        <div class="stat-card__value" style="color:var(--gold-dark, #b45309);">{{ sport_teams|length }}</div>
-        <div class="stat-card__note">fielded across all sports</div>
+      <div class="stat-card" style="border:1px solid var(--line); border-radius:10px; padding:1rem 1rem; background:#fff; display:flex; flex-direction:column; gap:0.35rem;">
+        <div style="display:flex; align-items:center; gap:0.5rem;">
+          <div style="width:28px; height:28px; border-radius:8px; background:#fdf3d7; color:#856404; display:flex; align-items:center; justify-content:center; font-size:0.95rem;">{{ ico.icon('business', 16) }}</div>
+          <div class="stat-card__label" style="font-size:0.72rem; font-weight:800; color:var(--muted); text-transform:uppercase; letter-spacing:0.04em;">Franchise owners</div>
+        </div>
+        <div class="stat-card__value" style="font-size:1.5rem; font-weight:800; color:var(--deep-maroon); margin-top:0.2rem; line-height:1.1;">{{ owners|length }}</div>
+        <div style="font-size:0.72rem; color:var(--muted); margin-top:0.2rem;">registered franchises</div>
       </div>
-      <div class="stat-card">
-        <div class="stat-card__label">Purse spent</div>
-        <div class="stat-card__value">{{ spent|inr }}</div>
-        <div class="stat-card__note">{{ remaining|inr }} remaining</div>
+      <div class="stat-card" style="border:1px solid var(--line); border-radius:10px; padding:1rem 1rem; background:#fff; display:flex; flex-direction:column; gap:0.35rem;">
+        <div style="display:flex; align-items:center; gap:0.5rem;">
+          <div style="width:28px; height:28px; border-radius:8px; background:#ffe8e6; color:#ba1a1a; display:flex; align-items:center; justify-content:center; font-size:0.95rem;">{{ ico.icon('trophy', 16) }}</div>
+          <div class="stat-card__label" style="font-size:0.72rem; font-weight:800; color:var(--muted); text-transform:uppercase; letter-spacing:0.04em;">Competing teams</div>
+        </div>
+        <div class="stat-card__value" style="font-size:1.5rem; font-weight:800; color:#b45309; margin-top:0.2rem; line-height:1.1;">{{ sport_teams|length }}</div>
+        <div style="font-size:0.72rem; color:var(--muted); margin-top:0.2rem;">fielded across all sports</div>
       </div>
-      <div class="stat-card {{ 'stat-card--alert' if missing_email else '' }}">
-        <div class="stat-card__label">Missing email</div>
-        <div class="stat-card__value">{{ missing_email }}</div>
-        <div class="stat-card__note">{{ 'these players get no mail' if missing_email else 'everyone is reachable' }}</div>
+      <div class="stat-card" style="border:1px solid var(--line); border-radius:10px; padding:1rem 1rem; background:#fff; display:flex; flex-direction:column; gap:0.35rem;">
+        <div style="display:flex; align-items:center; gap:0.5rem;">
+          <div style="width:28px; height:28px; border-radius:8px; background:#fdf3d7; color:#856404; display:flex; align-items:center; justify-content:center; font-size:0.95rem;">{{ ico.icon('account_balance_wallet', 16) }}</div>
+          <div class="stat-card__label" style="font-size:0.72rem; font-weight:800; color:var(--muted); text-transform:uppercase; letter-spacing:0.04em;">Purse spent</div>
+        </div>
+        <div class="stat-card__value" style="font-size:1.5rem; font-weight:800; color:var(--deep-maroon); margin-top:0.2rem; line-height:1.1;">{{ spent|inr }}</div>
+        <div style="font-size:0.72rem; color:var(--muted); margin-top:0.2rem;">{{ remaining|inr }} remaining</div>
+      </div>
+      <div class="stat-card {{ 'stat-card--alert' if missing_email else '' }}" style="border:1px solid {{ '#fecaca' if missing_email else 'var(--line)' }}; border-radius:10px; padding:1rem 1rem; background:#fff; display:flex; flex-direction:column; gap:0.35rem;">
+        <div style="display:flex; align-items:center; gap:0.5rem;">
+          <div style="width:28px; height:28px; border-radius:8px; background:{{ '#fdecea' if missing_email else '#eef2f7' }}; color:{{ '#8e2119' if missing_email else '#475569' }}; display:flex; align-items:center; justify-content:center; font-size:0.95rem;">{{ ico.icon('email', 16) }}</div>
+          <div class="stat-card__label" style="font-size:0.72rem; font-weight:800; color:var(--muted); text-transform:uppercase; letter-spacing:0.04em;">Missing email</div>
+        </div>
+        <div class="stat-card__value" style="font-size:1.5rem; font-weight:800; color:var(--deep-maroon); margin-top:0.2rem; line-height:1.1;">{{ missing_email }}</div>
+        <div style="font-size:0.72rem; color:{{ '#ba1a1a' if missing_email else 'var(--muted)' }}; margin-top:0.2rem;">{{ 'these players get no mail' if missing_email else 'everyone is reachable' }}</div>
       </div>
     </div>
 
-    <!-- Institutional Representation Summary in Overview -->
-    <div class="card" style="margin-bottom:1.5rem; border-left:4px solid var(--gold); background: #fdfbf7;">
-      <div class="card__head" style="background:transparent; border-bottom:1px solid #fae8c8;">
+    <!-- Institutional representation -->
+    <div class="card" style="border:1px solid var(--line); border-radius:12px; background:#fff; margin-bottom:1.5rem; overflow:hidden;">
+      <div class="card__head" style="background:#fdfbf7; border-bottom:1px solid var(--line); padding:1rem 1.25rem; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.6rem;">
         <div>
-          <div class="card__title" style="display:flex; align-items:center; gap:0.5rem;">
+          <div class="card__title" style="display:flex; align-items:center; gap:0.5rem; font-size:1rem; font-weight:800; color:var(--deep-maroon); margin:0;">
             <span>🏛️</span> Institutional Athlete Representation
           </div>
-          <div style="font-size:0.8rem; color:var(--muted); margin-top:0.2rem;">
-            Counts of registered athletes from GM University, GMIT, and External / Foreign Colleges
-          </div>
+          <div style="font-size:0.78rem; color:var(--muted); margin-top:0.2rem;">Registered athletes by college category</div>
         </div>
-        <button type="button" class="btn btn--gold btn--sm" onclick="window.activateInstFilter && window.activateInstFilter('all');">
-          Open College Analytics &rarr;
-        </button>
+        <button type="button" class="btn btn--gold btn--sm" onclick="window.activateInstFilter && window.activateInstFilter('all');" style="font-size:0.78rem;">{{ ico.icon('open_in_new', 14) }} College analytics</button>
       </div>
       <div class="card__body" style="padding:1rem 1.25rem;">
-        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:1rem;">
-          <div style="background:#fff; border:1px solid #fae8c8; border-radius:8px; padding:0.9rem 1.1rem; border-top:3px solid #d4af37; cursor:pointer;" onclick="window.activateInstFilter && window.activateInstFilter('gmu');">
-            <div style="font-size:0.7rem; font-weight:800; color:#855800; text-transform:uppercase; letter-spacing:1px;">GM University (GMU)</div>
-            <div style="font-size:1.75rem; font-weight:900; color:#855800; margin:0.2rem 0;">{{ inst_counts.gmu }}</div>
-            <div style="font-size:0.75rem; color:var(--muted);">{{ '%.1f'|format((inst_counts.gmu / total_players * 100) if total_players else 0) }}% · Host University Campus</div>
+        <div style="display:flex; flex-direction:column; gap:0.75rem;">
+          <div style="display:flex; align-items:center; gap:0.9rem; padding:0.85rem 1rem; border:1px solid #fae8c8; border-radius:10px; background:#fdfbf7; cursor:pointer;" onclick="window.activateInstFilter && window.activateInstFilter('gmu');">
+            <div style="width:34px; height:34px; border-radius:8px; background:#fef3c7; color:#92400e; display:flex; align-items:center; justify-content:center; font-size:1rem; flex-shrink:0;">🏛️</div>
+            <div style="flex:1;">
+              <div style="font-size:0.72rem; font-weight:800; color:#855800; text-transform:uppercase; letter-spacing:0.04em;">GM University (GMU)</div>
+              <div style="font-size:1.25rem; font-weight:800; color:var(--deep-maroon); margin-top:0.1rem;">{{ inst_counts.gmu }}</div>
+            </div>
+            <div style="font-size:0.78rem; font-weight:700; color:#92400e;">{{ '%.1f'|format((inst_counts.gmu / total_players * 100) if total_players else 0) }}%</div>
           </div>
-          <div style="background:#fff; border:1px solid #e0f2fe; border-radius:8px; padding:0.9rem 1.1rem; border-top:3px solid #0284c7; cursor:pointer;" onclick="window.activateInstFilter && window.activateInstFilter('gmit');">
-            <div style="font-size:0.7rem; font-weight:800; color:#0369a1; text-transform:uppercase; letter-spacing:1px;">GMIT (Technology)</div>
-            <div style="font-size:1.75rem; font-weight:900; color:#0369a1; margin:0.2rem 0;">{{ inst_counts.gmit }}</div>
-            <div style="font-size:0.75rem; color:var(--muted);">{{ '%.1f'|format((inst_counts.gmit / total_players * 100) if total_players else 0) }}% · Engineering &amp; Technology</div>
+          <div style="display:flex; align-items:center; gap:0.9rem; padding:0.85rem 1rem; border:1px solid #e0f2fe; border-radius:10px; background:#f0f9ff; cursor:pointer;" onclick="window.activateInstFilter && window.activateInstFilter('gmit');">
+            <div style="width:34px; height:34px; border-radius:8px; background:#e0f2fe; color:#0369a1; display:flex; align-items:center; justify-content:center; font-size:1rem; flex-shrink:0;">🎓</div>
+            <div style="flex:1;">
+              <div style="font-size:0.72rem; font-weight:800; color:#0369a1; text-transform:uppercase; letter-spacing:0.04em;">GMIT (Technology)</div>
+              <div style="font-size:1.25rem; font-weight:800; color:var(--deep-maroon); margin-top:0.1rem;">{{ inst_counts.gmit }}</div>
+            </div>
+            <div style="font-size:0.78rem; font-weight:700; color:#0369a1;">{{ '%.1f'|format((inst_counts.gmit / total_players * 100) if total_players else 0) }}%</div>
           </div>
-          <div style="background:#fff; border:1px solid #f3e8ff; border-radius:8px; padding:0.9rem 1.1rem; border-top:3px solid #7c3aed; cursor:pointer;" onclick="window.activateInstFilter && window.activateInstFilter('other');">
-            <div style="font-size:0.7rem; font-weight:800; color:#6b21a8; text-transform:uppercase; letter-spacing:1px;">Others / Foreign</div>
-            <div style="font-size:1.75rem; font-weight:900; color:#6b21a8; margin:0.2rem 0;">{{ inst_counts.other }}</div>
-            <div style="font-size:0.75rem; color:var(--muted);">{{ '%.1f'|format((inst_counts.other / total_players * 100) if total_players else 0) }}% · External Institutions</div>
+          <div style="display:flex; align-items:center; gap:0.9rem; padding:0.85rem 1rem; border:1px solid #f3e8ff; border-radius:10px; background:#faf5ff; cursor:pointer;" onclick="window.activateInstFilter && window.activateInstFilter('other');">
+            <div style="width:34px; height:34px; border-radius:8px; background:#f3e8ff; color:#6b21a8; display:flex; align-items:center; justify-content:center; font-size:1rem; flex-shrink:0;">🌍</div>
+            <div style="flex:1;">
+              <div style="font-size:0.72rem; font-weight:800; color:#6b21a8; text-transform:uppercase; letter-spacing:0.04em;">Others / Foreign</div>
+              <div style="font-size:1.25rem; font-weight:800; color:var(--deep-maroon); margin-top:0.1rem;">{{ inst_counts.other }}</div>
+            </div>
+            <div style="font-size:0.78rem; font-weight:700; color:#6b21a8;">{{ '%.1f'|format((inst_counts.other / total_players * 100) if total_players else 0) }}%</div>
           </div>
         </div>
       </div>
     </div>
 
-    <div class="grid-2">
-      <div class="card">
-        <div class="card__head"><div class="card__title">Registrations by sport</div></div>
+    <div class="grid-2" style="margin-bottom:1.5rem;">
+      <div class="card" style="border:1px solid var(--line); border-radius:12px; background:#fff;">
+        <div class="card__head" style="border-bottom:1px solid var(--line); padding:1rem 1.25rem;">
+          <div class="card__title" style="font-size:1rem; font-weight:800; color:var(--deep-maroon); margin:0; display:flex; align-items:center; gap:0.5rem;">{{ ico.icon('table', 16) }} Registrations by sport</div>
+        </div>
         <div class="card__body card__body--flush">
           <div class="table-wrap">
-            <table>
+            <table style="width:100%; border-collapse:collapse;">
               <thead>
-                <tr><th>Sport</th><th>Registered</th><th>Men</th><th>Women</th><th>Signed</th><th></th></tr>
+                <tr style="border-bottom:1px solid var(--line);">
+                  <th style="text-align:left; padding:0.75rem 1rem; font-size:0.75rem; font-weight:800; color:var(--muted); text-transform:uppercase;">Sport</th>
+                  <th style="text-align:left; padding:0.75rem 1rem; font-size:0.75rem; font-weight:800; color:var(--muted); text-transform:uppercase;">Registered</th>
+                  <th style="text-align:left; padding:0.75rem 1rem; font-size:0.75rem; font-weight:800; color:var(--muted); text-transform:uppercase;">Men</th>
+                  <th style="text-align:left; padding:0.75rem 1rem; font-size:0.75rem; font-weight:800; color:var(--muted); text-transform:uppercase;">Women</th>
+                  <th style="text-align:left; padding:0.75rem 1rem; font-size:0.75rem; font-weight:800; color:var(--muted); text-transform:uppercase;">Signed</th>
+                  <th style="text-align:right; padding:0.75rem 1rem; font-size:0.75rem; font-weight:800; color:var(--muted); text-transform:uppercase;"></th>
+                </tr>
               </thead>
               <tbody>
                 {% for sport in sports %}
                   {% set group = players_by_sport[sport] %}
-                  <tr>
-                    <td class="cell-strong">{{ sport }}</td>
-                    <td>{{ group|length }}</td>
-                    <td>{{ group|selectattr('gender', 'equalto', 'Male')|list|length }}</td>
-                    <td>{{ group|selectattr('gender', 'equalto', 'Female')|list|length if sport not in mens_only_sports else '—' }}</td>
-                    <td>{{ group|selectattr('sold')|list|length }}</td>
-                    <td><a href="{{ url_for('export_summary', sport=sport) }}" class="link-btn link-btn--edit">Export</a></td>
+                  <tr style="border-bottom:1px solid #f1f5f9;">
+                    <td class="cell-strong" style="padding:0.75rem 1rem; font-size:0.88rem; color:var(--text);">{{ sport }}</td>
+                    <td style="padding:0.75rem 1rem; font-size:0.88rem; color:var(--on-surface-variant);">{{ group|length }}</td>
+                    <td style="padding:0.75rem 1rem; font-size:0.88rem; color:var(--on-surface-variant);">{{ group|selectattr('gender', 'equalto', 'Male')|list|length }}</td>
+                    <td style="padding:0.75rem 1rem; font-size:0.88rem; color:var(--on-surface-variant);">{{ group|selectattr('gender', 'equalto', 'Female')|list|length if sport not in mens_only_sports else '—' }}</td>
+                    <td style="padding:0.75rem 1rem; font-size:0.88rem; font-weight:700; color:var(--deep-maroon);">{{ group|selectattr('sold')|list|length }}</td>
+                    <td style="text-align:right; padding:0.75rem 1rem;"><a href="{{ url_for('export_summary', sport=sport) }}" class="link-btn link-btn--edit" style="font-size:0.78rem;">Export</a></td>
                   </tr>
                 {% endfor %}
               </tbody>
@@ -312,40 +355,56 @@
         </div>
       </div>
 
-      <div class="card">
-        <div class="card__head"><div class="card__title">Top signings</div></div>
+      <div class="card" style="border:1px solid var(--line); border-radius:12px; background:#fff;">
+        <div class="card__head" style="border-bottom:1px solid var(--line); padding:1rem 1.25rem;">
+          <div class="card__title" style="font-size:1rem; font-weight:800; color:var(--deep-maroon); margin:0; display:flex; align-items:center; gap:0.5rem;">{{ ico.icon('local_fire_department', 16) }} Top signings</div>
+        </div>
         <div class="card__body card__body--flush">
           {% if sold_players %}
             <div class="table-wrap">
-              <table>
-                <thead><tr><th>Player</th><th>Sport</th><th>Team</th><th>Bid</th></tr></thead>
+              <table style="width:100%; border-collapse:collapse;">
+                <thead>
+                  <tr style="border-bottom:1px solid var(--line);">
+                    <th style="text-align:left; padding:0.75rem 1rem; font-size:0.75rem; font-weight:800; color:var(--muted); text-transform:uppercase;">Player</th>
+                    <th style="text-align:left; padding:0.75rem 1rem; font-size:0.75rem; font-weight:800; color:var(--muted); text-transform:uppercase;">Sport</th>
+                    <th style="text-align:left; padding:0.75rem 1rem; font-size:0.75rem; font-weight:800; color:var(--muted); text-transform:uppercase;">Team</th>
+                    <th style="text-align:right; padding:0.75rem 1rem; font-size:0.75rem; font-weight:800; color:var(--muted); text-transform:uppercase;">Bid</th>
+                  </tr>
+                </thead>
                 <tbody>
                   {% for player in sold_players[:10] %}
-                    <tr>
-                      <td class="cell-strong">{{ player.name }}</td>
-                      <td>{{ player.sport }}</td>
-                      <td>{{ player.sold_to }}</td>
-                      <td class="cell-strong">{{ (player.bid_amount or 0)|inr }}</td>
-                    </tr>
+                  <tr style="border-bottom:1px solid #f1f5f9;">
+                    <td class="cell-strong" style="padding:0.75rem 1rem; font-size:0.88rem; color:var(--text);">{{ player.name }}</td>
+                    <td style="padding:0.75rem 1rem; font-size:0.88rem; color:var(--on-surface-variant);">{{ player.sport }}</td>
+                    <td style="padding:0.75rem 1rem; font-size:0.88rem; color:var(--on-surface-variant);">{{ player.sold_to }}</td>
+                    <td style="text-align:right; padding:0.75rem 1rem; font-size:0.88rem; font-weight:800; color:var(--deep-maroon);">{{ (player.bid_amount or 0)|inr }}</td>
+                  </tr>
                   {% endfor %}
                 </tbody>
               </table>
             </div>
           {% else %}
-            <div class="empty">No players have been sold yet. Open a bidding room to start the auction.</div>
+            <div class="empty" style="text-align:center; padding:2rem 1rem;">
+              <div style="font-size:2rem; margin-bottom:0.5rem;">🏏</div>
+              <p style="margin:0 0 0.75rem; color:var(--muted); font-size:0.88rem;">No players have been sold yet.</p>
+              <a href="{{ url_for('bidding', sport='football', gender='male') }}" class="btn btn--maroon btn--sm">{{ ico.icon('gavel', 14) }} Open bidding room</a>
+            </div>
           {% endif %}
         </div>
       </div>
     </div>
 
-    <div class="card">
-      <div class="card__head"><div class="card__title">Open a bidding room</div></div>
-      <div class="card__body">
-        <div style="display:flex; flex-wrap:wrap; gap:0.6rem;">
+    <!-- Quick actions -->
+    <div class="card" style="border:1px solid var(--line); border-radius:12px; background:#fff;">
+      <div class="card__head" style="border-bottom:1px solid var(--line); padding:1rem 1.25rem;">
+        <div class="card__title" style="font-size:1rem; font-weight:800; color:var(--deep-maroon); margin:0; display:flex; align-items:center; gap:0.5rem;">{{ ico.icon('rocket_launch', 16) }} Quick actions</div>
+      </div>
+      <div class="card__body" style="padding:1rem 1.25rem;">
+        <div style="display:flex; flex-wrap:wrap; gap:0.75rem;">
           {% for sport in sports %}
-            <a href="{{ url_for('bidding', sport=sport|lower, gender='male') }}" class="btn btn--maroon btn--sm">{{ sport }} (Men)</a>
+            <a href="{{ url_for('bidding', sport=sport|lower, gender='male') }}" class="btn btn--maroon btn--sm" style="font-weight:700;">{{ ico.icon('gavel', 14) }} {{ sport }} (Men)</a>
             {% if sport not in mens_only_sports %}
-              <a href="{{ url_for('bidding', sport=sport|lower, gender='female') }}" class="btn btn--ghost btn--sm">{{ sport }} (Women)</a>
+              <a href="{{ url_for('bidding', sport=sport|lower, gender='female') }}" class="btn btn--ghost btn--sm">{{ ico.icon('gavel', 14) }} {{ sport }} (Women)</a>
             {% endif %}
           {% endfor %}
         </div>
