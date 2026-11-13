@@ -10,11 +10,20 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..144,400;8..144,600;8..144,700;8..144,800&family=Source+Sans+3:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}">
+  {# Installable as the "GM League Admin" app (see scorecard/app_api.py). #}
+  <link rel="manifest" href="{{ url_for('scorecard.admin_app_manifest') }}">
+  <meta name="theme-color" content="#5b1f1f">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="GML Admin">
+  <link rel="apple-touch-icon" href="{{ url_for('scorecard.static', filename='app/admin-192.png') }}">
+  <script src="{{ url_for('scorecard.static', filename='app/admin-install.js') }}" defer></script>
+  <style>[data-admin-install-card][hidden], [data-admin-install][hidden] { display: none !important; }</style>
   {% block head %}{% endblock %}
 </head>
 <body>
   {% block body %}
   {% if session.get('admin_logged_in') %}
+  <div class="scrim" data-close-sidebar></div>
   <aside class="sidebar">
     <div class="sidebar__brand">
       <div class="sidebar__mark">🏆</div>
@@ -36,6 +45,9 @@
       </a>
       <a href="{{ url_for('scorecard.admin_scorers') }}" class="nav-item {{ 'is-active' if request.endpoint == 'scorecard.admin_scorers' else '' }}">
         <span>Scorers Access</span>
+      </a>
+      <a href="{{ url_for('scorecard.scorer_app') }}" class="nav-item">
+        <span>Scorer App (offline)</span>
       </a>
       <a href="{{ url_for('auction_squads') }}" class="nav-item {{ 'is-active' if request.endpoint == 'auction_squads' else '' }}">
         <span>Auction Squads</span>
@@ -70,6 +82,20 @@
   </aside>
 
   <main class="content">
+    {# Phones and tablets hide the sidebar; this bar is the way back to it. #}
+    <div class="mobile-bar">
+      <button type="button" class="icon-btn" data-toggle-sidebar aria-label="Open the admin menu">☰ Menu</button>
+      <a href="{{ url_for('admin_dashboard') }}" class="mobile-bar__home">{{ brand.short }} Admin</a>
+    </div>
+    <script>
+      (function () {
+        var body = document.body;
+        var toggle = document.querySelector('[data-toggle-sidebar]');
+        var scrim = document.querySelector('[data-close-sidebar]');
+        toggle.addEventListener('click', function () { body.classList.toggle('sidebar-open'); });
+        scrim.addEventListener('click', function () { body.classList.remove('sidebar-open'); });
+      })();
+    </script>
     {% with messages = get_flashed_messages(with_categories=true) %}
       {% if messages %}
         <div style="margin-bottom: 1.5rem;">

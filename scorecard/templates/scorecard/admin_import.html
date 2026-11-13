@@ -1,0 +1,50 @@
+{% extends "scorecard/_page.html" %}
+{% block title %}Import scorer backup{% endblock %}
+
+{% block content %}
+  <div class="sc-page sc-page--narrow">
+    <header class="sc-page__head">
+      <span class="sc-eyebrow">Scorecard admin</span>
+      <h1>Import a scorer’s backup</h1>
+      <p><a href="{{ url_for('scorecard.admin_matches') }}">← Fixtures</a> · <a href="{{ url_for('scorecard.admin_scorers') }}">Scorers &amp; uploads</a></p>
+    </header>
+
+    {% if summary %}
+      <section class="sc-card" style="border-left:4px solid #16a34a;">
+        <h2>Imported from {{ summary.who }}</h2>
+        <p>
+          {{ summary.counts.get('applied', 0) }} change(s) added ·
+          {{ summary.counts.get('duplicate', 0) + summary.counts.get('noop', 0) }} were already on the server (skipped) ·
+          {{ summary.counts.get('rejected', 0) }} refused
+        </p>
+        {% if summary.errors %}
+          <ul style="color:#991b1b;">{% for e in summary.errors %}<li>{{ e }}</li>{% endfor %}</ul>
+        {% endif %}
+        {% if summary.matches %}
+          <p style="margin-bottom:0.3rem;"><strong>Matches now:</strong></p>
+          <ul>
+            {% for m in summary.matches if m %}
+              <li>{{ m.sport }}: {{ m.team_a.name }} {{ m.score_a or 0 }}–{{ m.score_b or 0 }} {{ m.team_b.name }} ({{ m.status }})</li>
+            {% endfor %}
+          </ul>
+        {% endif %}
+      </section>
+    {% endif %}
+
+    <section class="sc-card">
+      <h2>When to use this</h2>
+      <p class="sc-hint">
+        A scorer’s phone never got internet (or the phone is going home with someone).
+        On that phone: open the Scorer App → <strong>☰ menu → Download backup file</strong>, then send the file
+        to a committee member (WhatsApp, Bluetooth, USB). Upload it here.
+        Anything that already reached the server is skipped automatically, so uploading twice is safe.
+      </p>
+      <form method="post" enctype="multipart/form-data" class="sc-form">
+        <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+        <label><span>Backup file (.json)</span>
+          <input type="file" name="backup" accept=".json,application/json" required></label>
+        <button class="btn btn--primary" type="submit">Import scores</button>
+      </form>
+    </section>
+  </div>
+{% endblock %}

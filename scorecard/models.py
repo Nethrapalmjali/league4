@@ -721,5 +721,26 @@ class ScSyncOp(db.Model):
     match_id = db.Column(db.Integer, index=True)
     kind = db.Column(db.String(12))
     result = db.Column(db.String(12))
+    # Who pushed it: "scorer:<id>:<name>", "admin" or "import". Drives the
+    # committee's "last upload from the ground" view.
+    actor = db.Column(db.String(100), index=True)
     device_at = db.Column(db.DateTime)
     applied_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+
+class ScErrorLog(db.Model):
+    """Server errors, kept so the committee can see what broke and when.
+
+    Written by the site's 500 handler. Errors that happen before the app runs
+    at all (the host restarting or asleep) never reach here — those show up in
+    the hosting dashboard instead.
+    """
+
+    __tablename__ = "sc_error_log"
+
+    id = db.Column(db.Integer, primary_key=True)
+    at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+    method = db.Column(db.String(8))
+    path = db.Column(db.String(200))
+    error = db.Column(db.String(300))
+    detail = db.Column(db.Text)

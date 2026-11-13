@@ -8,6 +8,13 @@
   <meta name="robots" content="noindex">
   <link rel="icon" href="{{ url_for('static', filename='logos/gmulogo1.png') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/league.css') }}">
+  <link rel="manifest" href="{{ url_for('scorecard.admin_app_manifest') }}">
+  <meta name="theme-color" content="#5b1f1f">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="GML Admin">
+  <link rel="apple-touch-icon" href="{{ url_for('scorecard.static', filename='app/admin-192.png') }}">
+  <script src="{{ url_for('scorecard.static', filename='app/admin-install.js') }}" defer></script>
+  <style>[data-admin-install-card][hidden], [data-admin-install][hidden] { display: none !important; }</style>
   <style>
     body {
       display: grid;
@@ -70,25 +77,73 @@
         {% endif %}
       {% endwith %}
 
-      <form method="POST" action="{{ url_for('admin_login') }}">
+      <form method="POST" action="{{ url_for('admin_login') }}" data-login-form>
         <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
         <input type="hidden" name="next" value="{{ request.args.get('next', '') }}">
 
         <div class="field" style="margin-bottom:1rem;">
           <label for="username">Username</label>
-          <input type="text" id="username" name="username" required autocomplete="username" autofocus>
+          {# Phone keyboards otherwise capitalise the first letter. #}
+          <input type="text" id="username" name="username" required autocomplete="username" autofocus
+                 autocapitalize="none" autocorrect="off" spellcheck="false">
         </div>
 
         <div class="field" style="margin-bottom:1.5rem;">
           <label for="password">Password</label>
-          <input type="password" id="password" name="password" required autocomplete="current-password">
+          <div style="position:relative;">
+            <input type="password" id="password" name="password" required autocomplete="current-password"
+                   autocapitalize="none" autocorrect="off" spellcheck="false" style="padding-right:4.6rem;">
+            <button type="button" data-toggle-password
+                    style="position:absolute; right:0.4rem; top:50%; transform:translateY(-50%); border:0; background:transparent; color:var(--maroon); font-weight:800; font-size:0.85rem; padding:0.5rem; cursor:pointer;">Show</button>
+          </div>
         </div>
 
-        <button type="submit" class="btn btn--primary btn--block">Sign in</button>
+        <button type="submit" class="btn btn--primary btn--block" data-login-submit>Sign in</button>
       </form>
+      <script>
+        (function () {
+          var form = document.querySelector('[data-login-form]');
+          var btn = document.querySelector('[data-login-submit]');
+          var pw = document.getElementById('password');
+          var toggle = document.querySelector('[data-toggle-password]');
+          toggle.addEventListener('click', function () {
+            var show = pw.type === 'password';
+            pw.type = show ? 'text' : 'password';
+            toggle.textContent = show ? 'Hide' : 'Show';
+          });
+          // One tap is enough: a second tap while the dashboard loads used to
+          // send the form twice and end on "Your session expired".
+          form.addEventListener('submit', function (e) {
+            if (form.dataset.sent) { e.preventDefault(); return; }
+            form.dataset.sent = '1';
+            btn.disabled = true;
+            btn.textContent = 'Signing in… (the dashboard can take a few seconds)';
+          });
+          // Coming back to this page with the browser's Back button: allow a new try.
+          window.addEventListener('pageshow', function () {
+            delete form.dataset.sent;
+            btn.disabled = false;
+            btn.textContent = 'Sign in';
+          });
+        })();
+      </script>
+
+      <div data-admin-install-card hidden
+           style="margin-top:1.4rem; padding:0.85rem; border-radius:12px; background:#fff7e6; border:1px solid #f1d9a6;">
+        <div style="display:flex; gap:0.7rem; align-items:center; flex-wrap:wrap;">
+          <img src="{{ url_for('scorecard.static', filename='app/admin-192.png') }}" alt="" width="42" height="42" style="border-radius:10px;">
+          <div style="flex:1; min-width:180px; font-size:0.85rem; line-height:1.35;">
+            <strong style="display:block; color:#5b1f1f;">Install the GML Admin app</strong>
+            The whole admin panel on your home screen or desktop.
+            <span data-admin-install-hint style="display:block; color:#7a5b1a; margin-top:0.2rem;"></span>
+          </div>
+          <button type="button" class="btn btn--primary" data-admin-install hidden>Install</button>
+        </div>
+      </div>
 
       <p class="center" style="margin-top:1.4rem;">
-        <a href="{{ url_for('index') }}" class="back-link">← Back to the league</a>
+        <a href="{{ url_for('index') }}" class="back-link">← Back to the league</a> ·
+        <a href="{{ url_for('scorecard.scorer_app') }}" class="back-link">Scorer App</a>
       </p>
     </div>
   </div>

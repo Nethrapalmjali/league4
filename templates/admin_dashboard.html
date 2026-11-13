@@ -174,6 +174,12 @@
     <a class="nav-item icon-text" href="{{ url_for('scorecard.scorer_app') }}" target="_blank">
       {{ ico.icon('download', 16) }} Scorer App (offline)
     </a>
+    <a class="nav-item icon-text" href="{{ url_for('scorecard.admin_import_backup') }}">
+      {{ ico.icon('download', 16) }} Import scorer backup
+    </a>
+    <a class="nav-item icon-text" href="{{ url_for('scorecard.admin_errors') }}">
+      {{ ico.icon('table', 16) }} Error log
+    </a>
     <a class="nav-item icon-text" href="{{ url_for('scorecard.tournament_report') }}" target="_blank">
       {{ ico.icon('table', 16) }} Tournament report
     </a>
@@ -287,6 +293,27 @@
 
   <!-- ============================== OVERVIEW ============================== -->
   <section id="overview" class="section is-active" style="padding-top:0;">
+    <!-- Install the admin panel as an app (hidden once running inside it) -->
+    <div data-admin-install-card hidden
+         style="margin-bottom:1rem; border-radius:14px; padding:0.95rem 1.1rem; background:linear-gradient(135deg,#5b1f1f,#7a2a2a); color:#fff;">
+      <div style="display:flex; gap:0.9rem; align-items:center; flex-wrap:wrap;">
+        <img src="{{ url_for('scorecard.static', filename='app/admin-192.png') }}" alt="" width="52" height="52" style="border-radius:12px; flex-shrink:0;">
+        <div style="flex:1; min-width:220px;">
+          <strong style="display:block; font-size:1.02rem;">📲 Install the GML Admin app</strong>
+          <span style="font-size:0.86rem; opacity:0.9;">
+            The whole community admin panel (auction, players, teams, fixtures, scoring, reports) as an app on this
+            phone or computer, plus the Scorer App for scoring without internet.
+          </span>
+          <span data-admin-install-hint style="display:block; font-size:0.8rem; color:#f3d48c; margin-top:0.3rem;"></span>
+        </div>
+        <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
+          <button type="button" class="btn btn--gold" data-admin-install hidden style="font-weight:800;">Install admin app</button>
+          <a href="{{ url_for('scorecard.scorer_app') }}" class="btn btn--ghost btn--sm"
+             style="background:rgba(255,255,255,0.12); color:#fff; border-color:rgba(255,255,255,0.3);">Open Scorer App</a>
+        </div>
+      </div>
+    </div>
+
     <!-- Championship Command Hero -->
     <div class="hero-command">
       <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:1rem; position:relative; z-index:1;">

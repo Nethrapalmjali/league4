@@ -11,6 +11,8 @@ hardcoded here.
 from __future__ import annotations
 
 from collections import Counter
+import hashlib
+import hmac
 import os
 import re
 import secrets
@@ -21,7 +23,7 @@ import uuid
 from datetime import datetime, timedelta
 from functools import wraps
 from io import BytesIO
-from urllib.parse import quote
+from urllib.parse import quote, urlparse
 
 # xlsxwriter is imported lazily inside excel_response() to keep cold start fast
 from dotenv import load_dotenv
@@ -174,7 +176,10 @@ app.config.update(
     SESSION_COOKIE_HTTPONLY=True,
     SESSION_COOKIE_SAMESITE="Lax",
     SESSION_COOKIE_SECURE=env_bool("SESSION_COOKIE_SECURE", False),
-    PERMANENT_SESSION_LIFETIME=timedelta(hours=8),
+    # How long a committee login lasts without use (each visit extends it).
+    # Safe to keep long: changing the admin password signs every device out
+    # (see _expire_admin_session_on_password_change).
+    PERMANENT_SESSION_LIFETIME=timedelta(days=env_int("ADMIN_SESSION_DAYS", 7)),
     DEBUG=env_bool("FLASK_DEBUG", False),
     PROPAGATE_EXCEPTIONS=False,
 )
@@ -720,6 +725,33 @@ def csrf_token():
     return token
 
 
+def _posted_from_this_site():
+    """False only when the browser says the form came from another website."""
+    source = request.headers.get("Origin") or request.headers.get("Referer") or ""
+    if not source or source == "null":
+        return True  # some privacy settings send neither; the password still guards login
+    try:
+        return urlparse(source).netloc.lower() == (request.host or "").lower()
+    except ValueError:
+        return False
+
+
+def admin_session_fingerprint():
+    """Changes whenever the admin username or password changes."""
+    key = app.secret_key.encode() if isinstance(app.secret_key, str) else app.secret_key
+    material = f"web|{ADMIN_USERNAME}|{ADMIN_PASSWORD_HASH or ADMIN_PASSWORD}".encode()
+    return hmac.new(key, material, hashlib.sha256).hexdigest()[:16]
+
+
+@app.before_request
+def _expire_admin_session_on_password_change():
+    # A committee login made under an old admin password stops working the
+    # moment the password changes — on every phone, laptop and app at once.
+    if session.get("admin_logged_in") and session.get("admin_pf") != admin_session_fingerprint():
+        session.pop("admin_logged_in", None)
+        session.pop("admin_pf", None)
+
+
 @app.before_request
 def protect_against_csrf():
     if request.method not in {"POST", "PUT", "PATCH", "DELETE"}:
@@ -728,6 +760,16 @@ def protect_against_csrf():
     # so a cross-site request cannot ride on it — CSRF does not apply there.
     if request.path.startswith("/scores/api/app/"):
         return None
+    # Signing in is protected by the password itself. The session token only
+    # ever got in the way here: a second tap on "Sign in" while the dashboard
+    # loaded, a login page left open in another tab, or a phone that slept
+    # with the page open all showed "Your session expired" for a correct
+    # password. A same-site check keeps other websites from posting the form.
+    if request.path == "/admin/login":
+        if _posted_from_this_site():
+            return None
+        flash("Please sign in from this page.", "error")
+        return redirect(url_for("admin_login"))
     sent = request.form.get("_csrf_token") or request.headers.get("X-CSRF-Token", "")
     expected = session.get("_csrf_token", "")
 
@@ -1696,11 +1738,38 @@ def auction_squads():
 def admin_password_ok(candidate):
     if ADMIN_PASSWORD_HASH:
         return check_password_hash(ADMIN_PASSWORD_HASH, candidate)
-    return secrets.compare_digest(candidate, ADMIN_PASSWORD)
+    # Compared as bytes: compare_digest raises on non-ASCII text, which turned
+    # a stray character from a phone keyboard into a server error.
+    return secrets.compare_digest((candidate or "").encode(), (ADMIN_PASSWORD or "").encode())
+
+
+def admin_username_ok(candidate):
+    # Phone keyboards capitalise the first letter ("Nandu"); a username is not
+    # a secret, so letter case and stray spaces should not decide a login.
+    return secrets.compare_digest(
+        (candidate or "").strip().lower().encode(), (ADMIN_USERNAME or "").strip().lower().encode()
+    )
+
+
+def _admin_login_target():
+    target = (request.args.get("next") or request.form.get("next") or "").strip()
+    if target and not target.startswith("//") and (
+        target.startswith("/admin")
+        or target.startswith("/bidding")
+        or target.startswith("/scores/admin")
+    ):
+        return target
+    return url_for("admin_dashboard")
 
 
 @app.route("/admin/login", methods=["GET", "POST"])
 def admin_login():
+    # Already signed in — a second tap on "Sign in" while the dashboard was
+    # loading, or the admin app reopening on this page: go straight in rather
+    # than showing the form (and a confusing "session expired") again.
+    if session.get("admin_logged_in"):
+        return redirect(_admin_login_target())
+
     if request.method == "POST":
         attempts = session.get("_login_attempts", 0)
         if attempts >= 8:
@@ -1709,15 +1778,14 @@ def admin_login():
 
         username = clean(request.form.get("username"), 60)
         password = request.form.get("password") or ""
-        if secrets.compare_digest(username, ADMIN_USERNAME) and admin_password_ok(password):
+        if admin_username_ok(username) and admin_password_ok(password):
+            target = _admin_login_target()
             session.clear()
             session.permanent = True
             session["admin_logged_in"] = True
+            session["admin_pf"] = admin_session_fingerprint()
             flash("Welcome back. You're logged in.", "success")
-            target = request.args.get("next") or request.form.get("next") or ""
-            if target and (target.startswith("/admin") or target.startswith("/bidding")):
-                return redirect(target)
-            return redirect(url_for("admin_dashboard"))
+            return redirect(target)
 
         session["_login_attempts"] = attempts + 1
         flash("Invalid username or password.", "error")
@@ -1727,6 +1795,7 @@ def admin_login():
 @app.route("/admin/logout")
 def admin_logout():
     session.pop("admin_logged_in", None)
+    session.pop("admin_pf", None)
     flash("You have been logged out.", "success")
     return redirect(url_for("admin_login"))
 
@@ -2448,6 +2517,11 @@ def server_error(error):
     app.logger.exception("Unhandled error: %s", error)
     try:
         db.session.rollback()
+    except Exception:
+        pass
+    try:  # keep a copy the committee can read at /scores/admin/errors
+        from scorecard.errorlog import record as record_error
+        record_error(error)
     except Exception:
         pass
     return render_template("error.html", code=500, title="Something broke",

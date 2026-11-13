@@ -192,5 +192,10 @@
     }, true);
   </script>
   {% block scripts %}{% endblock %}
+  {% if session.get('admin_logged_in') %}
+    {# Committee pages under /scores/admin use this shell: keep their links
+       inside the GML Admin app when it is installed. #}
+    <script src="{{ url_for('scorecard.static', filename='app/admin-install.js') }}" defer></script>
+  {% endif %}
 </body>
 </html>

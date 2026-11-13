@@ -24,8 +24,16 @@
           saved on the device and uploads by itself when the signal returns. Add the day’s fixtures here first.
         </div>
       </div>
-      <a class="btn btn--sm" href="{{ url_for('scorecard.scorer_app') }}" target="_blank"
-         style="background:#e3b559; color:#5b1f1f; font-weight:800;">Open &amp; install app</a>
+      <div style="display:flex; gap:0.4rem; flex-wrap:wrap;">
+        <a class="btn btn--sm" href="{{ url_for('scorecard.scorer_app') }}" target="_blank"
+           style="background:#e3b559; color:#5b1f1f; font-weight:800;">Open &amp; install app</a>
+        <a class="btn btn--sm" href="{{ url_for('scorecard.admin_scorers') }}"
+           style="background:rgba(255,255,255,0.15); color:#fff;">Upload status</a>
+        <a class="btn btn--sm" href="{{ url_for('scorecard.admin_import_backup') }}"
+           style="background:rgba(255,255,255,0.15); color:#fff;">Import backup</a>
+        <a class="btn btn--sm" href="{{ url_for('scorecard.admin_errors') }}"
+           style="background:rgba(255,255,255,0.15); color:#fff;">Error log</a>
+      </div>
     </div>
 
     <!-- Sport & Category filter bar -->

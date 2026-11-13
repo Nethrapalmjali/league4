@@ -63,6 +63,8 @@
     <span class="sc-row__tail">
       {% if match.status == 'live' %}
         <span class="sc-live">Live{% if match.period %} · {{ match.period }}{% endif %}</span>
+        {% set ago = match.updated_at|sc_minutes_ago %}
+        {% if ago is not none and ago >= 10 %}<span class="sc-when">Updated {{ ago }} min ago</span>{% endif %}
       {% elif match.starts_at %}
         <span class="sc-when">{{ match.starts_at.strftime('%d %b, %H:%M') }}</span>
       {% endif %}

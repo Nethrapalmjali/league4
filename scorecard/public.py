@@ -1,5 +1,7 @@
 """Public scorecard pages and the JSON the live view polls."""
 
+from datetime import datetime
+
 from flask import jsonify, render_template
 
 from . import scorecard_bp
@@ -31,7 +33,16 @@ def _match_brief(match):
         "starts_at": match.starts_at.isoformat() if match.starts_at else None,
         "team_a": {"name": match.team_a.name, "tag": match.team_a.tag, "score": match.score_a or 0},
         "team_b": {"name": match.team_b.name, "tag": match.team_b.tag, "score": match.score_b or 0},
+        "updated_at": match.updated_at.isoformat() + "Z" if match.updated_at else None,
     }
+
+
+@scorecard_bp.app_template_filter("sc_minutes_ago")
+def minutes_ago(when):
+    """Whole minutes since a stored (UTC) time, or None."""
+    if not when:
+        return None
+    return int((datetime.utcnow() - when).total_seconds() // 60)
 
 
 def _event_brief(event, match):

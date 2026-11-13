@@ -10,7 +10,7 @@ table, fixture list, or scorer roster.
 
 from datetime import datetime
 
-from flask import flash, redirect, render_template, request, url_for
+from flask import flash, redirect, render_template, request, session, url_for
 from werkzeug.security import generate_password_hash
 
 from . import scorecard_bp
@@ -488,26 +488,49 @@ def admin_scorers():
         gender = request.form.get("gender") or "Men"
         if not name or len(passcode) < 4 or gender not in GENDERS:
             flash("A scorer needs a name, a passcode of at least 4 characters, and a valid gender.", "error")
-        elif ScScorer.query.filter(
-            db.func.lower(ScScorer.name) == name.lower(),
-            ScScorer.gender == gender,
-        ).first():
-            flash(f"There is already a {gender} scorer called {name}.", "error")
+        elif ScScorer.query.filter(db.func.lower(ScScorer.name) == name.lower()).first():
+            # Sign-in looks a scorer up by name alone, so a name must be unique
+            # across both categories or one of the two could never sign in.
+            flash(f"There is already a scorer called {name}. Use a different name (e.g. {name} W).", "error")
         else:
             db.session.add(ScScorer(name=name, passcode_hash=generate_password_hash(passcode), gender=gender))
             db.session.commit()
             flash(f"{name} ({gender}) can now sign in and score.", "success")
+            # Shown once on the next page so the committee can send it on;
+            # the passcode cannot be read back after this.
+            session["sc_new_scorer"] = {"name": name, "passcode": passcode}
         return redirect(url_for("scorecard.admin_scorers", gender=filter_gender))
 
     scorers = ScScorer.query.filter_by(
         gender=filter_gender
     ).order_by(ScScorer.name).all()
 
+    from .app_api import upload_status
+    try:
+        uploads = upload_status()
+    except Exception:  # noqa: BLE001 — a status widget must not break the page
+        db.session.rollback()
+        uploads = {}
+
+    new_scorer = session.pop("sc_new_scorer", None)
+    share_text = None
+    if new_scorer:
+        share_text = (
+            f"GM League scoring login\n"
+            f"Name: {new_scorer['name']}\nPasscode: {new_scorer['passcode']}\n\n"
+            f"1. Open {url_for('scorecard.scorer_app', _external=True)} with internet\n"
+            f"2. Tap Install (iPhone: Share → Add to Home Screen)\n"
+            f"3. Sign in once. After that it works without internet."
+        )
+
     return render_template(
         "scorecard/admin_scorers.html",
         scorers=scorers,
         genders=GENDERS,
         filter_gender=filter_gender,
+        uploads=uploads,
+        new_scorer=new_scorer,
+        share_text=share_text,
     )
 
 

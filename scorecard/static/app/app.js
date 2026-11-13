@@ -46,12 +46,14 @@
     outbox: load("outbox", []),          // queued changes, oldest first
     timers: load("timers", {}),          // id -> { running, base, paused }
     meta: load("meta", {}),              // { lastBundleAt, lastSyncAt }
+    setup: load("setup", null),          // admins: teams, squads, rules — for new matches offline
     net: "unknown",                      // unknown | online | offline
     syncing: false,
     authProblem: null,
     rejected: [],
     view: { name: "list", matchId: null },
-    ui: { clock: {}, player: {}, loginRole: "scorer", loginError: "", busy: false, menu: false },
+    ui: { clock: {}, player: {}, loginRole: "scorer", loginError: "", busy: false, menu: false, sport: "all", draft: {} },
+    wakeLock: null,
     installPrompt: null,
     backoff: 0,
     syncTimer: null
@@ -298,6 +300,21 @@
     });
   }
 
+  function renameMatch(oldId, newId) {
+    if (String(oldId) === String(newId)) return;
+    var m = S.matches[oldId];
+    if (m) { delete S.matches[oldId]; m.id = newId; S.matches[newId] = m; }
+    S.outbox.forEach(function (op) { if (op.match_id === oldId) op.match_id = newId; });
+    [S.timers, S.ui.player, S.ui.clock].forEach(function (map) {
+      if (map[oldId] !== undefined) { map[newId] = map[oldId]; delete map[oldId]; }
+    });
+    saveMatches(); saveOutbox(); saveTimers();
+    if (S.view.name === "match" && S.view.matchId === oldId) {
+      S.view.matchId = newId;
+      history.replaceState(null, "", "#/match/" + newId);
+    }
+  }
+
   // Take the server's copy of a match, unless this device still has changes
   // for it that the server has not seen — then ours is the more complete one.
   function mergeServerMatch(sm) {
@@ -309,10 +326,12 @@
     return api("GET", "/bundle").then(function (data) {
       var seen = {};
       (data.matches || []).forEach(function (sm) { seen[sm.id] = true; mergeServerMatch(sm); });
-      Object.keys(S.matches).forEach(function (id) {
-        if (!seen[id] && pendingFor(Number(id)) === 0) delete S.matches[id];
+      Object.keys(S.matches).forEach(function (key) {
+        if (!seen[key] && pendingFor(S.matches[key].id) === 0) delete S.matches[key];
       });
       if (data.me && S.auth) { S.auth.me = data.me; store("auth", S.auth); }
+      S.setup = data.setup || null;
+      store("setup", S.setup);
       S.meta.lastBundleAt = Date.now();
       saveMatches(); saveMeta();
     });
@@ -341,6 +360,16 @@
       var batch = S.outbox.slice(0, BATCH);
       work = api("POST", "/sync", { ops: batch }).then(function (data) {
         var done = {};
+        // A match created on this device gets its real id from the server:
+        // rename it everywhere before anything else looks it up.
+        var byId = {};
+        batch.forEach(function (op) { byId[op.id] = op; });
+        (data.results || []).forEach(function (r) {
+          var sent = byId[r.id];
+          if (sent && sent.type === "create" && r.match_id && (r.status === "applied" || r.status === "duplicate")) {
+            renameMatch(sent.match_id, r.match_id);
+          }
+        });
         (data.results || []).forEach(function (r) {
           if (r.status === "retry") return;
           done[r.id] = true;
@@ -382,12 +411,98 @@
   function go(hash) { if (location.hash !== hash) location.hash = hash; else route(); }
   function route() {
     var h = location.hash || "";
-    var mm = h.match(/^#\/match\/(\d+)/);
+    var mm = h.match(/^#\/match\/([\w:-]+)/);
     S.ui.menu = false;
-    if (mm && S.matches[mm[1]]) S.view = { name: "match", matchId: Number(mm[1]) };
+    if (mm && S.matches[mm[1]]) S.view = { name: "match", matchId: /^\d+$/.test(mm[1]) ? Number(mm[1]) : mm[1] };
+    else if (h === "#/new" && canCreate()) S.view = { name: "new", matchId: null };
     else S.view = { name: "list", matchId: null };
     render();
-    window.scrollTo(0, 0);
+    updateWakeLock();
+    try { window.scrollTo(0, 0); } catch (e) {}
+  }
+
+  /* ----------------------------------------------- keep the screen on -- */
+  // A phone that dims and locks mid-rally costs a point; hold the screen on
+  // while a match is open, let it sleep everywhere else.
+  function updateWakeLock() {
+    var want = S.view.name === "match" && !document.hidden;
+    if (!("wakeLock" in navigator)) return;
+    if (want && !S.wakeLock) {
+      navigator.wakeLock.request("screen").then(function (lock) {
+        S.wakeLock = lock;
+        lock.addEventListener("release", function () { S.wakeLock = null; });
+      }).catch(function () {});
+    } else if (!want && S.wakeLock) {
+      S.wakeLock.release().catch(function () {});
+      S.wakeLock = null;
+    }
+  }
+
+  /* ------------------------------------------- new match (admin only) -- */
+  function canCreate() {
+    return !!(S.auth && S.auth.me && S.auth.me.role === "admin" && S.setup && S.setup.teams);
+  }
+
+  function createLocalMatch(d) {
+    var rules = S.setup.rules[d.sport] || { periods: ["P1", "P2"], actions: [{ key: "point", label: "Point", points: 1 }] };
+    var team = function (id) {
+      for (var i = 0; i < S.setup.teams.length; i++) if (String(S.setup.teams[i].id) === String(id)) return S.setup.teams[i];
+      return null;
+    };
+    var ta = team(d.team_a_id), tb = team(d.team_b_id);
+    var opId = uid();
+    var key = "n:" + opId;
+    S.matches[key] = {
+      id: key, sport: d.sport, gender: d.gender, stage: d.stage || "League", venue: d.venue || null,
+      starts_at: null, status: "scheduled", period: null,
+      periods: rules.periods, actions: rules.actions,
+      team_a: { id: ta.id, name: ta.name, tag: ta.tag }, team_b: { id: tb.id, name: tb.name, tag: tb.tag },
+      score_a: 0, score_b: 0, can_edit_final: true,
+      players: { a: S.setup.squads[String(ta.id)] || [], b: S.setup.squads[String(tb.id)] || [] },
+      events: [], created_here: true
+    };
+    S.outbox.push({
+      id: opId, type: "create", match_id: key, at: new Date().toISOString(),
+      payload: { sport: d.sport, gender: d.gender, stage: d.stage, venue: d.venue,
+                 team_a_id: ta.id, team_b_id: tb.id }
+    });
+    saveOutbox(); saveMatches();
+    scheduleSync(150);
+    return key;
+  }
+
+  function renderNew() {
+    var d = S.ui.draft;
+    var su = S.setup;
+    var sports = [];
+    su.teams.forEach(function (t) { if (sports.indexOf(t.sport) === -1) sports.push(t.sport); });
+    d.sport = d.sport || sports[0];
+    d.gender = d.gender || "Men";
+    var teams = su.teams.filter(function (t) { return t.sport === d.sport && t.gender === d.gender; });
+    function opts(list, chosen, label) {
+      return '<option value="">' + label + '</option>' + list.map(function (t) {
+        return '<option value="' + t.id + '"' + (String(t.id) === String(chosen) ? " selected" : "") + '>' + esc(t.name) + '</option>';
+      }).join("");
+    }
+    return '<div class="wrap"><div class="card"><h1>New match</h1>' +
+      '<p class="muted small">Works without internet. The match is created on the website at the next upload.</p>' +
+      '<form class="form" data-form="new">' +
+      '<label>Sport<select name="sport" data-draft="sport">' + sports.map(function (s) {
+        return '<option' + (s === d.sport ? " selected" : "") + '>' + esc(s) + '</option>';
+      }).join("") + '</select></label>' +
+      '<div class="seg">' + ["Men", "Women"].map(function (g) {
+        return '<button type="button" data-act="draft-gender" data-gender="' + g + '" class="' + (d.gender === g ? "is-on" : "") + '">' + g + '</button>';
+      }).join("") + '</div>' +
+      (teams.length < 2 ? '<div class="notice notice--warn">Fewer than two ' + esc(d.sport) + ' ' + esc(d.gender) + ' teams are on this device. Refresh with internet if teams were just added.</div>' : "") +
+      '<label>Team A<select name="team_a_id" required data-draft="team_a_id">' + opts(teams, d.team_a_id, "— Pick team A —") + '</select></label>' +
+      '<label>Team B<select name="team_b_id" required data-draft="team_b_id">' + opts(teams, d.team_b_id, "— Pick team B —") + '</select></label>' +
+      '<label>Stage<select name="stage" data-draft="stage">' + (su.stages || ["League"]).map(function (s) {
+        return '<option' + (s === (d.stage || "League") ? " selected" : "") + '>' + esc(s) + '</option>';
+      }).join("") + '</select></label>' +
+      '<label>Venue (optional)<input name="venue" data-draft="venue" value="' + esc(d.venue || "") + '" placeholder="e.g. Court 2"></label>' +
+      '<button class="btn btn--gold btn--block" type="submit">Create &amp; start scoring</button>' +
+      '<button class="btn btn--ghost btn--block" type="button" data-act="back">Cancel</button>' +
+      '</form></div></div>';
   }
 
   function netPill() {
@@ -396,17 +511,22 @@
       : S.net === "offline" ? '<span class="pill pill--offline"><span class="dot"></span>Offline</span>'
       : '<span class="pill"><span class="dot"></span>Checking…</span>';
     var sync = pend
-      ? '<button class="pill pill--pending" data-act="sync">' + (S.syncing ? "Syncing… " : "⏳ ") + pend + " to upload</button>"
-      : '<span class="pill pill--synced">✓ All saved</span>';
+      ? '<button class="pill pill--pending" data-act="sync" title="Changes waiting to upload — tap to try now">' + (S.syncing ? "↻ " : "⏳ ") + pend + '<span class="wide-only"> to upload</span></button>'
+      : '<span class="pill pill--synced">✓<span class="wide-only"> All</span> saved</span>';
     return net + sync;
   }
 
   function renderTop() {
     var el = document.querySelector(".top");
     if (!el) return;
-    var back = S.view.name === "match" ? '<button class="top__back" data-act="back">← Matches</button>' : "";
-    el.innerHTML = back +
-      '<span class="top__brand"><img src="/scores/static/app/icon-192.png" alt="">GML Scorer</span>' +
+    var back = S.view.name !== "list" && S.auth ? '<button class="top__back" data-act="back" aria-label="Back to matches">←<span class="wide-only"> Matches</span></button>' : "";
+    var m = S.view.name === "match" ? S.matches[S.view.matchId] : null;
+    // While scoring, the brand gives way to a score that stays in view however
+    // far the scorer has scrolled down the buttons.
+    var brand = m
+      ? '<span class="top__brand top__mini">' + esc(m.team_a.tag) + ' <b>' + m.score_a + '–' + m.score_b + '</b> ' + esc(m.team_b.tag) + '</span>'
+      : '<span class="top__brand"><img src="/scores/static/app/icon-192.png" alt="">GML Scorer</span>';
+    el.innerHTML = back + brand +
       (S.auth ? netPill() + '<button class="pill" data-act="menu" aria-label="Menu">☰</button>' : "");
   }
 
@@ -449,6 +569,8 @@
       '<p class="muted small">' + (S.auth.me.role === "admin" ? "Committee admin" : "Scorer") +
       ' · last upload: ' + esc(last) + ' · ' + S.outbox.length + ' waiting</p><div class="menu">' +
       '<button class="btn btn--gold" data-act="refresh">↻ Upload now &amp; refresh matches</button>' +
+      '<button class="btn btn--ghost" data-act="admin-site">🏛 Community admin website' +
+      (S.auth.me.role === "admin" ? "" : " (admin password needed)") + '</button>' +
       '<button class="btn btn--ghost" data-act="backup">⬇ Download backup file</button>' +
       '<button class="btn btn--ghost" data-act="logout">Sign out</button>' +
       '</div></div>';
@@ -481,9 +603,14 @@
   }
 
   function renderList() {
-    var ids = Object.keys(S.matches).map(Number);
+    var all = Object.keys(S.matches).map(function (k) { return S.matches[k]; });
+    var sports = [];
+    all.forEach(function (m) { if (sports.indexOf(m.sport) === -1) sports.push(m.sport); });
+    if (S.ui.sport !== "all" && sports.indexOf(S.ui.sport) === -1) S.ui.sport = "all";
+    var shown = all.filter(function (m) { return S.ui.sport === "all" || m.sport === S.ui.sport; });
+    var ids = shown.map(function (m) { return m.id; });
     var groups = { live: [], scheduled: [], final: [] };
-    ids.forEach(function (id) { var m = S.matches[id]; (groups[m.status] || groups.scheduled).push(m); });
+    shown.forEach(function (m) { (groups[m.status] || groups.scheduled).push(m); });
     function row(m) {
       var p = pendingFor(m.id);
       return '<button class="mrow" data-act="open" data-id="' + m.id + '">' +
@@ -493,6 +620,20 @@
         '<span class="mrow__score">' + m.score_a + "–" + m.score_b + '</span></button>';
     }
     var html = '<div class="wrap">' + installCard() + noticesHtml() + renderMenu();
+    if (S.auth.me.role === "admin") {
+      html += '<div class="card admin-link"><div class="admin-link__text"><strong>🏛 Community admin website</strong>' +
+        '<span>Auction, players, teams, fixtures, scorers and reports — the full admin panel. Needs internet.</span></div>' +
+        '<button class="btn" data-act="admin-site">Open</button></div>';
+    }
+    if (canCreate()) {
+      html += '<button class="btn btn--gold btn--block" data-act="new" style="margin-bottom:0.8rem;">＋ New match (works offline)</button>';
+    }
+    if (sports.length > 1) {
+      html += '<div class="chips">' + ["all"].concat(sports).map(function (s) {
+        return '<button class="chip' + (S.ui.sport === s ? " is-on" : "") + '" data-act="sport" data-sport="' + esc(s) + '">' +
+          (s === "all" ? "All" : (SPORT_ICON[s] || "") + " " + esc(s)) + '</button>';
+      }).join("") + '</div>';
+    }
     if (!ids.length) {
       html += '<div class="card empty"><p><strong>No matches on this device yet.</strong></p>' +
         '<p>Matches assigned to you download automatically when there is internet. Ask the committee to add today’s fixtures, then tap refresh.</p>' +
@@ -535,17 +676,20 @@
     if (!writable) {
       html += '<div class="notice notice--warn">This match is finished. Ask the committee to allow edits if something needs correcting.</div>';
     } else {
-      // Clock & period controls
+      // Clock & period controls. Badminton has no clock: the game a rally
+      // belongs to is worked out automatically, so there is nothing to show.
       var override = S.ui.clock[m.id];
-      html += '<div class="ctl">';
-      if (usesTimer(m)) {
-        var t = timerOf(m.id);
-        html += '<span class="ctl__timer" data-timer>' + fmtTimer(elapsedSec(m.id)) + '</span>' +
-          '<button class="btn btn--sm ' + (t.running ? "btn--ghost" : "") + '" data-act="timer">' + (t.running ? "⏸ Pause" : (timerStarted(m.id) ? "▶ Resume" : "▶ Start clock")) + '</button>' +
-          '<button class="btn btn--sm btn--ghost" data-act="timer-set">Set min</button>';
+      if (m.sport !== "Badminton") {
+        html += '<div class="ctl">';
+        if (usesTimer(m)) {
+          var t = timerOf(m.id);
+          html += '<span class="ctl__timer" data-timer>' + fmtTimer(elapsedSec(m.id)) + '</span>' +
+            '<button class="btn btn--sm ' + (t.running ? "btn--ghost" : "") + '" data-act="timer">' + (t.running ? "⏸ Pause" : (timerStarted(m.id) ? "▶ Resume" : "▶ Start clock")) + '</button>' +
+            '<button class="btn btn--sm btn--ghost" data-act="timer-set">Set min</button>';
+        }
+        html += '<span class="ctl__grow"></span><label class="ctl__clock">Stamp <input data-clock maxlength="8" value="' + esc(override !== undefined ? override : autoClock(m)) + '" placeholder="auto"></label>';
+        html += '</div>';
       }
-      html += '<span class="ctl__grow"></span><label class="ctl__clock">Stamp <input data-clock maxlength="8" value="' + esc(override !== undefined ? override : autoClock(m)) + '" placeholder="auto"></label>';
-      html += '</div>';
 
       if (m.sport !== "Badminton" && m.periods.length > 1) {
         var idx = Math.max(0, m.periods.indexOf(m.period));
@@ -557,7 +701,11 @@
           '</div>';
       }
 
-      html += '<div class="pads">';
+      if (bs && bs.winner) {
+        html += '<div class="notice notice--ok">🏆 Match won ' + bs.games_a + '–' + bs.games_b + '. Tap <strong>End match</strong>. ' +
+          'If the last point was a mistake, tap <strong>Undo last</strong> first.</div>';
+      }
+      html += '<div class="pads"' + (bs && bs.winner ? ' hidden' : '') + '>';
       ["a", "b"].forEach(function (side) {
         var team = side === "a" ? m.team_a : m.team_b;
         var players = (m.players && m.players[side]) || [];
@@ -605,6 +753,7 @@
     var body;
     if (!S.auth) body = renderLogin();
     else if (S.view.name === "match" && S.matches[S.view.matchId]) body = renderMatch(S.matches[S.view.matchId]);
+    else if (S.view.name === "new" && canCreate()) body = renderNew();
     else body = renderList();
     root.innerHTML = '<header class="top"></header>' + body;
     renderTop();
@@ -620,22 +769,46 @@
     if (act === "back") return go("#/");
     if (act === "open") return go("#/match/" + btn.dataset.id);
     if (act === "menu") { S.ui.menu = !S.ui.menu; return render(); }
+    if (act === "new") { S.ui.draft = {}; return go("#/new"); }
+    if (act === "sport") { S.ui.sport = btn.dataset.sport; return render(); }
+    if (act === "draft-gender") {
+      S.ui.draft.gender = btn.dataset.gender;
+      S.ui.draft.team_a_id = S.ui.draft.team_b_id = "";
+      return render();
+    }
     if (act === "role") { S.ui.loginRole = btn.dataset.role; S.ui.loginError = ""; return render(); }
     if (act === "sync") return syncNow(true);
     if (act === "refresh") { S.ui.menu = false; toast("Checking for updates…"); return syncNow(true).then(function () { if (S.net === "online" && !S.outbox.length) return syncNow(true); }); }
     if (act === "clear-rejected") { S.rejected = []; return render(); }
     if (act === "install") return doInstall();
     if (act === "backup") return downloadBackup();
+    if (act === "admin-site") return openAdminWebsite("/admin/dashboard");
     if (act === "logout") return logout();
     if (act === "relogin") { S.auth = null; store("auth", null); return render(); }
 
     if (!m) return;
     if (act === "timer") return toggleTimer(m.id);
     if (act === "timer-set") return setTimerMinute(m.id);
-    if (act === "period") return enqueue(m.id, "period", { period: btn.dataset.period });
+    if (act === "period") {
+      var target = btn.dataset.period;
+      var forward = m.periods.indexOf(target) > m.periods.indexOf(m.period || m.periods[0]);
+      // Second half starts at 45' (football) / 20' (kabaddi): offer to jump the
+      // clock there so stamps read right even if the clock was paused at half time.
+      var halfMin = m.sport === "Football" ? 45 : (m.sport === "Kabaddi" ? 20 : 0);
+      if (forward && halfMin && target === "H2" && elapsedSec(m.id) < halfMin * 60 &&
+          window.confirm("Second half. Set the match clock to " + halfMin + ":00?")) {
+        var tm = timerOf(m.id);
+        if (tm.running) tm.base = Date.now() - halfMin * 60000; else tm.paused = halfMin * 60;
+        S.timers[m.id] = tm; saveTimers();
+      }
+      return enqueue(m.id, "period", { period: target });
+    }
     if (act === "start") return enqueue(m.id, "status", { status: "live" });
     if (act === "finish") {
-      if (!window.confirm("End this match? It will show as finished on the public scoreboard once uploaded.")) return;
+      var fs = m.sport === "Badminton" ? badmintonStats(m) : null;
+      var scoreLine = fs ? m.team_a.name + " " + fs.games_a + "–" + fs.games_b + " " + m.team_b.name + " (games)"
+        : m.team_a.name + " " + m.score_a + "–" + m.score_b + " " + m.team_b.name;
+      if (!window.confirm("End this match?\n\nFinal score: " + scoreLine + "\n\nIt shows as finished on the public scoreboard once uploaded.")) return;
       var t = timerOf(m.id);
       if (t.running) { t.paused = elapsedSec(m.id); t.running = false; S.timers[m.id] = t; saveTimers(); }
       return enqueue(m.id, "status", { status: "final" });
@@ -647,6 +820,9 @@
       return toast("Undone: " + last.kind + (last.player ? " · " + last.player : ""));
     }
     if (act === "score") {
+      if (m.sport === "Badminton" && badmintonStats(m).winner) {
+        return toast("Match already won — tap End match, or Undo last first.");
+      }
       var side = btn.dataset.side;
       var picker = root.querySelector('[data-player="' + side + '"]');
       // Worked out before the point is added: for Badminton the stamp is the
@@ -659,6 +835,9 @@
         player_id: picker && picker.value ? Number(picker.value) : null,
         clock: (clock || "").trim().slice(0, 8)
       });
+      // The next score is usually someone else's — start the picker fresh so a
+      // forgotten selection cannot credit the wrong player.
+      if (S.ui.player[m.id]) { delete S.ui.player[m.id][side]; render(); }
       if (navigator.vibrate) navigator.vibrate(30);
       var again = root.querySelector('[data-act="score"][data-side="' + side + '"][data-action="' + btn.dataset.action + '"]');
       if (again) { again.classList.add("act--flash"); setTimeout(function () { again.classList.remove("act--flash"); }, 250); }
@@ -667,6 +846,11 @@
   }
 
   function onChange(e) {
+    if (e.target.dataset.draft) {
+      S.ui.draft[e.target.dataset.draft] = e.target.value;
+      if (e.target.dataset.draft === "sport") { S.ui.draft.team_a_id = S.ui.draft.team_b_id = ""; render(); }
+      return;
+    }
     var m = S.view.name === "match" ? S.matches[S.view.matchId] : null;
     if (!m) return;
     if (e.target.matches("[data-player]")) {
@@ -680,6 +864,16 @@
   }
 
   function onSubmit(e) {
+    if (e.target.matches('[data-form="new"]')) {
+      e.preventDefault();
+      var d = S.ui.draft;
+      if (!d.team_a_id || !d.team_b_id) return toast("Pick both teams.");
+      if (String(d.team_a_id) === String(d.team_b_id)) return toast("Team A and Team B must be different.");
+      var key = createLocalMatch(d);
+      S.ui.draft = {};
+      toast("Match created. Start scoring!");
+      return go("#/match/" + key);
+    }
     if (!e.target.matches('[data-form="login"]')) return;
     e.preventDefault();
     var f = e.target;
@@ -715,6 +909,39 @@
     render();
   }
 
+  // The full community admin website, in this same window. A committee
+  // sign-in carries straight over (posted as a form, never put in the URL);
+  // anyone else gets the normal admin login page.
+  function openAdminWebsite(next) {
+    if (S.net === "offline") {
+      return toast("📶 The admin website needs internet. Scoring keeps working offline here.");
+    }
+    var go = function () {
+      if (!S.auth || S.auth.me.role !== "admin") {
+        location.href = "/admin/login?next=" + encodeURIComponent(next);
+        return;
+      }
+      var f = document.createElement("form");
+      f.method = "POST";
+      f.action = API + "/web-login";
+      [["token", S.auth.token], ["next", next]].forEach(function (kv) {
+        var input = document.createElement("input");
+        input.type = "hidden"; input.name = kv[0]; input.value = kv[1];
+        f.appendChild(input);
+      });
+      document.body.appendChild(f);
+      f.submit();
+    };
+    toast("Opening the admin website…");
+    // Push anything still waiting first, while we know there is a signal;
+    // whatever does not make it stays safe on the device for next time.
+    if (!S.outbox.length) return go();
+    var done = false;
+    var once = function () { if (!done) { done = true; go(); } };
+    syncNow(true).then(once, once);
+    setTimeout(once, 4000);
+  }
+
   function downloadBackup() {
     var data = { exported_at: new Date().toISOString(), me: S.auth && S.auth.me, outbox: S.outbox, matches: S.matches };
     var blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
@@ -740,13 +967,16 @@
   window.addEventListener("appinstalled", function () { S.installPrompt = null; toast("Installed. Open GML Scorer from your home screen or desktop."); render(); });
   window.addEventListener("online", function () { S.backoff = 0; scheduleSync(100); });
   window.addEventListener("offline", function () { S.net = "offline"; renderTop(); render(); });
-  document.addEventListener("visibilitychange", function () { if (!document.hidden) scheduleSync(100); });
+  document.addEventListener("visibilitychange", function () {
+    updateWakeLock(); // the browser drops the lock whenever the app is hidden
+    if (!document.hidden) scheduleSync(100);
+  });
   window.addEventListener("hashchange", route);
   // Another tab of the app on this device changed something — pick it up.
   window.addEventListener("storage", function (e) {
     if (!e.key || e.key.indexOf(KEY) !== 0) return;
     S.auth = load("auth", null); S.matches = load("matches", {}); S.outbox = load("outbox", []);
-    S.timers = load("timers", {}); render();
+    S.timers = load("timers", {}); S.setup = load("setup", null); render();
   });
   root.addEventListener("click", onClick);
   root.addEventListener("change", onChange);

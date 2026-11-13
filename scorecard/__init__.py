@@ -63,7 +63,11 @@ def _ensure_tables():
                 text("ALTER TABLE sc_match ADD COLUMN scorer_can_edit_later BOOLEAN DEFAULT 0")))
             steps.append(lambda c: "client_id" in _columns(c, "sc_event") or c.execute(
                 text("ALTER TABLE sc_event ADD COLUMN client_id VARCHAR(40)")))
+            steps.append(lambda c: "actor" in _columns(c, "sc_sync_op") or c.execute(
+                text("ALTER TABLE sc_sync_op ADD COLUMN actor VARCHAR(100)")))
         else:
+            steps.append(lambda c: c.execute(text(
+                "ALTER TABLE sc_sync_op ADD COLUMN IF NOT EXISTS actor VARCHAR(100)")))
             steps.append(lambda c: c.execute(text(
                 "ALTER TABLE sc_match ADD COLUMN IF NOT EXISTS scorer_can_edit_later BOOLEAN DEFAULT FALSE")))
             steps.append(lambda c: c.execute(text(
@@ -83,4 +87,4 @@ def _ensure_tables():
 
 
 # Imported for their side effects — each module hangs routes off the blueprint.
-from . import admin, app_api, public, scorer, stats  # noqa: E402,F401
+from . import admin, app_api, errorlog, public, scorer, stats  # noqa: E402,F401

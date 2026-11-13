@@ -15,6 +15,10 @@
         <span class="sc-board__state" data-state>
           {% if match.status == 'live' %}
             <span class="sc-live">Live{% if match.period %} · {{ match.period }}{% endif %}</span>
+            {% set ago = match.updated_at|sc_minutes_ago %}
+            {% if ago is not none and ago >= 10 %}
+              <span class="sc-when">Last update {{ ago }} min ago (ground scores upload when signal allows)</span>
+            {% endif %}
           {% elif match.status == 'final' %}
             <span class="sc-final">Full time</span>
           {% elif match.starts_at %}

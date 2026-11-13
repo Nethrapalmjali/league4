@@ -24,6 +24,7 @@
 }
 
 * { box-sizing: border-box; }
+[hidden] { display: none !important; }
 html, body { margin: 0; padding: 0; }
 body {
   font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
@@ -140,8 +141,31 @@ button:disabled { cursor: not-allowed; opacity: 0.5; }
 .ctl__clock { display: flex; align-items: center; gap: 0.4rem; font-size: 0.85rem; font-weight: 700; color: var(--muted); }
 .ctl__clock input { width: 6.5rem; border: 2px solid var(--line); border-radius: 10px; padding: 0.45rem 0.55rem; font-size: 1rem; font-weight: 700; }
 
-.pads { display: grid; grid-template-columns: 1fr 1fr; gap: 0.8rem; margin-bottom: 0.8rem; }
-@media (max-width: 640px) { .pads { grid-template-columns: 1fr; } }
+/* Team A and Team B always side by side — on a phone too — so the scorer's
+   thumb goes left for A and right for B without scrolling to find team B. */
+.pads { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-bottom: 0.8rem; }
+@media (max-width: 640px) {
+  .wrap { padding: 0.6rem; }
+  .pad { padding: 0.5rem; }
+  .pad__name { font-size: 0.92rem; }
+  .pad select { font-size: 0.85rem; padding: 0.45rem; }
+  .pad__actions { grid-template-columns: 1fr !important; gap: 0.4rem; }
+  .act { min-height: 56px; font-size: 0.88rem; }
+  .board__num { font-size: 2.6rem; }
+}
+@media (max-width: 480px) {
+  .wide-only { display: none; }
+  .top { gap: 0.4rem; padding-left: 0.6rem; padding-right: 0.6rem; }
+}
+.admin-link { display: flex; gap: 0.8rem; align-items: center; padding: 0.85rem 1rem; border-left: 4px solid var(--maroon); }
+.admin-link__text { flex: 1; min-width: 0; }
+.admin-link__text strong { display: block; color: var(--maroon); }
+.admin-link__text span { font-size: 0.84rem; color: var(--muted); }
+.top__mini { font-size: 1.05rem; gap: 0.35rem; }
+.top__mini b { background: rgba(255,255,255,0.16); border-radius: 8px; padding: 0.1rem 0.5rem; font-variant-numeric: tabular-nums; }
+.chips { display: flex; gap: 0.4rem; overflow-x: auto; padding-bottom: 0.3rem; margin-bottom: 0.4rem; }
+.chip { flex-shrink: 0; border: 2px solid var(--line); background: #fff; color: var(--ink); border-radius: 999px; padding: 0.45rem 0.85rem; font-weight: 800; font-size: 0.88rem; }
+.chip.is-on { background: var(--maroon); border-color: var(--maroon); color: #fff; }
 .pad { border-radius: var(--radius); padding: 0.8rem; border: 2px solid var(--line); }
 .pad--a { background: var(--side-a-bg); border-color: #c7d6fb; }
 .pad--b { background: var(--side-b-bg); border-color: #f3d9b4; }

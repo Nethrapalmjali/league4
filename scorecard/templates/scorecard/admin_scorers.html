@@ -25,12 +25,49 @@
       {% endfor %}
     </nav>
 
+    {% if new_scorer %}
+      <section class="sc-card" style="border:2px solid #16a34a; background:#f0fdf4;">
+        <h2>✅ Send {{ new_scorer.name }} their login now</h2>
+        <p class="sc-hint" style="margin-top:0;">This is the only time the passcode is shown.</p>
+        <pre id="share-text" style="white-space:pre-wrap; background:#fff; border:1px solid #bbf7d0; border-radius:8px; padding:0.75rem; font-size:0.9rem;">{{ share_text }}</pre>
+        <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
+          <a class="btn btn--primary" style="background:#16a34a; border-color:#16a34a;" target="_blank" rel="noopener"
+             href="https://wa.me/?text={{ share_text|urlencode }}">Share on WhatsApp</a>
+          <button type="button" class="btn btn--ghost" onclick="navigator.clipboard && navigator.clipboard.writeText(document.getElementById('share-text').textContent).then(function(){ this.textContent='Copied ✓'; }.bind(this))">Copy</button>
+        </div>
+      </section>
+    {% endif %}
+
+    <section class="sc-card">
+      <h2>📶 Uploads from the ground (last 18 h)</h2>
+      {% if uploads %}
+        <div style="display:grid; gap:0.4rem;">
+          {% for actor, u in uploads|dictsort %}
+            <div style="display:flex; justify-content:space-between; gap:0.6rem; flex-wrap:wrap; padding:0.45rem 0; border-bottom:1px solid #f1f5f9;">
+              <strong>{{ actor.split(':', 2)[2] if actor.startswith('scorer:') else ('Committee (app)' if actor == 'admin' else 'Backup import') }}</strong>
+              <span style="color:{{ '#16a34a' if u.mins is not none and u.mins < 15 else '#b45309' }}; font-weight:700;">
+                last upload {% if u.mins is none %}?{% elif u.mins < 1 %}just now{% elif u.mins < 60 %}{{ u.mins }} min ago{% else %}{{ u.mins // 60 }} h {{ u.mins % 60 }} min ago{% endif %}
+                · {{ u.count }} change(s)
+              </span>
+            </div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <p class="sc-hint" style="margin:0;">Nothing uploaded from the Scorer App yet today.</p>
+      {% endif %}
+      <p class="sc-hint">
+        A scorer whose last upload is old may still be holding scores on their phone (no signal).
+        If their phone will not reconnect, ask for the backup file and
+        <a href="{{ url_for('scorecard.admin_import_backup') }}">import it here</a>.
+      </p>
+    </section>
+
     <section class="sc-card">
       <h2>Issue a passcode ({{ filter_gender }})</h2>
       <form method="post" class="sc-form sc-form--row">
         <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
         <label><span>Name</span><input type="text" name="name" required placeholder="Volunteer's name"></label>
-        <label><span>Passcode</span><input type="text" name="passcode" required minlength="4"></label>
+        <label><span>Passcode</span><input type="text" name="passcode" required minlength="4" autocomplete="off" placeholder="4+ characters"></label>
         <label style="display:none;">
           <span>Category</span>
           <select name="gender"><option value="{{ filter_gender }}">{{ filter_gender }}</option></select>
@@ -39,7 +76,8 @@
         <button class="btn btn--primary" type="submit">Create</button>
       </form>
       <p class="sc-hint">
-        Write the passcode down now — it is stored hashed and cannot be read back.
+        After you create the scorer, you get a ready message to send them on WhatsApp
+        (name, passcode and how to install the Scorer App). The passcode is stored hashed and cannot be read back later.
         A scorer can only reach the scoring screen, never the auction or player data.
         Scorers are separated by category so a {{ filter_gender }} scorer is offered
         for {{ filter_gender }} fixtures first.

@@ -9,6 +9,15 @@
       <p>Open a match to start recording. <a href="{{ url_for('scorecard.scorer_logout') }}">Sign out</a></p>
     </header>
 
+    <a href="{{ url_for('scorecard.scorer_app') }}" class="sc-card" style="display:flex; gap:0.8rem; align-items:center; text-decoration:none; background:#5b1f1f; color:#fff; margin-bottom:1rem;">
+      <img src="{{ url_for('scorecard.static', filename='app/icon-192.png') }}" alt="" width="44" height="44" style="border-radius:10px;">
+      <span style="flex:1;">
+        <strong style="display:block;">Weak signal? Use the Scorer App</strong>
+        <span style="font-size:0.85rem; opacity:0.9;">Scores save on your phone with no internet and upload by themselves later. Tap to install.</span>
+      </span>
+      <span style="font-weight:800; color:#e3b559;">→</span>
+    </a>
+
     <div class="sc-list">
       {% for match in matches %}
         <a class="sc-row" href="{{ url_for('scorecard.console', match_id=match.id) }}">

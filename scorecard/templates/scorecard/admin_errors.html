@@ -1,0 +1,40 @@
+{% extends "scorecard/_page.html" %}
+{% block title %}Error log{% endblock %}
+
+{% block content %}
+  <div class="sc-page">
+    <header class="sc-page__head">
+      <span class="sc-eyebrow">Scorecard admin</span>
+      <h1>Error log</h1>
+      <p>
+        <a href="{{ url_for('admin_dashboard') }}" style="color:var(--maroon); font-weight:700;">← Committee Dashboard</a> ·
+        <a href="{{ url_for('scorecard.admin_matches') }}">Fixtures</a>
+      </p>
+      <p class="sc-hint">
+        Every time the site shows “Something broke”, the reason is saved here (last 14 days).
+        If the site did not load at all, the server itself was down or restarting — check the
+        Render dashboard for that.
+      </p>
+    </header>
+
+    {% if not errors %}
+      <p class="sc-empty">✅ No errors recorded.</p>
+    {% endif %}
+
+    <div class="sc-list">
+      {% for e in errors %}
+        {% set mins = ((now - e.at).total_seconds() // 60)|int %}
+        <details class="sc-card" style="margin-bottom:0.6rem; padding:0.8rem 1rem;">
+          <summary style="cursor:pointer; display:flex; flex-wrap:wrap; gap:0.5rem; align-items:baseline;">
+            <strong style="color:#991b1b; overflow-wrap:anywhere;">{{ e.error }}</strong>
+            <span class="sc-when">
+              {% if mins < 60 %}{{ mins }} min ago{% elif mins < 1440 %}{{ mins // 60 }} h ago{% else %}{{ mins // 1440 }} day(s) ago{% endif %}
+            </span>
+            <code style="font-size:0.8rem; overflow-wrap:anywhere;">{{ e.method }} {{ e.path }}</code>
+          </summary>
+          <pre style="white-space:pre-wrap; font-size:0.75rem; background:#f8fafc; padding:0.7rem; border-radius:6px; overflow-x:auto; margin-top:0.6rem;">{{ e.detail }}</pre>
+        </details>
+      {% endfor %}
+    </div>
+  </div>
+{% endblock %}

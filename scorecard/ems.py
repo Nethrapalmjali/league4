@@ -43,16 +43,23 @@ SPORTS = _base_sports
 
 
 def admin_credentials_ok(username, password):
-    """The committee login check, for the Scorer App's admin sign-in."""
-    import secrets
-
+    """The committee login check, for the Scorer App's admin sign-in — the
+    same rules as the website's login page."""
     try:
-        return (
-            secrets.compare_digest(str(username).encode(), str(_ems.ADMIN_USERNAME).encode())
-            and _ems.admin_password_ok(password)
-        )
-    except TypeError:  # compare_digest refuses non-ASCII str — treat as a mismatch
+        return _ems.admin_username_ok(str(username)) and _ems.admin_password_ok(str(password))
+    except TypeError:
         return False
+
+
+def admin_session_fingerprint():
+    """Stored in a website session at sign-in; see app._expire_admin_session_on_password_change."""
+    return _ems.admin_session_fingerprint()
+
+
+def admin_secret_material():
+    """What the committee login currently is. App sign-ins are tied to it, so
+    changing the admin password signs every device out of the committee role."""
+    return f"{_ems.ADMIN_USERNAME}|{_ems.ADMIN_PASSWORD_HASH or _ems.ADMIN_PASSWORD}"
 
 
 def team_owner_model():

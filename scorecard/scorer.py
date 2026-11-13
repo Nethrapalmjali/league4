@@ -175,6 +175,8 @@ def add_event(match_id):
     action = action_for(match.sport, request.form.get("action") or "")
     if not action:
         return jsonify({"error": "That action is not valid for this sport."}), 400
+    if match.sport == "Badminton" and (match.badminton_stats or {}).get("match_winner"):
+        return jsonify({"error": "This match is already won. Tap End match, or Undo the last point first."}), 400
 
     team_id = match.team_a_id if side == "a" else match.team_b_id
 

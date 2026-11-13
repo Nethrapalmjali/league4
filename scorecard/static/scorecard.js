@@ -75,14 +75,17 @@
     if (!el || !scorers) return;
     el.innerHTML = "";
     scorers.forEach(function (s) {
+      // Built with text nodes, never innerHTML: player names come from the
+      // public registration form and must not be able to inject markup.
       var pill = document.createElement("span");
       pill.className = "sc-scorer-pill";
-      var icon = s.icon || "⚽";
-      var txt = icon + " " + s.name;
+      pill.appendChild(document.createTextNode((s.icon || "⚽") + " " + s.name));
       if (s.clock) {
-        txt += " <small>" + s.clock + "</small>";
+        pill.appendChild(document.createTextNode(" "));
+        var small = document.createElement("small");
+        small.textContent = s.clock;
+        pill.appendChild(small);
       }
-      pill.innerHTML = txt;
       el.appendChild(pill);
     });
   }
@@ -111,13 +114,25 @@
     if (scoreB) scoreB.textContent = newB;
 
     if (stateEl) {
+      stateEl.textContent = "";
       if (data.status === "live") {
-        stateEl.innerHTML =
-          '<span class="sc-live">Live' +
-          (data.period ? " · " + data.period : "") +
-          "</span>";
+        var live = document.createElement("span");
+        live.className = "sc-live";
+        live.textContent = "Live" + (data.period ? " · " + data.period : "");
+        stateEl.appendChild(live);
+        // Scorers at the ground may be offline; say so rather than look frozen.
+        var mins = data.updated_at ? Math.floor((Date.now() - Date.parse(data.updated_at)) / 60000) : 0;
+        if (mins >= 10) {
+          var stale = document.createElement("span");
+          stale.className = "sc-when";
+          stale.textContent = "Last update " + mins + " min ago (ground scores upload when signal allows)";
+          stateEl.appendChild(stale);
+        }
       } else if (data.status === "final") {
-        stateEl.innerHTML = '<span class="sc-final">Full time</span>';
+        var fin = document.createElement("span");
+        fin.className = "sc-final";
+        fin.textContent = "Full time";
+        stateEl.appendChild(fin);
       }
     }
 
