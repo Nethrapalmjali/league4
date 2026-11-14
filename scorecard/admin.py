@@ -421,6 +421,19 @@ def admin_enter_result(match_id):
         flash(f"Player of the Match: {picked}." if picked else "Player of the Match cleared — the top performer is shown instead.", "success")
         return redirect(url_for("scorecard.admin_enter_result", match_id=match.id))
 
+    if request.method == "POST" and request.form.get("action") == "switch_bo5" and match.sport == "Badminton":
+        if match.match_format == "bo5":
+            flash("This match is already best of 5 rounds.", "success")
+        else:
+            match.switch_to_best_of_5()
+            match.updated_at = datetime.utcnow()
+            db.session.commit()
+            bs = match.badminton_stats
+            rounds = ", ".join(f"{g['label']} {g['a']}–{g['b']}" for g in bs["games_list"] if g["a"] or g["b"])
+            flash("Switched to best of 5 rounds to 15. The points already scored were replayed under the new rules"
+                  + (f": {rounds}" if rounds else "") + ". Correct any round below if it differs from the court.", "success")
+        return redirect(url_for("scorecard.admin_enter_result", match_id=match.id))
+
     if request.method == "POST" and match.sport == "Badminton" and match.match_format:
         return _save_badminton_rounds(match, players, live_events, back, chosen_potm)
 

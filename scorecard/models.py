@@ -589,6 +589,35 @@ class ScMatch(db.Model):
                 current += 1
         return pts, placed
 
+    def switch_to_best_of_5(self):
+        """Move an older best-of-3 Badminton match to best of 5 rounds to 15.
+        The points already scored are replayed in the order they were played
+        (each keeps its player) and re-stamped with the round they fall in
+        under the new rules. Returns the number of points re-stamped."""
+        if self.sport != "Badminton" or self.match_format == "bo5":
+            return 0
+        self.match_format = "bo5"
+        fmt = self.format_info
+        keys = [r["key"] for r in fmt["rounds"]]
+        won = badminton_round_won(fmt)
+        pts = {"a": 0, "b": 0}
+        current = 0
+        moved = 0
+        for e in sorted(self.events, key=event_order):
+            if e.voided or (e.points or 0) <= 0:
+                continue
+            side = self.side_of(e.team_id)
+            if not side:
+                continue
+            e.clock = keys[current]
+            moved += 1
+            pts[side] += e.points or 1
+            if current < len(keys) - 1 and (won(pts["a"], pts["b"]) or won(pts["b"], pts["a"])):
+                current += 1
+                pts = {"a": 0, "b": 0}
+        self.recalculate()
+        return moved
+
     @property
     def badminton_stats(self):
         """Badminton round-by-round tracker, worked out from the point events.

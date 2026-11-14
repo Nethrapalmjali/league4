@@ -179,6 +179,23 @@
       </form>
     </section>
 
+    {% if match.sport == 'Badminton' and match.match_format != 'bo5' %}
+      <section class="sc-card">
+        <h2>Switch to best of 5 rounds</h2>
+        <p class="sc-hint" style="margin-top:0;">
+          This match uses the older best of 3 games to 21. Switching moves it to
+          best of 5 rounds to 15: the points already scored are replayed in the
+          order they were played under the new rules. You can correct any round afterwards.
+        </p>
+        <form method="post" class="sc-form sc-form--row"
+              onsubmit="return confirm('Switch this match to best of 5 rounds to 15?');">
+          <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+          <input type="hidden" name="action" value="switch_bo5">
+          <button class="btn btn--primary" type="submit">Switch to best of 5</button>
+        </form>
+      </section>
+    {% endif %}
+
     {% if match.status == 'final' %}
       <section class="sc-card">
         <h2>⭐ Player of the Match only</h2>
