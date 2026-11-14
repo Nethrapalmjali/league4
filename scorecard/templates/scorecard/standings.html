@@ -1,6 +1,6 @@
 {% extends "scorecard/_page.html" %}
 {% block title %}{{ sport }} {{ gender }} standings{% endblock %}
-{% block description %}League table and leading scorers for {{ sport }} ({{ gender }}) in {{ brand.name }}.{% endblock %}
+{% block description %}League table for {{ sport }} ({{ gender }}) in {{ brand.name }}.{% endblock %}
 
 {% block content %}
   <div class="sc-page">
@@ -71,65 +71,5 @@
         <p class="sc-hint">Win 2 points · Draw 1 · Walkover 1 (to the team that turned up) · Loss 0.</p>
       {% endif %}
     </section>
-
-    {% macro who(s) %}
-      <span class="sc-leader__who">
-        <a href="{{ url_for('scorecard.player_page', player_id=s.player.id) }}" class="sc-player-link"><strong>{{ s.player.name }}</strong></a>
-        <span class="sc-leader__team">
-          {{ s.player.team.name if s.player.team else '—' }}
-          {%- if s.player.jersey_no %} · #{{ s.player.jersey_no }}{% endif %}
-          · {{ s.played }} match{{ 'es' if s.played != 1 }}
-        </span>
-      </span>
-    {% endmacro %}
-
-    {% set headline = stats.categories[0] %}
-    <section class="sc-block">
-      <h2 class="sc-block__title">🏅 Player of the Tournament race ({{ sport }} · {{ gender }})</h2>
-      {% if not stats.tournament %}
-        <p class="sc-empty">
-          No player has been credited in {{ sport }} {{ gender }} yet. Scorers name the player
-          when they record a score, and pick a Player of the Match when a match ends.
-        </p>
-      {% else %}
-        <ol class="sc-leaders">
-          {% for s in stats.tournament %}
-            <li class="sc-leader">
-              <span class="sc-leader__rank">{{ loop.index }}</span>
-              {{ who(s) }}
-              <span class="sc-leader__count">
-                <b>{{ s.potm }}</b>
-                <span>⭐ Player of the Match · {{ s[headline.key] }} {{ headline.label|lower }}</span>
-              </span>
-            </li>
-          {% endfor %}
-        </ol>
-        <p class="sc-hint">Ranked by Player of the Match awards, then {{ headline.label|lower }}.</p>
-      {% endif %}
-    </section>
-
-    {% for board in stats.leaderboards %}
-      {% if board.rows or loop.first %}
-        <section class="sc-block">
-          <h2 class="sc-block__title">{{ board.category.label }} ({{ sport }} · {{ gender }})</h2>
-          {% if not board.rows %}
-            <p class="sc-empty">Nobody has been credited with {{ board.category.label|lower }} yet.</p>
-          {% else %}
-            <ol class="sc-leaders">
-              {% for s in board.rows %}
-                <li class="sc-leader">
-                  <span class="sc-leader__rank">{{ loop.index }}</span>
-                  {{ who(s) }}
-                  <span class="sc-leader__count">
-                    <b>{{ s[board.category.key] }}</b>
-                    <span>{{ board.category.label|lower }}</span>
-                  </span>
-                </li>
-              {% endfor %}
-            </ol>
-          {% endif %}
-        </section>
-      {% endif %}
-    {% endfor %}
   </div>
 {% endblock %}

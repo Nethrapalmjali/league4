@@ -1,0 +1,82 @@
+{% extends "scorecard/_page.html" %}
+{% block title %}Top performers (admin){% endblock %}
+
+{% block content %}
+  {% macro who(s) %}
+    <span class="sc-leader__who">
+      <a href="{{ url_for('scorecard.player_page', player_id=s.player.id) }}" class="sc-player-link"><strong>{{ s.player.name }}</strong></a>
+      <span class="sc-leader__team">
+        {{ s.player.team.name if s.player.team else '—' }}
+        {%- if s.player.jersey_no %} · #{{ s.player.jersey_no }}{% endif %}
+        · {{ s.played }} match{{ 'es' if s.played != 1 }}
+      </span>
+    </span>
+  {% endmacro %}
+
+  <div class="sc-page">
+    <header class="sc-page__head">
+      <span class="sc-eyebrow">Admin only · not shown on the public site</span>
+      <h1>Top performers</h1>
+      <p>
+        Player of the Tournament race and leaderboards for verified sports only.
+        {% if hidden %}<strong>{{ hidden|join(', ') }}</strong> are hidden for now (player credits incomplete).{% endif %}
+        <a href="{{ url_for('scorecard.admin_matches') }}">← Fixtures</a>
+      </p>
+    </header>
+
+    {% if not blocks %}
+      <p class="sc-empty">No verified sport has player statistics yet.</p>
+    {% endif %}
+
+    {% for block in blocks %}
+      {% set stats = block.stats %}
+      {% set sport, gender = block.sport, block.gender %}
+      {% set headline = stats.categories[0] %}
+      <h2 style="margin:.6rem 0 0;">{{ sport }} · {{ gender }}</h2>
+      <section class="sc-block">
+        <h2 class="sc-block__title">🏅 Player of the Tournament race ({{ sport }} · {{ gender }})</h2>
+        {% if not stats.tournament %}
+          <p class="sc-empty">No player has been credited in {{ sport }} {{ gender }} yet.</p>
+        {% else %}
+          <ol class="sc-leaders">
+            {% for s in stats.tournament %}
+              <li class="sc-leader">
+                <span class="sc-leader__rank">{{ loop.index }}</span>
+                {{ who(s) }}
+                <span class="sc-leader__count">
+                  <b>{{ s.potm }}</b>
+                  <span>⭐ Player of the Match · {{ s[headline.key] }} {{ headline.label|lower }}</span>
+                </span>
+              </li>
+            {% endfor %}
+          </ol>
+          <p class="sc-hint">Ranked by Player of the Match awards, then {{ headline.label|lower }}.</p>
+        {% endif %}
+      </section>
+
+      {% for board in stats.leaderboards %}
+        {% if board.rows or loop.first %}
+          <section class="sc-block">
+            <h2 class="sc-block__title">{{ board.category.label }} ({{ sport }} · {{ gender }})</h2>
+            {% if not board.rows %}
+              <p class="sc-empty">Nobody has been credited with {{ board.category.label|lower }} yet.</p>
+            {% else %}
+              <ol class="sc-leaders">
+                {% for s in board.rows %}
+                  <li class="sc-leader">
+                    <span class="sc-leader__rank">{{ loop.index }}</span>
+                    {{ who(s) }}
+                    <span class="sc-leader__count">
+                      <b>{{ s[board.category.key] }}</b>
+                      <span>{{ board.category.label|lower }}</span>
+                    </span>
+                  </li>
+                {% endfor %}
+              </ol>
+            {% endif %}
+          </section>
+        {% endif %}
+      {% endfor %}
+    {% endfor %}
+  </div>
+{% endblock %}

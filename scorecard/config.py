@@ -133,6 +133,13 @@ PLAYER_STATS = {
         {"key": "points", "label": "Points won", "kinds": ["Point", "Result entry"], "measure": "points"},
     ],
 }
+# Sports whose player statistics are verified and may be shown (admin only:
+# top performers, Player of the Tournament, report and Excel). Kabaddi,
+# Basketball and Badminton are hidden for now: players were missed while the
+# server was offline, so their rankings would be unfair. Nothing is deleted;
+# add a sport back here to show it again.
+VERIFIED_STATS_SPORTS = ["Football"]
+
 DEFAULT_PLAYER_STATS = [
     {"key": "points", "label": "Points", "kinds": ["Point", "Result entry"], "measure": "points"},
 ]

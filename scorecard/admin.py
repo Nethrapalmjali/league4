@@ -14,7 +14,9 @@ from flask import flash, redirect, render_template, request, session, url_for
 from werkzeug.security import generate_password_hash
 
 from . import scorecard_bp
-from .config import STAGES, STATUS_FINAL, STATUS_LIVE, STATUS_SCHEDULED, STATUSES, rules_for, GENDERS
+from .config import (
+    GENDERS, STAGES, STATUS_FINAL, STATUS_LIVE, STATUS_SCHEDULED, STATUSES, VERIFIED_STATS_SPORTS, rules_for,
+)
 from .ems import SPORTS, admin_required, db, team_owner_model, team_wallet_model
 from .models import ScEvent, ScMatch, ScPlayer, ScScorer, ScTeam, badminton_round_won, match_numbers
 
@@ -1160,6 +1162,8 @@ def export_tournament_excel():
     ws_scorers.write(0, 0, "GM LEAGUE SEASON 4 — PLAYER STATISTICS & AWARDS", title_format)
     s_row = 2
     for sport, gender in _sport_gender_combos():
+        if sport not in VERIFIED_STATS_SPORTS:
+            continue  # player credits incomplete for this sport — hidden for now
         table = player_table(sport, gender)
         if not table["players"]:
             continue
@@ -1204,6 +1208,8 @@ def tournament_report():
     sport_leaders = {}
     for sport, gender in _sport_gender_combos():
         sport_tables[(sport, gender)] = standings_for(sport, gender)
+        if sport not in VERIFIED_STATS_SPORTS:
+            continue  # player credits incomplete for this sport — hidden for now
         table = player_table(sport, gender)
         if table["players"]:
             sport_leaders[(sport, gender)] = table

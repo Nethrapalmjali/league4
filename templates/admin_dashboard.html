@@ -183,6 +183,9 @@
     <a class="nav-item icon-text" href="{{ url_for('scorecard.tournament_report') }}" target="_blank">
       {{ ico.icon('table', 16) }} Tournament report
     </a>
+    <a class="nav-item icon-text" href="{{ url_for('scorecard.admin_top_performers') }}">
+      {{ ico.icon('trophy', 16) }} Top performers
+    </a>
     <a class="nav-item icon-text" href="{{ url_for('scorecard.index') }}" target="_blank">
       {{ ico.icon('external-link', 16) }} Public scoreboard
     </a>
@@ -397,6 +400,15 @@
         <h3 class="command-tile__title">Official Tournament Report</h3>
         <p class="command-tile__desc">Generate comprehensive PDF and print-ready report of all matches, point tables, and top scorers.</p>
         <span class="command-tile__action">Print / PDF report {{ ico.icon('external-link', 14) }}</span>
+      </a>
+
+      <a href="{{ url_for('scorecard.admin_top_performers') }}" class="command-tile">
+        <div class="command-tile__icon-wrap">
+          {{ ico.icon('trophy', 20) }}
+        </div>
+        <h3 class="command-tile__title">Top Performers</h3>
+        <p class="command-tile__desc">Player of the Tournament race and top scorers — admin only, verified sports (Football).</p>
+        <span class="command-tile__action">View leaderboards {{ ico.icon('arrow-right', 14) }}</span>
       </a>
     </div>
 

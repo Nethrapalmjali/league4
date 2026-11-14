@@ -18,9 +18,9 @@ from sqlalchemy.orm import joinedload
 
 from . import scorecard_bp
 from .config import (
-    POINTS_DRAW, POINTS_LOSS, POINTS_WALKOVER, POINTS_WIN, STATUS_FINAL, player_stats_for,
+    POINTS_DRAW, POINTS_LOSS, POINTS_WALKOVER, POINTS_WIN, STATUS_FINAL, VERIFIED_STATS_SPORTS, player_stats_for,
 )
-from .ems import SPORTS, db, ems_player_card
+from .ems import SPORTS, admin_required, db, ems_player_card
 from .models import ScEvent, ScMatch, ScPlayer, ScTeam
 
 GENDERS = ["Men", "Women"]
@@ -261,9 +261,10 @@ def standings():
 
     def build():
         table = standings_for(sport, gender)
-        return {"table": table, "played": sum(r["played"] for r in table) // 2,
-                "players": player_table(sport, gender)}
+        return {"table": table, "played": sum(r["played"] for r in table) // 2}
 
+    # Public page: the points table only. Player rankings are on the admin
+    # Top performers page (verified sports only).
     data = _shared(("standings", sport, gender), build)
     return render_template(
         "scorecard/standings.html",
@@ -273,8 +274,23 @@ def standings():
         genders=GENDERS,
         table=data["table"],
         played=data["played"],
-        stats=data["players"],
     )
+
+
+@scorecard_bp.route("/admin/top_performers")
+@admin_required
+def admin_top_performers():
+    """Admin only: Player of the Tournament race and leaderboards, for the
+    sports whose player stats are verified (config.VERIFIED_STATS_SPORTS)."""
+    blocks = []
+    for sport, gender in _sport_gender_combos():
+        if sport not in VERIFIED_STATS_SPORTS:
+            continue
+        stats = player_table(sport, gender)
+        if stats["players"] or gender == "Men":
+            blocks.append({"sport": sport, "gender": gender, "stats": stats})
+    hidden = [s for s in SPORTS if s not in VERIFIED_STATS_SPORTS]
+    return render_template("scorecard/admin_performers.html", blocks=blocks, hidden=hidden)
 
 
 # ------------------------------------------------------------ player pages --
