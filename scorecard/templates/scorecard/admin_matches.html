@@ -124,7 +124,7 @@
       {% for match in matches %}
         <div class="sc-row sc-row--static" data-match-row data-sport="{{ match.sport|lower }}" data-gender="{{ match.gender|lower }}">
           <span class="sc-row__meta">
-            <span class="sc-row__sport">{{ match.sport }}</span>
+            <span class="sc-row__sport">{{ match.sport }} · {{ match.match_label }}</span>
             <span class="sc-row__stage">{{ match.gender }}</span>
             <span class="sc-row__stage">{{ match.stage }}</span>
           </span>

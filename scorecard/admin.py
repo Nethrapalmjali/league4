@@ -16,7 +16,7 @@ from werkzeug.security import generate_password_hash
 from . import scorecard_bp
 from .config import STAGES, STATUS_FINAL, STATUS_LIVE, STATUS_SCHEDULED, rules_for, GENDERS
 from .ems import SPORTS, admin_required, db, team_owner_model, team_wallet_model
-from .models import ScEvent, ScMatch, ScPlayer, ScScorer, ScTeam, badminton_round_won
+from .models import ScEvent, ScMatch, ScPlayer, ScScorer, ScTeam, badminton_round_won, match_numbers
 
 
 def _clean(value, limit=120):
@@ -772,6 +772,21 @@ def admin_link():
 
 
 # -------------------------------------------------- tournament export & report --
+def numbered_matches(matches):
+    """[(sport, gender, [(match no, match), ...]), ...] — each sport and
+    category numbered 1, 2, 3 ... in the order the matches were entered
+    (oldest first), sports in the site's usual order. Same numbers as shown
+    everywhere else (models.match_numbers)."""
+    numbers = match_numbers()
+    groups = {}
+    for m in sorted(matches, key=lambda m: m.id):
+        groups.setdefault((m.sport, m.gender), []).append(m)
+    sport_rank = {s: i for i, s in enumerate(SPORTS)}
+    gender_rank = {g: i for i, g in enumerate(GENDERS)}
+    keys = sorted(groups, key=lambda k: (sport_rank.get(k[0], 99), k[0], gender_rank.get(k[1], 9), k[1] or ""))
+    return [(sport, gender, [(numbers.get(m.id), m) for m in groups[(sport, gender)]]) for sport, gender in keys]
+
+
 @scorecard_bp.route("/admin/export_tournament_excel")
 @admin_required
 def export_tournament_excel():
@@ -792,13 +807,14 @@ def export_tournament_excel():
     ws_matches = workbook.add_worksheet("Matches & Results")
     ws_matches.write(0, 0, "GM LEAGUE SEASON 4 — TOURNAMENT FIXTURES & RESULTS", title_format)
 
-    match_headers = ["Match ID", "Sport", "Stage", "Gender", "Team A", "Score A", "Score B", "Team B", "Winner", "Status", "Period", "Scorers", "Venue", "Scheduled At"]
+    match_headers = ["Match No.", "Sport", "Stage", "Gender", "Team A", "Score A", "Score B", "Team B", "Winner", "Status", "Period", "Scorers", "Venue", "Scheduled At"]
     ws_matches.write_row(2, 0, match_headers, header_format)
 
-    for row_idx, m in enumerate(matches, start=3):
+    numbered = [(no, m) for _, _, rows in numbered_matches(matches) for no, m in rows]
+    for row_idx, (no, m) in enumerate(numbered, start=3):
         winner_name = m.team_a.name if m.winner_team_id == m.team_a_id else (m.team_b.name if m.winner_team_id == m.team_b_id else ("Draw" if m.status == "final" else "—"))
         row_data = [
-            m.id,
+            f"Match {no}",
             m.sport,
             m.stage,
             m.gender,
@@ -913,6 +929,7 @@ def tournament_report():
     return render_template(
         "scorecard/admin_report.html",
         matches=matches,
+        match_groups=numbered_matches(matches),
         sport_tables=sport_tables,
         sport_leaders=sport_leaders,
         sports=SPORTS,

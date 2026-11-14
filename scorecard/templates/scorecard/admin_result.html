@@ -6,7 +6,7 @@
   {% set bs = match.badminton_stats if rounds_mode else None %}
   <div class="sc-page sc-page--narrow">
     <header class="sc-page__head">
-      <span class="sc-eyebrow">{{ match.sport }} · {{ match.gender }} · {{ match.stage }}</span>
+      <span class="sc-eyebrow">{{ match.sport }} · {{ match.gender }} · {{ match.match_label }} · {{ match.stage }}</span>
       <h1>{{ 'Round scores' if rounds_mode else 'Enter final result' }}</h1>
       <p>
         <a href="{{ back }}">← Back to fixtures</a>

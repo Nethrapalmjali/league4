@@ -394,6 +394,7 @@ def _match_state(match, identity, squads=None):
         "sport": match.sport,
         "gender": match.gender,
         "stage": match.stage,
+        "match_no": match.match_no,
         "venue": match.venue,
         "starts_at": match.starts_at.isoformat() if match.starts_at else None,
         "status": match.status,

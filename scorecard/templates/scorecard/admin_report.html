@@ -195,6 +195,16 @@
       .actions-bar { display: none !important; }
       .page-break { page-break-before: always; }
     }
+    .match-group td {
+      background: #5b1f1f;
+      color: #fff;
+      font-weight: 800;
+      letter-spacing: 0.02em;
+      padding-top: 8px;
+      padding-bottom: 8px;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
   </style>
 </head>
 <body>
@@ -235,7 +245,7 @@
     <table class="table">
       <thead>
         <tr>
-          <th style="width:40px;" class="center">#</th>
+          <th style="width:70px;" class="center">Match</th>
           <th>Sport</th>
           <th>Stage</th>
           <th>Fixture &amp; Result</th>
@@ -246,9 +256,13 @@
         </tr>
       </thead>
       <tbody>
-        {% for m in matches %}
+        {% for sport, gender, rows in match_groups %}
+          <tr class="match-group">
+            <td colspan="8">{{ sport }} — {{ gender }} · {{ rows|length }} match{{ 'es' if rows|length != 1 else '' }}</td>
+          </tr>
+          {% for no, m in rows %}
           <tr>
-            <td class="center">{{ m.id }}</td>
+            <td class="center bold" style="white-space:nowrap;">Match {{ no }}</td>
             <td class="bold">{{ m.sport }}</td>
             <td>{{ m.stage }}</td>
             <td>
@@ -273,6 +287,7 @@
               </span>
             </td>
           </tr>
+          {% endfor %}
         {% else %}
           <tr><td colspan="8" class="center">No match fixtures recorded yet.</td></tr>
         {% endfor %}

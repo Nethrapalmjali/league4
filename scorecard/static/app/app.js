@@ -195,6 +195,11 @@
     m.score_a = t.a; m.score_b = t.b;
   }
 
+  // "Match 3": numbered per sport and category in the order the committee
+  // entered them (worked out by the server). A match made on this phone has
+  // no number until it reaches the server.
+  function matchLabel(m) { return m.match_no ? "Match " + m.match_no : "New match"; }
+
   function findAction(m, key) {
     for (var i = 0; i < m.actions.length; i++) if (m.actions[i].key === key) return m.actions[i];
     return null;
@@ -649,7 +654,7 @@
     function row(m) {
       var p = pendingFor(m.id);
       return '<button class="mrow" data-act="open" data-id="' + m.id + '">' +
-        '<span class="mrow__meta"><span>' + (SPORT_ICON[m.sport] || "🏆") + " " + esc(m.sport) + '</span><span>· ' + esc(m.gender) + '</span><span>· ' + esc(m.stage) + '</span>' +
+        '<span class="mrow__meta"><span>' + (SPORT_ICON[m.sport] || "🏆") + " " + esc(m.sport) + '</span><span>· <strong>' + esc(matchLabel(m)) + '</strong></span><span>· ' + esc(m.gender) + '</span><span>· ' + esc(m.stage) + '</span>' +
         statusTag(m) + (p ? '<span class="tag tag--pending">⏳ ' + p + ' to upload</span>' : "") + '</span>' +
         '<span class="mrow__teams">' + esc(m.team_a.name) + '<br><span class="muted">vs</span> ' + esc(m.team_b.name) + '</span>' +
         '<span class="mrow__score">' + m.score_a + "–" + m.score_b + '</span></button>';
@@ -812,7 +817,7 @@
     }
 
     var html = '<div class="wrap">' + noticesHtml() + renderMenu();
-    html += '<div class="board"><div class="board__meta"><span>' + (SPORT_ICON[m.sport] || "🏆") + " " + esc(m.sport) + " · " + esc(m.gender) + " · " + esc(m.stage) + '</span>' + statusTag(m) + '</div>' +
+    html += '<div class="board"><div class="board__meta"><span>' + (SPORT_ICON[m.sport] || "🏆") + " " + esc(m.sport) + " · " + esc(matchLabel(m)) + " · " + esc(m.gender) + " · " + esc(m.stage) + '</span>' + statusTag(m) + '</div>' +
       '<div class="board__score">' +
       '<div><div class="board__team">' + esc(m.team_a.name) + '</div><div class="board__num">' + bigA + '</div><div class="board__sub">' + subA + '</div></div>' +
       '<div class="board__mid">' + mid + '</div>' +

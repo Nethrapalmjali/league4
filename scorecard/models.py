@@ -21,6 +21,25 @@ def badminton_round_won(fmt):
     return lambda x, y: (x >= target and x - y >= win_by) or x >= cap
 
 
+def match_numbers(refresh=False):
+    """{match id: match no.} — each sport and category numbered 1, 2, 3 ...
+    in the order the committee entered the matches. One light query, kept
+    for the rest of the request, so every page and the Scorer App show the
+    same numbers."""
+    from flask import g, has_app_context
+    if not refresh and has_app_context() and getattr(g, "_sc_match_numbers", None) is not None:
+        return g._sc_match_numbers
+    rows = db.session.query(ScMatch.id, ScMatch.sport, ScMatch.gender).order_by(ScMatch.id).all()
+    counters, numbers = {}, {}
+    for mid, sport, gender in rows:
+        key = (sport, gender)
+        counters[key] = counters.get(key, 0) + 1
+        numbers[mid] = counters[key]
+    if has_app_context():
+        g._sc_match_numbers = numbers
+    return numbers
+
+
 def event_order(event):
     """Oldest first. Events not yet saved (no id) come last, in the order
     they were added — the Scorer App saves a whole upload at once."""
@@ -126,6 +145,21 @@ class ScMatch(db.Model):
         super().__init__(**kwargs)
         if self.sport == "Badminton" and not self.match_format:
             self.match_format = BADMINTON_DEFAULT_FORMAT
+
+    @property
+    def match_no(self):
+        """1, 2, 3 ... within its sport and category, in entry order."""
+        if not self.id:
+            return None
+        numbers = match_numbers()
+        if self.id not in numbers:  # created earlier in this same request
+            numbers = match_numbers(refresh=True)
+        return numbers.get(self.id)
+
+    @property
+    def match_label(self):
+        """e.g. "Match 3" — how the match is named everywhere."""
+        return f"Match {self.match_no}" if self.match_no else "New match"
 
     @property
     def format_info(self):

@@ -5,7 +5,7 @@
 {% macro row(match, show_score=True) %}
   <a class="sc-row" href="{{ url_for('scorecard.match', match_id=match.id) }}">
     <span class="sc-row__meta">
-      <span class="sc-row__sport">{{ match.sport }}</span>
+      <span class="sc-row__sport">{{ match.sport }} · {{ match.match_label }}</span>
       <span class="sc-row__stage">{{ match.stage }}{% if match.gender %} · {{ match.gender }}{% endif %}</span>
     </span>
     <span class="sc-row__teams">

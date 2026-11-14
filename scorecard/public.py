@@ -28,6 +28,7 @@ def _match_brief(match):
         "sport": match.sport,
         "gender": match.gender,
         "stage": match.stage,
+        "match_no": match.match_no,
         "status": match.status,
         "period": match.period,
         "venue": match.venue,

@@ -11,7 +11,7 @@
 
     <section class="sc-board">
       <header class="sc-board__head">
-        <span class="sc-eyebrow">{{ match.sport }} · {{ match.stage }}{% if match.gender %} · {{ match.gender }}{% endif %}</span>
+        <span class="sc-eyebrow">{{ match.sport }} · {{ match.match_label }} · {{ match.stage }}{% if match.gender %} · {{ match.gender }}{% endif %}</span>
         <span class="sc-board__state" data-state>
           {% if match.status == 'live' %}
             <span class="sc-live">Live{% if match.period %} · {{ match.period }}{% endif %}</span>

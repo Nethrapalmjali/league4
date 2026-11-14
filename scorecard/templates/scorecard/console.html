@@ -26,7 +26,7 @@
 
   <header class="sc-console__top">
     <a class="sc-console__back" href="{{ url_for('scorecard.scorer_home') }}">← Matches</a>
-    <span class="sc-console__meta">{{ match.sport }} · {{ match.stage }}</span>
+    <span class="sc-console__meta">{{ match.sport }} · {{ match.match_label }} · {{ match.stage }}</span>
     <span class="sc-console__period" data-period>{{ match.period or 'Not started' }}</span>
   </header>
 
