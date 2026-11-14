@@ -20,7 +20,7 @@
               <span class="sc-when">Last update {{ ago }} min ago (ground scores upload when signal allows)</span>
             {% endif %}
           {% elif match.status == 'final' %}
-            <span class="sc-final">Full time</span>
+            <span class="sc-final">{{ 'Walkover' if match.is_walkover else 'Full time' }}</span>
           {% elif match.starts_at %}
             <span class="sc-when">{{ match.starts_at.strftime('%d %b, %H:%M') }}</span>
           {% endif %}
@@ -69,6 +69,10 @@
       </div>
 
       {% if match.venue %}<p class="sc-board__venue">{{ match.venue }}</p>{% endif %}
+      {% if match.is_walkover %}
+        <p class="sc-board__venue"><strong>Walkover — {{ match.team_a.name if match.winner_team_id == match.team_a_id else match.team_b.name }} awarded the match.</strong></p>
+      {% endif %}
+      {% if match.note %}<p class="sc-board__venue">{{ match.note }}</p>{% endif %}
 
       {% if potm %}
         <div class="sc-potm-card" data-potm-card>

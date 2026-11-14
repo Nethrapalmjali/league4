@@ -125,6 +125,13 @@ class ScMatch(db.Model):
     # Badminton only: "bo5" (5 rounds to 15) for every new match. Empty on
     # matches scored before formats existed — read as the old best of 3.
     match_format = db.Column(db.String(12))
+    # "walkover": the winner was awarded the match because the other team did
+    # not turn up (1 league point instead of 2). Empty for a normal result.
+    result_type = db.Column(db.String(12))
+
+    @property
+    def is_walkover(self):
+        return self.result_type == "walkover" and self.status == STATUS_FINAL and bool(self.winner_team_id)
     note = db.Column(db.String(200))
 
     created_at = db.Column(db.DateTime, default=datetime.utcnow)

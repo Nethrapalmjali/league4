@@ -149,11 +149,14 @@ DEFAULT_RULES = {
     "actions": [{"key": "point", "label": "Point", "points": 1}],
 }
 
-# League points. Three-one-nil is what everyone reads without being told; the
-# sports here that cannot draw simply never award the middle one.
-POINTS_WIN = 3
+# League points, as set by the committee: win 2, draw 1, loss 0, and a
+# walkover 1 to the team that turned up. Sports that cannot draw simply never
+# award the draw point.
+POINTS_WIN = 2
 POINTS_DRAW = 1
 POINTS_LOSS = 0
+# Walkover: the team that turned up gets this (and a win); the absent team gets POINTS_LOSS.
+POINTS_WALKOVER = 1
 
 STAGES = [
     "League",

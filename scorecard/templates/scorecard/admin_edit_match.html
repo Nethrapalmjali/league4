@@ -153,22 +153,33 @@
           </div>
         </section>
 
-        {% if not badminton %}
         <section class="sc-card">
           <h2>Winner</h2>
-          {% set level = match.score_a == match.score_b and match.winner_team_id %}
-          {% set wsel = val('winner', ('a' if match.winner_team_id == match.team_a_id else 'b') if level else 'auto') %}
+          {% if match.is_walkover %}
+            {% set current_w = 'wo_a' if match.winner_team_id == match.team_a_id else 'wo_b' %}
+          {% elif not badminton and match.score_a == match.score_b and match.winner_team_id %}
+            {% set current_w = 'a' if match.winner_team_id == match.team_a_id else 'b' %}
+          {% else %}
+            {% set current_w = 'auto' %}
+          {% endif %}
+          {% set wsel = val('winner', current_w) %}
           <label><span>Used when the match is Finished</span>
             <select name="winner">
-              <option value="auto" {% if wsel == 'auto' %}selected{% endif %}>From the score (level = draw)</option>
+              <option value="auto" {% if wsel == 'auto' %}selected{% endif %}>{{ 'From the rounds' if badminton else 'From the score (level = draw)' }}</option>
+              {% if not badminton %}
               <option value="a" {% if wsel == 'a' %}selected{% endif %}>{{ match.team_a.name }} won on a level score</option>
               <option value="b" {% if wsel == 'b' %}selected{% endif %}>{{ match.team_b.name }} won on a level score</option>
               <option value="draw" {% if wsel == 'draw' %}selected{% endif %}>Draw</option>
+              {% endif %}
+              <option value="wo_a" {% if wsel == 'wo_a' %}selected{% endif %}>Walkover — {{ match.team_a.name }} turned up</option>
+              <option value="wo_b" {% if wsel == 'wo_b' %}selected{% endif %}>Walkover — {{ match.team_b.name }} turned up</option>
             </select>
           </label>
-          <p class="em-hint">Pick a team only when the score is level (penalties / toss / tie-break).</p>
+          <p class="em-hint">
+            {% if not badminton %}Pick a team by hand only when the score is level (penalties / toss / tie-break). {% endif %}
+            Walkover: the team that turned up gets 1 point and a win; the match is marked Finished.
+          </p>
         </section>
-        {% endif %}
 
         <section class="sc-card">
           <h2>⭐ Player of the Match</h2>

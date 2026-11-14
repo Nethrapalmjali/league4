@@ -18,7 +18,7 @@ from sqlalchemy.orm import joinedload
 
 from . import scorecard_bp
 from .config import (
-    POINTS_DRAW, POINTS_LOSS, POINTS_WIN, STATUS_FINAL, player_stats_for,
+    POINTS_DRAW, POINTS_LOSS, POINTS_WALKOVER, POINTS_WIN, STATUS_FINAL, player_stats_for,
 )
 from .ems import SPORTS, db, ems_player_card
 from .models import ScEvent, ScMatch, ScPlayer, ScTeam
@@ -147,6 +147,14 @@ def standings_for(sport, gender="Men"):
             row["scored"] += scored
             row["conceded"] += conceded
 
+        if match.is_walkover and match.winner_team_id in (match.team_a_id, match.team_b_id):
+            # The other team did not turn up: a win, but only 1 point.
+            winner, loser = (a, b) if match.winner_team_id == match.team_a_id else (b, a)
+            winner["won"] += 1
+            winner["points"] += POINTS_WALKOVER
+            loser["lost"] += 1
+            loser["points"] += POINTS_LOSS
+            continue
         if score_a > score_b:
             winner, loser = a, b
         elif score_b > score_a:

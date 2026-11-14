@@ -544,6 +544,7 @@ def admin_enter_result(match_id):
         db.session.refresh(match)
 
         match.status = "final"
+        match.result_type = None  # a typed-in score is a played match, not a walkover
         match.period = final_period
         if potm_given():
             match.potm_player_id = chosen_potm()
@@ -676,8 +677,11 @@ def admin_edit_match(match_id):
         if scorer_id not in {s.id for s in scorers}:
             errors.append("Pick a scorer from the list.")
     winner_choice = f.get("winner") or "auto"
-    if winner_choice not in ("auto", "a", "b", "draw"):
+    if winner_choice not in ("auto", "a", "b", "draw", "wo_a", "wo_b"):
         winner_choice = "auto"
+    walkover = winner_choice in ("wo_a", "wo_b")
+    if walkover:
+        status = STATUS_FINAL  # a walkover is a finished match
     if errors:
         return page(f, errors)
 
@@ -759,7 +763,11 @@ def admin_edit_match(match_id):
     db.session.flush()
     match.recalculate()
     a, b = match.score_a or 0, match.score_b or 0
-    if badminton:
+    match.result_type = "walkover" if walkover else None
+    if walkover:
+        # The team that turned up is awarded the match, whatever the score.
+        match.winner_team_id = match.team_a_id if winner_choice == "wo_a" else match.team_b_id
+    elif badminton:
         if status == STATUS_FINAL and not match.winner_team_id:
             match.winner_team_id = match.team_a_id if a > b else (match.team_b_id if b > a else None)
         elif status != STATUS_FINAL:
@@ -911,6 +919,7 @@ def _save_badminton_rounds(match, players, live_events, back, chosen_potm):
         match.recalculate()
     if request.form.get("potm_player_id") or (request.form.get("potm_extra_name") or "").strip():
         match.potm_player_id = chosen_potm()
+    match.result_type = None  # round scores mean the match was played
     if match.status == STATUS_FINAL and not match.note:
         match.note = "Round scores entered by the committee."
     db.session.commit()

@@ -69,7 +69,11 @@ def _ensure_tables():
                 text("ALTER TABLE sc_match ADD COLUMN potm_player_id INTEGER")))
             steps.append(lambda c: "match_format" in _columns(c, "sc_match") or c.execute(
                 text("ALTER TABLE sc_match ADD COLUMN match_format VARCHAR(12)")))
+            steps.append(lambda c: "result_type" in _columns(c, "sc_match") or c.execute(
+                text("ALTER TABLE sc_match ADD COLUMN result_type VARCHAR(12)")))
         else:
+            steps.append(lambda c: c.execute(text(
+                "ALTER TABLE sc_match ADD COLUMN IF NOT EXISTS result_type VARCHAR(12)")))
             steps.append(lambda c: c.execute(text(
                 "ALTER TABLE sc_match ADD COLUMN IF NOT EXISTS match_format VARCHAR(12)")))
             steps.append(lambda c: c.execute(text(
