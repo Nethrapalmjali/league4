@@ -41,6 +41,7 @@
       <h1>{{ 'Round scores' if rounds_mode else 'Enter final result' }}</h1>
       <p>
         <a href="{{ back }}">← Back to fixtures</a>
+        · <a href="{{ url_for('scorecard.admin_edit_match', match_id=match.id) }}">✏️ Edit everything about this match</a>
       </p>
     </header>
 

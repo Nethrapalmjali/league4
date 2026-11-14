@@ -14,7 +14,7 @@ from flask import flash, redirect, render_template, request, session, url_for
 from werkzeug.security import generate_password_hash
 
 from . import scorecard_bp
-from .config import STAGES, STATUS_FINAL, STATUS_LIVE, STATUS_SCHEDULED, rules_for, GENDERS
+from .config import STAGES, STATUS_FINAL, STATUS_LIVE, STATUS_SCHEDULED, STATUSES, rules_for, GENDERS
 from .ems import SPORTS, admin_required, db, team_owner_model, team_wallet_model
 from .models import ScEvent, ScMatch, ScPlayer, ScScorer, ScTeam, badminton_round_won, match_numbers
 
@@ -375,6 +375,38 @@ def admin_grant_scorer_edit(match_id):
     return redirect(url_for("scorecard.admin_matches", sport=sport, gender=gender))
 
 
+def _squad_player(match, players, side, name):
+    """The squad player called ``name`` on that side, added to the team's
+    squad first if nobody there has that name (an extra player on the day)."""
+    name = " ".join((name or "").split())[:100]
+    if not name:
+        return None
+    same = next((p for p in players[side] if p.name.strip().lower() == name.lower()), None)
+    if same:
+        return same
+    player = ScPlayer(team_id=match.team_a_id if side == "a" else match.team_b_id, name=name, active=True)
+    db.session.add(player)
+    db.session.flush()
+    players[side].append(player)
+    return player
+
+
+def _chosen_potm(match, players, squad_ids):
+    """Player of the Match from the form: an extra player typed in (someone
+    who played but is not in the squad list) wins over the list. They are
+    added to that team's squad once, so the award counts on every page."""
+    if (request.form.get("potm_extra_name") or "").strip():
+        side = "b" if request.form.get("potm_extra_side") == "b" else "a"
+        player = _squad_player(match, players, side, request.form.get("potm_extra_name"))
+        squad_ids.add(player.id)
+        return player.id
+    try:
+        pid = int(request.form.get("potm_player_id") or 0) or None
+    except ValueError:
+        pid = None
+    return pid if pid in squad_ids else None
+
+
 def _int_field(value, low=0, high=999):
     try:
         number = int(str(value).strip())
@@ -406,27 +438,7 @@ def admin_enter_result(match_id):
     squad_ids = {p.id for p in players["a"]} | {p.id for p in players["b"]}
 
     def chosen_potm():
-        # An extra player typed in (someone who played but is not in the
-        # squad list) wins over the list: they are added to that team's squad
-        # once, so their award counts on every page like anyone else's.
-        extra = " ".join((request.form.get("potm_extra_name") or "").split())[:100]
-        if extra:
-            team_id = match.team_b_id if request.form.get("potm_extra_side") == "b" else match.team_a_id
-            side = "b" if team_id == match.team_b_id else "a"
-            same = next((p for p in players[side] if p.name.strip().lower() == extra.lower()), None)
-            if same:
-                return same.id
-            player = ScPlayer(team_id=team_id, name=extra, active=True)
-            db.session.add(player)
-            db.session.flush()
-            players[side].append(player)
-            squad_ids.add(player.id)
-            return player.id
-        try:
-            pid = int(request.form.get("potm_player_id") or 0) or None
-        except ValueError:
-            pid = None
-        return pid if pid in squad_ids else None
+        return _chosen_potm(match, players, squad_ids)
 
     def potm_given():
         return bool(request.form.get("potm_player_id") or (request.form.get("potm_extra_name") or "").strip())
@@ -552,6 +564,234 @@ def admin_enter_result(match_id):
         "scorecard/admin_result.html", match=match, rules=rules,
         players=players, live_events=live_events, form={}, back=back,
     )
+
+
+# ------------------------------------------------------------- edit match --
+# One-click buttons on the Edit match page: the points a single action can add.
+SCORE_STEPS = {"Basketball": [1, 2, 3], "Kabaddi": [1, 2, 3]}
+
+
+def _points_by_key(match):
+    """Active scored points per (side, player id or None) — what each player
+    (and the team, for points with no player) has right now."""
+    totals = {}
+    for e in match.events:
+        if e.voided or (e.points or 0) <= 0:
+            continue
+        side = match.side_of(e.team_id)
+        if side:
+            key = (side, e.player_id)
+            totals[key] = totals.get(key, 0) + e.points
+    return totals
+
+
+def _apply_points_change(match, side, player_id, delta, clock):
+    """Add or take away ``delta`` points for one player (or the team).
+    Taking away voids the latest of their scoring events (kept, not deleted)
+    and puts back any part-event remainder, so nothing is ever lost."""
+    team_id = match.team_a_id if side == "a" else match.team_b_id
+    if delta > 0:
+        match.events.append(ScEvent(team_id=team_id, player_id=player_id, clock=clock,
+                                    kind="Result entry", points=delta))
+        return
+    remove = -delta
+    mine = [e for e in match.events if not e.voided and (e.points or 0) > 0
+            and e.team_id == team_id and e.player_id == player_id]
+    for e in sorted(mine, key=lambda e: (e.id is not None, e.id or 0), reverse=True):
+        if remove <= 0:
+            break
+        e.voided = True
+        if e.points > remove:
+            match.events.append(ScEvent(team_id=team_id, player_id=player_id, clock=e.clock,
+                                        kind="Result entry", points=e.points - remove))
+            remove = 0
+        else:
+            remove -= e.points
+
+
+@scorecard_bp.route("/admin/matches/<int:match_id>/edit", methods=["GET", "POST"])
+@admin_required
+def admin_edit_match(match_id):
+    """Everything about one match on one page: teams, time, venue, stage,
+    scorer, status, every player's points (one-click buttons), the winner and
+    Player of the Match. Live scoring keeps working alongside it: the page
+    sends what it showed when it opened, and only the changes the committee
+    made are applied, so points a scorer adds meanwhile are kept."""
+    match = ScMatch.query.get_or_404(match_id)
+    badminton = match.sport == "Badminton"
+    teams = ScTeam.query.filter_by(sport=match.sport, gender=match.gender).order_by(ScTeam.name).all()
+    scorers = [s for s in ScScorer.query.order_by(ScScorer.name).all()
+               if s.active or s.id == match.assigned_scorer_id]
+    back = url_for("scorecard.admin_matches", sport=match.sport, gender=match.gender)
+
+    def load_players():
+        return {
+            "a": ScPlayer.query.filter_by(team_id=match.team_a_id).order_by(ScPlayer.name).all(),
+            "b": ScPlayer.query.filter_by(team_id=match.team_b_id).order_by(ScPlayer.name).all(),
+        }
+
+    players = load_players()
+
+    def page(form, errors=()):
+        for message in errors:
+            flash(message, "error")
+        current = _points_by_key(match)
+        squad = {side: {p.id for p in players[side]} for side in ("a", "b")}
+        # Points credited to someone no longer in the squad count as team points.
+        team_pts = {side: sum(v for (s, pid), v in current.items() if s == side and pid not in squad[side])
+                    for side in ("a", "b")}
+        return render_template(
+            "scorecard/admin_edit_match.html", match=match, teams=teams, scorers=scorers,
+            players=players, current=current, team_pts=team_pts, form=form, back=back,
+            stages=STAGES, statuses=STATUSES, badminton=badminton,
+            steps=SCORE_STEPS.get(match.sport, [1]),
+        )
+
+    if request.method != "POST":
+        return page({})
+
+    f = request.form
+    errors = []
+    try:
+        new_a, new_b = int(f.get("team_a_id") or 0), int(f.get("team_b_id") or 0)
+    except ValueError:
+        new_a = new_b = 0
+    team_ids = {t.id for t in teams}
+    if new_a not in team_ids or new_b not in team_ids:
+        errors.append(f"Pick two {match.gender} {match.sport} teams.")
+    elif new_a == new_b:
+        errors.append("Team A and Team B are the same team — pick two different ones.")
+    status = f.get("status")
+    if status not in STATUSES:
+        errors.append("Pick a status.")
+    starts_at = _parse_when(f.get("starts_at"))
+    if f.get("starts_at") and starts_at is None:
+        errors.append("The date and time is not valid.")
+    scorer_id = None
+    if f.get("scorer_id"):
+        try:
+            scorer_id = int(f.get("scorer_id"))
+        except ValueError:
+            scorer_id = -1
+        if scorer_id not in {s.id for s in scorers}:
+            errors.append("Pick a scorer from the list.")
+    winner_choice = f.get("winner") or "auto"
+    if winner_choice not in ("auto", "a", "b", "draw"):
+        winner_choice = "auto"
+    if errors:
+        return page(f, errors)
+
+    teams_changed = {new_a, new_b} != {match.team_a_id, match.team_b_id}
+    if teams_changed:
+        # A team replaced by another: its points move with the side, but the
+        # player credits are cleared (those players are not in the new team).
+        old_ids = [t for t in (match.team_a_id, match.team_b_id) if t not in (new_a, new_b)]
+        new_ids = [t for t in (new_a, new_b) if t not in (match.team_a_id, match.team_b_id)]
+        moved = dict(zip(old_ids, new_ids))
+        for e in match.events:
+            if e.team_id in moved:
+                e.team_id, e.player_id = moved[e.team_id], None
+        if match.potm_player_id:
+            potm = db.session.get(ScPlayer, match.potm_player_id)
+            if potm is None or potm.team_id in moved:
+                match.potm_player_id = None
+    match.team_a_id, match.team_b_id = new_a, new_b
+    match.starts_at = starts_at
+    match.venue = _clean(f.get("venue")) or None
+    match.stage = f.get("stage") if f.get("stage") in STAGES else (match.stage or "League")
+    match.assigned_scorer_id = scorer_id
+    match.note = _clean(f.get("note"), 200) or None
+    match.status = status
+    if not badminton:
+        period = f.get("period")
+        if period in match.periods:
+            match.period = period
+        elif status == STATUS_LIVE and not match.period:
+            match.period = match.periods[0]
+
+    if teams_changed:
+        db.session.flush()
+        db.session.expire(match, ["team_a", "team_b"])
+        players = load_players()
+    elif not badminton:
+        # Scores: apply only what the committee changed on the page.
+        squad = {side: {p.id for p in players[side]} for side in ("a", "b")}
+        changes = {}
+        for side in ("a", "b"):
+            rows = [(p.id, f"p{side}_{p.id}") for p in players[side]] + [(None, f"p{side}_team")]
+            for pid, name in rows:
+                if name not in f:
+                    continue
+                new, old = _int_field(f.get(name), 0, 999), _int_field(f.get(name + "_was"), 0, 999)
+                if new is None or old is None:
+                    errors.append("Points must be whole numbers from 0 to 999.")
+                    continue
+                if new != old:
+                    changes[(side, pid)] = changes.get((side, pid), 0) + new - old
+            for name, pts in zip(f.getlist(f"extra_{side}_name"), f.getlist(f"extra_{side}_pts")):
+                if not name.strip():
+                    continue
+                value = _int_field(pts or 0, 0, 999)
+                if value is None:
+                    errors.append(f"Points for {name.strip()} must be a whole number.")
+                    continue
+                player = _squad_player(match, players, side, name)
+                squad[side].add(player.id)
+                if value:
+                    changes[(side, player.id)] = changes.get((side, player.id), 0) + value
+        if errors:
+            db.session.rollback()
+            players = load_players()
+            return page(f, errors)
+        clock = "Result" if status == STATUS_FINAL else (match.period or "Result")
+        for (side, pid), delta in changes.items():
+            if pid is None:
+                # The team row also holds points of players who left the squad.
+                current = _points_by_key(match)
+                for (s, other), pts in current.items():
+                    if s == side and other is not None and other not in squad[side] and delta < 0:
+                        take = min(pts, -delta)
+                        _apply_points_change(match, side, other, -take, clock)
+                        delta += take
+            if delta:
+                _apply_points_change(match, side, pid, delta, clock)
+
+    db.session.flush()
+    match.recalculate()
+    a, b = match.score_a or 0, match.score_b or 0
+    if badminton:
+        if status == STATUS_FINAL and not match.winner_team_id:
+            match.winner_team_id = match.team_a_id if a > b else (match.team_b_id if b > a else None)
+        elif status != STATUS_FINAL:
+            bs = match.badminton_stats
+            if not (bs and bs["match_winner"]):
+                match.winner_team_id = None
+    elif status != STATUS_FINAL:
+        match.winner_team_id = None
+    elif a != b:
+        leader = "a" if a > b else "b"
+        if winner_choice in ("a", "b") and winner_choice != leader:
+            db.session.rollback()
+            players = load_players()
+            return page(f, [f"The score is {a}–{b}, so {match.team_a.name if leader == 'a' else match.team_b.name} won. "
+                            "Pick a winner by hand only when the score is level."])
+        match.winner_team_id = match.team_a_id if leader == "a" else match.team_b_id
+    else:
+        match.winner_team_id = {"a": match.team_a_id, "b": match.team_b_id}.get(winner_choice)
+
+    all_ids = {p.id for side in players.values() for p in side}
+    if (f.get("potm_extra_name") or "").strip() or "potm_player_id" in f:
+        match.potm_player_id = _chosen_potm(match, players, all_ids)
+    match.updated_at = datetime.utcnow()
+    db.session.commit()
+
+    team_a, team_b = db.session.get(ScTeam, match.team_a_id), db.session.get(ScTeam, match.team_b_id)
+    shown = {STATUS_SCHEDULED: "upcoming", STATUS_LIVE: "live", STATUS_FINAL: "finished"}[status]
+    message = f"Saved: {team_a.name} {match.score_a or 0} – {match.score_b or 0} {team_b.name} ({shown})."
+    if teams_changed:
+        message += " Teams changed — the points stayed with each side; credit them to the new players below if needed."
+    flash(message, "success")
+    return redirect(url_for("scorecard.admin_edit_match", match_id=match.id))
 
 
 def badminton_round_errors(fmt, scores):

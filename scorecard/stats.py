@@ -151,6 +151,10 @@ def standings_for(sport, gender="Men"):
             winner, loser = a, b
         elif score_b > score_a:
             winner, loser = b, a
+        elif match.winner_team_id in (match.team_a_id, match.team_b_id):
+            # Level on the scoreboard, but the committee recorded a winner
+            # (penalties, toss, tie-break) on the Edit match page.
+            winner, loser = (a, b) if match.winner_team_id == match.team_a_id else (b, a)
         else:
             a["drawn"] += 1
             b["drawn"] += 1

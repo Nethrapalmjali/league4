@@ -143,6 +143,8 @@
                href="{{ url_for('scorecard.console', match_id=match.id) }}">
               {{ 'Review' if match.status == 'final' else 'Open scoring' }}
             </a>
+            <a class="btn btn--sm btn--primary" href="{{ url_for('scorecard.admin_edit_match', match_id=match.id) }}"
+               title="Change anything about this match: teams, time, status, points, winner, Player of the Match">✏️ Edit match</a>
             <a class="btn btn--sm btn--ghost" href="{{ url_for('scorecard.admin_enter_result', match_id=match.id) }}"
                title="Type in the final score of a match that was not scored live">
               {{ 'Correct result' if match.status == 'final' else 'Enter result' }}

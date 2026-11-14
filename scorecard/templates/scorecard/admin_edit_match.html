@@ -1,0 +1,254 @@
+{% extends "scorecard/_page.html" %}
+{% block title %}Edit match{% endblock %}
+
+{% block content %}
+  {% macro val(name, default) %}{{ form.get(name, default) if form else default }}{% endmacro %}
+  <style>
+    .em-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(210px, 1fr)); gap:.7rem; }
+    .em-grid label, .em-full { min-width:0; }
+    .em-grid input, .em-grid select, .em-full input, .em-full select { width:100%; box-sizing:border-box; }
+    .em-score { display:flex; justify-content:space-between; align-items:center; gap:.6rem; background:#0f172a; color:#fff;
+                border-radius:10px; padding:.7rem .9rem; position:sticky; top:.5rem; z-index:5; }
+    .em-score__team { font-weight:700; overflow-wrap:anywhere; flex:1; }
+    .em-score__team--b { text-align:right; }
+    .em-score__num { font-size:1.7rem; font-weight:900; letter-spacing:.04em; white-space:nowrap; }
+    .em-sides { display:grid; grid-template-columns:repeat(auto-fit, minmax(290px, 1fr)); gap:1rem; margin-top:.8rem; }
+    .em-side h3 { margin:.2rem 0 .5rem; font-size:1rem; }
+    .em-row { display:flex; align-items:center; gap:.35rem; padding:.35rem 0; border-bottom:1px solid #e5e7eb; }
+    .em-row__name { flex:1; min-width:0; overflow-wrap:anywhere; font-size:.93rem; }
+    .em-row__name small { color:#64748b; }
+    .em-row input[type=number] { width:3.6rem; text-align:center; font-weight:800; font-size:1rem; padding:.35rem .2rem; }
+    .em-btn { min-width:2.4rem; height:2.3rem; border-radius:8px; border:1px solid #cbd5e1; background:#f8fafc;
+              font-weight:800; font-size:.95rem; cursor:pointer; touch-action:manipulation; }
+    .em-btn--plus { background:#1b8751; border-color:#1b8751; color:#fff; }
+    .em-btn:active { transform:scale(.95); }
+    .em-row--changed input[type=number] { outline:2px solid #f59e0b; }
+    .em-extra input[type=text] { flex:1; min-width:0; }
+    .em-actions { display:flex; flex-wrap:wrap; gap:.6rem; align-items:center; }
+    .em-save { position:sticky; bottom:0; background:var(--bg, #fff); padding:.7rem 0; border-top:1px solid #e5e7eb; z-index:5; }
+    .potm-extra { margin:.4rem 0 .2rem; }
+    .potm-extra summary { cursor:pointer; font-weight:600; color:#2563eb; font-size:.92rem; }
+    .potm-extra__row { display:flex; flex-wrap:wrap; gap:.6rem; margin-top:.5rem; }
+    .potm-extra__row label { flex:1 1 200px; min-width:0; }
+    .potm-extra__row input, .potm-extra__row select { width:100%; box-sizing:border-box; }
+  </style>
+
+  <div class="sc-page sc-page--narrow">
+    <header class="sc-page__head">
+      <span class="sc-eyebrow">{{ match.sport }} · {{ match.gender }} · {{ match.match_label }}</span>
+      <h1>Edit match</h1>
+      <p><a href="{{ back }}">← Back to fixtures</a></p>
+    </header>
+
+    <form method="post" class="sc-form" id="edit-form">
+      <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+
+      <section class="sc-card">
+        <h2>Match details</h2>
+        <div class="em-grid">
+          <label><span>Team A</span>
+            <select name="team_a_id">
+              {% for t in teams %}<option value="{{ t.id }}" {% if val('team_a_id', match.team_a_id)|string == t.id|string %}selected{% endif %}>{{ t.name }}</option>{% endfor %}
+            </select>
+          </label>
+          <label><span>Team B</span>
+            <select name="team_b_id">
+              {% for t in teams %}<option value="{{ t.id }}" {% if val('team_b_id', match.team_b_id)|string == t.id|string %}selected{% endif %}>{{ t.name }}</option>{% endfor %}
+            </select>
+          </label>
+          <label><span>Date &amp; time</span>
+            <input type="datetime-local" name="starts_at" value="{{ val('starts_at', match.starts_at.strftime('%Y-%m-%dT%H:%M') if match.starts_at else '') }}">
+          </label>
+          <label><span>Venue</span>
+            <input type="text" name="venue" maxlength="120" value="{{ val('venue', match.venue or '') }}">
+          </label>
+          <label><span>Stage</span>
+            <select name="stage">
+              {% for s in stages %}<option {% if val('stage', match.stage) == s %}selected{% endif %}>{{ s }}</option>{% endfor %}
+            </select>
+          </label>
+          <label><span>Scorer</span>
+            <select name="scorer_id">
+              <option value="">— No scorer —</option>
+              {% for s in scorers %}<option value="{{ s.id }}" {% if val('scorer_id', match.assigned_scorer_id)|string == s.id|string %}selected{% endif %}>{{ s.name }}{% if not s.active %} (inactive){% endif %}</option>{% endfor %}
+            </select>
+          </label>
+        </div>
+        <p class="sc-hint" style="margin:.5rem 0 0;">Changing a team keeps the points on that side, but clears which player scored them.</p>
+      </section>
+
+      <section class="sc-card">
+        <h2>Status</h2>
+        <div class="em-grid">
+          <label><span>Status</span>
+            <select name="status">
+              {% for s, label in [('scheduled', 'Upcoming'), ('live', 'Live'), ('final', 'Finished')] %}
+                <option value="{{ s }}" {% if val('status', match.status) == s %}selected{% endif %}>{{ label }}</option>
+              {% endfor %}
+            </select>
+          </label>
+          {% if not badminton %}
+          <label><span>Period</span>
+            <select name="period">
+              <option value="">—</option>
+              {% for p in match.periods %}<option {% if val('period', match.period) == p %}selected{% endif %}>{{ p }}</option>{% endfor %}
+            </select>
+          </label>
+          {% endif %}
+        </div>
+        <label class="em-full" style="margin-top:.7rem; display:block;"><span>Note on the match page (optional)</span>
+          <input type="text" name="note" maxlength="200" placeholder="e.g. GM United won on penalties" value="{{ val('note', match.note or '') }}">
+        </label>
+      </section>
+
+      {% if badminton %}
+      <section class="sc-card">
+        <h2>Scores</h2>
+        <p style="margin:0 0 .6rem;">
+          Rounds now: <strong>{{ match.badminton_stats.tally if match.badminton_stats else '0–0' }}</strong>
+          {% if match.badminton_stats and match.badminton_stats.live_text %} · {{ match.badminton_stats.live_text }}{% endif %}
+        </p>
+        <a class="btn btn--primary" href="{{ url_for('scorecard.admin_enter_result', match_id=match.id) }}">Edit round scores →</a>
+        <p class="sc-hint" style="margin:.5rem 0 0;">Badminton scores are edited round by round on the Round scores page; winners and the tally are worked out there.</p>
+      </section>
+      {% else %}
+      <section class="sc-card">
+        <h2>Scores &amp; player points</h2>
+        <div class="em-score" aria-live="polite">
+          <span class="em-score__team">{{ match.team_a.name }}</span>
+          <span class="em-score__num"><span data-total="a">{{ match.score_a or 0 }}</span> – <span data-total="b">{{ match.score_b or 0 }}</span></span>
+          <span class="em-score__team em-score__team--b">{{ match.team_b.name }}</span>
+        </div>
+        <p class="sc-hint" style="margin:.5rem 0 0;">
+          Tap <strong>+</strong> to add points in one click, <strong>−1</strong> to take one away, or type a number.
+          If a scorer is scoring live at the same time, their points are kept — only your changes are applied.
+        </p>
+        <div class="em-sides">
+          {% for side, team in [('a', match.team_a), ('b', match.team_b)] %}
+          <div class="em-side" data-side="{{ side }}">
+            <h3>{{ team.name }}</h3>
+            {% for p in players[side] %}
+              {% set name = 'p' ~ side ~ '_' ~ p.id %}
+              {% set was = current.get((side, p.id), 0) %}
+              <div class="em-row">
+                <span class="em-row__name">{% if p.jersey_no %}<small>#{{ p.jersey_no }}</small> {% endif %}{{ p.name }}</span>
+                <button type="button" class="em-btn" data-step="-1" aria-label="Take 1 from {{ p.name }}">−1</button>
+                <input type="number" min="0" max="999" inputmode="numeric" name="{{ name }}" value="{{ form.get(name, was) if form else was }}" aria-label="{{ p.name }} points">
+                <input type="hidden" name="{{ name }}_was" value="{{ form.get(name ~ '_was', was) if form else was }}">
+                {% for s in steps %}<button type="button" class="em-btn em-btn--plus" data-step="{{ s }}" aria-label="Add {{ s }} to {{ p.name }}">+{{ s }}</button>{% endfor %}
+              </div>
+            {% endfor %}
+            {% set name = 'p' ~ side ~ '_team' %}
+            <div class="em-row">
+              <span class="em-row__name"><em>Team points (no player)</em></span>
+              <button type="button" class="em-btn" data-step="-1" aria-label="Take 1 team point">−1</button>
+              <input type="number" min="0" max="999" inputmode="numeric" name="{{ name }}" value="{{ form.get(name, team_pts[side]) if form else team_pts[side] }}" aria-label="Team points">
+              <input type="hidden" name="{{ name }}_was" value="{{ form.get(name ~ '_was', team_pts[side]) if form else team_pts[side] }}">
+              {% for s in steps %}<button type="button" class="em-btn em-btn--plus" data-step="{{ s }}" aria-label="Add {{ s }} team points">+{{ s }}</button>{% endfor %}
+            </div>
+            <div class="em-row em-extra">
+              <input type="text" name="extra_{{ side }}_name" maxlength="100" placeholder="Extra player (not in list)" autocomplete="off" aria-label="Extra player name">
+              <button type="button" class="em-btn" data-step="-1" aria-label="Take 1">−1</button>
+              <input type="number" min="0" max="999" inputmode="numeric" name="extra_{{ side }}_pts" value="0" data-was="0" aria-label="Extra player points">
+              {% for s in steps %}<button type="button" class="em-btn em-btn--plus" data-step="{{ s }}" aria-label="Add {{ s }}">+{{ s }}</button>{% endfor %}
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      </section>
+
+      <section class="sc-card">
+        <h2>Winner</h2>
+        {% set wsel = val('winner', 'a' if match.winner_team_id == match.team_a_id and match.score_a == match.score_b and match.winner_team_id else ('b' if match.winner_team_id == match.team_b_id and match.score_a == match.score_b and match.winner_team_id else 'auto')) %}
+        <label class="em-full" style="display:block;"><span>Who won (used when the match is Finished)</span>
+          <select name="winner">
+            <option value="auto" {% if wsel == 'auto' %}selected{% endif %}>From the score (level score = draw)</option>
+            <option value="a" {% if wsel == 'a' %}selected{% endif %}>{{ match.team_a.name }} won — level score (penalties / toss / tie-break)</option>
+            <option value="b" {% if wsel == 'b' %}selected{% endif %}>{{ match.team_b.name }} won — level score (penalties / toss / tie-break)</option>
+            <option value="draw" {% if wsel == 'draw' %}selected{% endif %}>Draw</option>
+          </select>
+        </label>
+        <p class="sc-hint" style="margin:.5rem 0 0;">If one team has more points, they are the winner. Pick a team by hand only when the score is level; it counts as a win in the standings.</p>
+      </section>
+      {% endif %}
+
+      <section class="sc-card">
+        <h2>⭐ Player of the Match</h2>
+        <label class="em-full" style="display:block;"><span>Player</span>
+          <select name="potm_player_id">
+            <option value="">— Top performer automatically —</option>
+            {% for side, team in [('a', match.team_a), ('b', match.team_b)] %}
+              <optgroup label="{{ team.name }}">
+                {% for p in players[side] %}
+                  <option value="{{ p.id }}" {% if val('potm_player_id', match.potm_player_id)|string == p.id|string %}selected{% endif %}>{% if p.jersey_no %}#{{ p.jersey_no }} {% endif %}{{ p.name }}</option>
+                {% endfor %}
+              </optgroup>
+            {% endfor %}
+          </select>
+        </label>
+        <details class="potm-extra" {% if form and form.get('potm_extra_name') %}open{% endif %}>
+          <summary>Player not in the list? Type an extra player</summary>
+          <div class="potm-extra__row">
+            <label><span>Team</span>
+              <select name="potm_extra_side">
+                <option value="a">{{ match.team_a.name }}</option>
+                <option value="b" {% if form and form.get('potm_extra_side') == 'b' %}selected{% endif %}>{{ match.team_b.name }}</option>
+              </select>
+            </label>
+            <label><span>Player name</span>
+              <input type="text" name="potm_extra_name" maxlength="100" autocomplete="off" placeholder="Full name" value="{{ form.get('potm_extra_name', '') if form else '' }}">
+            </label>
+          </div>
+        </details>
+      </section>
+
+      <div class="em-save em-actions">
+        <button class="btn btn--primary" type="submit">Save all changes</button>
+        <a class="btn btn--ghost" href="{{ url_for('scorecard.admin_edit_match', match_id=match.id) }}">Discard changes</a>
+        <a class="btn btn--ghost" href="{{ url_for('scorecard.match', match_id=match.id) }}" target="_blank" rel="noopener">View public page ↗</a>
+      </div>
+    </form>
+  </div>
+
+  <script>
+    (function () {
+      var form = document.getElementById("edit-form");
+      function total(side) {
+        var sum = 0;
+        form.querySelectorAll('.em-side[data-side="' + side + '"] input[type=number]').forEach(function (i) {
+          sum += Math.max(0, parseInt(i.value, 10) || 0);
+        });
+        var out = form.querySelector('[data-total="' + side + '"]');
+        if (out) out.textContent = sum;
+      }
+      function mark(input) {
+        var was = input.dataset.was;
+        if (was === undefined) {
+          var hidden = form.querySelector('input[name="' + input.name + '_was"]');
+          was = hidden ? hidden.value : "0";
+        }
+        input.closest(".em-row").classList.toggle("em-row--changed", String(parseInt(input.value, 10) || 0) !== String(parseInt(was, 10) || 0));
+      }
+      form.addEventListener("click", function (ev) {
+        var btn = ev.target.closest("[data-step]");
+        if (!btn) return;
+        var input = btn.closest(".em-row").querySelector("input[type=number]");
+        input.value = Math.min(999, Math.max(0, (parseInt(input.value, 10) || 0) + parseInt(btn.dataset.step, 10)));
+        mark(input);
+        total(btn.closest(".em-side").dataset.side);
+      });
+      form.addEventListener("input", function (ev) {
+        if (ev.target.type !== "number") return;
+        mark(ev.target);
+        total(ev.target.closest(".em-side").dataset.side);
+      });
+      form.querySelectorAll(".em-side input[type=number]").forEach(mark);
+      ["a", "b"].forEach(total);
+      var dirty = false;
+      form.addEventListener("change", function () { dirty = true; });
+      form.addEventListener("click", function (ev) { if (ev.target.closest("[data-step]")) dirty = true; });
+      form.addEventListener("submit", function () { dirty = false; });
+      window.addEventListener("beforeunload", function (ev) { if (dirty) { ev.preventDefault(); ev.returnValue = ""; } });
+    })();
+  </script>
+{% endblock %}
