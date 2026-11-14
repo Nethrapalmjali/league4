@@ -14,9 +14,9 @@ from flask import flash, redirect, render_template, request, session, url_for
 from werkzeug.security import generate_password_hash
 
 from . import scorecard_bp
-from .config import STAGES, STATUS_LIVE, STATUS_SCHEDULED, rules_for, GENDERS
+from .config import STAGES, STATUS_FINAL, STATUS_LIVE, STATUS_SCHEDULED, rules_for, GENDERS
 from .ems import SPORTS, admin_required, db, team_owner_model, team_wallet_model
-from .models import ScEvent, ScMatch, ScPlayer, ScScorer, ScTeam
+from .models import ScEvent, ScMatch, ScPlayer, ScScorer, ScTeam, badminton_round_won
 
 
 def _clean(value, limit=120):
@@ -421,6 +421,9 @@ def admin_enter_result(match_id):
         flash(f"Player of the Match: {picked}." if picked else "Player of the Match cleared — the top performer is shown instead.", "success")
         return redirect(url_for("scorecard.admin_enter_result", match_id=match.id))
 
+    if request.method == "POST" and match.sport == "Badminton" and match.match_format:
+        return _save_badminton_rounds(match, players, live_events, back, chosen_potm)
+
     if request.method == "POST":
         new_events = []
         errors = []
@@ -517,6 +520,139 @@ def admin_enter_result(match_id):
         "scorecard/admin_result.html", match=match, rules=rules,
         players=players, live_events=live_events, form={}, back=back,
     )
+
+
+def badminton_round_errors(fmt, scores):
+    """Check typed round scores. ``scores`` is [(a, b) or None per round, in
+    order]. Returns a list of problems (empty when it all adds up)."""
+    won = badminton_round_won(fmt)
+    target, win_by, cap, need = fmt["target"], fmt["win_by"], fmt["cap"], fmt["need"]
+    errors = []
+    wins = {"a": 0, "b": 0}
+    decided_by = None   # round label after which the match was already won
+    open_round = None   # first round that is not finished
+    for r, score in zip(fmt["rounds"], scores):
+        name = f"Round {r['number']} ({r['label']})" if fmt["unit"] == "Round" else r["label"]
+        if score is None or score == (0, 0):
+            if open_round is None and decided_by is None:
+                open_round = name
+            continue
+        a, b = score
+        if decided_by:
+            errors.append(f"{name} is not required — the match was already won after {decided_by}. Clear its scores.")
+            continue
+        if open_round:
+            errors.append(f"{name} has scores, but {open_round} is not finished yet. Finish the rounds in order.")
+            continue
+        wa, wb = won(a, b), won(b, a)
+        if wa and wb:
+            errors.append(f"{name}: both sides cannot reach {target}.")
+            continue
+        if wa or wb:
+            hi, lo = (a, b) if wa else (b, a)
+            # The round stops the moment it is won: no "15–3 then 16–3".
+            if hi > target and not (lo == hi - win_by or (hi == cap and lo == cap - 1)):
+                errors.append(f"{name}: {hi}–{lo} is not possible — the round ends when a side reaches {target}"
+                              + (f" with a {win_by}-point lead." if win_by > 1 else "."))
+                continue
+            wins["a" if wa else "b"] += 1
+            if wins["a"] >= need or wins["b"] >= need:
+                decided_by = name
+        else:
+            open_round = name
+    return errors
+
+
+def _save_badminton_rounds(match, players, live_events, back, chosen_potm):
+    """Save the round-by-round scores the committee typed (or corrected).
+
+    Only the difference is written: a round that went up gets one extra
+    "Result entry" for the missing points; a round that went down has its
+    latest points hidden (kept, not deleted) until it matches. Rounds that
+    were already right are not touched, so players credited live keep their
+    points.
+    """
+    fmt = match.format_info
+    rounds = fmt["rounds"]
+    scores, errors = [], []
+    for r in rounds:
+        n = r["number"]
+        raw_a = (request.form.get(f"r{n}a") or "").strip()
+        raw_b = (request.form.get(f"r{n}b") or "").strip()
+        if not raw_a and not raw_b:
+            scores.append(None)
+            continue
+        a, b = _int_field(raw_a or 0, 0, fmt["cap"]), _int_field(raw_b or 0, 0, fmt["cap"])
+        if a is None or b is None:
+            errors.append(f"Round {n}: points must be whole numbers from 0 to {fmt['cap']}.")
+            scores.append(None)
+            continue
+        scores.append((a, b))
+    errors += badminton_round_errors(fmt, scores)
+    if not errors and all(s is None or s == (0, 0) for s in scores) and not live_events:
+        errors.append("Enter the score of at least one round.")
+    if errors:
+        for message in errors:
+            flash(message, "error")
+        return render_template(
+            "scorecard/admin_result.html", match=match, rules=rules_for(match.sport),
+            players=players, live_events=live_events, form=request.form, back=back,
+        )
+
+    current, placed = match.badminton_points_by_round()
+    changed = 0
+    for r, score in zip(rounds, scores):
+        wanted = {"a": score[0] if score else 0, "b": score[1] if score else 0}
+        for side in ("a", "b"):
+            have = current[r["key"]][side]
+            if wanted[side] == have:
+                continue
+            changed += 1
+            if wanted[side] < have:
+                mine = [e for e, key in placed if key == r["key"] and match.side_of(e.team_id) == side]
+                for event in reversed(mine):
+                    if have <= wanted[side]:
+                        break
+                    event.voided = True
+                    have -= event.points or 1
+            if wanted[side] > have:
+                match.events.append(ScEvent(
+                    team_id=match.team_a_id if side == "a" else match.team_b_id,
+                    clock=r["key"], kind="Result entry", points=wanted[side] - have,
+                ))
+
+    if match.status == STATUS_SCHEDULED and any(scores):
+        match.status = STATUS_LIVE
+    match.recalculate()
+    stats = match.badminton_stats
+    if stats["match_winner"]:
+        match.status = STATUS_FINAL
+        match.recalculate()
+    elif request.form.get("finish") == "1":
+        # Walkover, retirement or a shortened match: finished without 3 rounds.
+        match.status = STATUS_FINAL
+        match.recalculate()
+        a, b = match.score_a or 0, match.score_b or 0
+        match.winner_team_id = match.team_a_id if a > b else (match.team_b_id if b > a else None)
+    elif match.status == STATUS_FINAL:
+        match.status = STATUS_LIVE  # a correction re-opened the result
+        match.recalculate()
+    if request.form.get("potm_player_id"):
+        match.potm_player_id = chosen_potm()
+    if match.status == STATUS_FINAL and not match.note:
+        match.note = "Round scores entered by the committee."
+    db.session.commit()
+
+    stats = match.badminton_stats
+    if stats["match_winner"]:
+        flash(f"Saved. {stats['result_text']} — the rest of the rounds are marked Not required. "
+              "Standings and the public scoreboard are updated.", "success")
+    elif match.status == STATUS_FINAL:
+        flash(f"Saved and finished at {match.score_a}–{match.score_b} in rounds.", "success")
+    else:
+        flash(f"Saved{'' if changed else ' (nothing changed)'}. Rounds {stats['tally']} — "
+              f"{stats['active_label']} is next. The match stays live.", "success")
+    return redirect(url_for("scorecard.admin_enter_result", match_id=match.id))
 
 
 # ----------------------------------------------------------------- scorers --

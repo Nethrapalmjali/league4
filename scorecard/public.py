@@ -122,8 +122,18 @@ def match(match_id):
 
 @scorecard_bp.route("/api/live.json")
 def api_live():
-    payload = _shared("live", lambda: {"matches": [_match_brief(m) for m in _ordered(STATUS_LIVE)]})
-    return _cached(payload)
+    def build():
+        rows = (ScMatch.query.options(selectinload(ScMatch.events)).filter_by(status=STATUS_LIVE)
+                .order_by(ScMatch.starts_at.asc(), ScMatch.id.desc()).all())
+        out = []
+        for m in rows:
+            brief = _match_brief(m)
+            if m.sport == "Badminton":
+                brief["line"] = m.badminton_stats["live_text"]  # e.g. "Men's Doubles: 9–7"
+            out.append(brief)
+        return {"matches": out}
+
+    return _cached(_shared("live", build))
 
 
 @scorecard_bp.route("/api/match/<int:match_id>.json")
@@ -144,6 +154,14 @@ def _match_payload(match_id):
     payload["events"] = [_event_brief(event, record) for event in events]
     payload["scorers_a"] = record.scorers_for_side("a")
     payload["scorers_b"] = record.scorers_for_side("b")
+    if record.sport == "Badminton":
+        bs = record.badminton_stats
+        payload["badminton"] = {
+            "tally": bs["tally"], "unit": bs["unit"], "result_text": bs["result_text"], "live_text": bs["live_text"],
+            "active_label": bs["active_label"],
+            "rounds": [{k: g[k] for k in ("number", "label", "a", "b", "winner", "status")}
+                       for g in bs["games_list"]],
+        }
     potm = record.player_of_the_match
     payload["potm"] = {
         "player": potm["player"].name if potm and potm.get("player") else None,

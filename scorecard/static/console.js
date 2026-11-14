@@ -169,7 +169,10 @@
     }
 
     // Auto-update the minute input box if user hasn't manually edited it
-    if (!isManualMinute && clockEl) {
+    // Badminton has no clock: its box holds the round in play instead.
+    var noClock = (currentSport || "").trim().toLowerCase() === "badminton";
+    if (noClock && !isManualMinute && clockEl && lastBadminton) clockEl.value = lastBadminton.active_game;
+    if (!isManualMinute && clockEl && !noClock) {
       clockEl.value = currentMin;
       if (clockBadge) {
         clockBadge.textContent = "Live Sync";
@@ -341,8 +344,39 @@
     }
   };
 
+  var lastBadminton = null;
+  try {
+    var seedBar = document.querySelector("[data-badminton-bar]");
+    if (seedBar && seedBar.dataset.stats) lastBadminton = JSON.parse(seedBar.dataset.stats);
+  } catch (err) { lastBadminton = null; }
+  function badmintonGuide() {
+    var bs = lastBadminton;
+    if (!bs) return null;
+    if (bs.match_winner) {
+      return { badge: "🏆 " + bs.tally, text: "🏸 <strong>" + escHtml(bs.result_text) + ".</strong> The rest are not required. Tap <strong>End match</strong>." };
+    }
+    var who = bs.match_point_a ? "Match point " + tagOf("a") : bs.match_point_b ? "Match point " + tagOf("b")
+      : bs.game_point_a ? bs.unit + " point " + tagOf("a") : bs.game_point_b ? bs.unit + " point " + tagOf("b") : "";
+    return {
+      badge: (who ? "⚠️ " + who : escHtml(bs.active_game)),
+      text: "🏸 <strong>" + escHtml(bs.active_label) + "</strong> — first to " + bs.target +
+        " wins the " + bs.unit.toLowerCase() + ". " + escHtml(bs.unit) + "s " + bs.tally +
+        " (need " + bs.need + "). It moves on by itself; just tap the point buttons."
+    };
+  }
+  function tagOf(side) {
+    var bar = document.querySelector("[data-badminton-bar]");
+    return bar ? (side === "a" ? bar.dataset.tagA : bar.dataset.tagB) : side.toUpperCase();
+  }
+  function escHtml(s) {
+    return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+    });
+  }
+
   function getGuideInfo() {
     var sportKey = (currentSport || "").trim().toLowerCase();
+    if (sportKey === "badminton" && lastBadminton) return badmintonGuide();
     var sportGuide = PERIOD_GUIDES[sportKey] || {};
     var guide = sportGuide[currentPeriod];
 
@@ -420,6 +454,14 @@
         btn.disabled = true;
         btn.textContent = "Final Period (" + currentPeriod + ")";
       });
+    }
+
+    // Badminton rounds move on by themselves when one is won; manual
+    // round buttons would only let a point land in the wrong round.
+    if ((currentSport || "").toLowerCase() === "badminton") {
+      periodNextBtns.forEach(function (btn) { btn.style.display = "none"; });
+      if (periodUndoBtn) periodUndoBtn.hidden = true;
+      if (periodUndoBarBtn) periodUndoBarBtn.hidden = true;
     }
   }
 
@@ -537,25 +579,50 @@
     // 2. Badminton UI
     if (sport === "badminton" && data.badminton_stats) {
       var bs = data.badminton_stats;
+      lastBadminton = bs;
+      var unit = (bs.unit || "Game").toLowerCase();
+      var bar = document.querySelector("[data-badminton-bar]");
+      var tagA = bar ? bar.dataset.tagA : "A", tagB = bar ? bar.dataset.tagB : "B";
       if (badmintonGamesEl) {
-        badmintonGamesEl.textContent = "Games: " + bs.games_a + " – " + bs.games_b;
+        badmintonGamesEl.textContent = tagA + " " + bs.games_a + " – " + bs.games_b + " " + tagB;
       }
       if (badmintonSetsEl) {
-        badmintonSetsEl.textContent = bs.sets_summary ? ("Sets: " + bs.sets_summary) : (bs.active_game + " in progress");
+        badmintonSetsEl.textContent = bs.live_text || bs.rule_text || "";
       }
-      if (subscoreA) subscoreA.textContent = bs.games_a + " Game" + (bs.games_a !== 1 ? "s" : "") + " won";
-      if (subscoreB) subscoreB.textContent = bs.games_b + " Game" + (bs.games_b !== 1 ? "s" : "") + " won";
+      // Big numbers: the points of the round in play; the round tally below.
+      var over = bs.match_winner || data.status === "final";
+      if (scoreA) scoreA.textContent = over ? bs.games_a : bs.active_pts_a;
+      if (scoreB) scoreB.textContent = over ? bs.games_b : bs.active_pts_b;
+      if (subscoreA) subscoreA.textContent = bs.games_a + " " + unit + (bs.games_a !== 1 ? "s" : "") + " won";
+      if (subscoreB) subscoreB.textContent = bs.games_b + " " + unit + (bs.games_b !== 1 ? "s" : "") + " won";
+
+      var list = document.querySelector("[data-badminton-rounds-list]");
+      if (list && bs.games_list) {
+        list.textContent = "";
+        bs.games_list.forEach(function (g) {
+          var li = document.createElement("li");
+          li.className = "sc-rounds__item sc-rounds__item--" + g.status;
+          var name = document.createElement("span");
+          name.className = "sc-rounds__name";
+          name.textContent = (g.number ? g.number + ". " : "") + (g.label || g.game);
+          var score = document.createElement("span");
+          score.className = "sc-rounds__score";
+          score.textContent = g.status === "not_required" ? "" : g.score_text;
+          var state = document.createElement("span");
+          state.className = "sc-rounds__state";
+          state.textContent = g.status === "completed" ? "✓ " + (g.winner === "a" ? tagA : tagB)
+            : g.status.replace("_", " ").replace(/\b\w/g, function (c) { return c.toUpperCase(); });
+          li.appendChild(name); li.appendChild(score); li.appendChild(state);
+          list.appendChild(li);
+        });
+      }
 
       if (bs.match_winner) {
-        showError("🏆 Match Won by Team " + bs.match_winner.toUpperCase() + "! (" + bs.games_a + "–" + bs.games_b + ") Tap 'End match' to finalize.");
-      } else if (bs.game_point_a) {
-        if (periodBadge) periodBadge.textContent = "⚠️ Game Point Team A";
-      } else if (bs.game_point_b) {
-        if (periodBadge) periodBadge.textContent = "⚠️ Game Point Team B";
+        showError("🏆 " + (bs.result_text || ("Match won " + bs.tally)) + ". Tap 'End match' to finalize (or Undo if the last point was a mistake).");
       }
 
       if (clockEl && !isManualMinute) {
-        clockEl.value = data.period || bs.active_game || "Game 1";
+        clockEl.value = bs.active_game || data.period || "";
       }
     }
 

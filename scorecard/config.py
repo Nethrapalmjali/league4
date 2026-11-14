@@ -46,12 +46,59 @@ SPORT_RULES = {
         ],
     },
     "Badminton": {
-        "periods": ["Game 1", "Game 2", "Game 3"],
+        # New matches: the team format below (BADMINTON_FORMATS["bo5"]).
+        "periods": ["Round 1", "Round 2", "Round 3", "Round 4", "Round 5"],
         "actions": [
             {"key": "point", "label": "Point", "points": 1},
         ],
     },
 }
+
+# Badminton match formats. ``target``: points that win a round; ``win_by``:
+# margin needed; ``cap``: reaching this always wins; ``need``: rounds that win
+# the match. Every new badminton match is "bo5". Matches scored before it
+# existed (no format stored) keep the old best-of-3-games-to-21 reading, so
+# their results never change.
+BADMINTON_DEFAULT_FORMAT = "bo5"
+BADMINTON_FORMATS = {
+    "bo5": {
+        "key": "bo5",
+        "unit": "Round",
+        "rounds": [
+            {"key": "Round 1", "label": "{g} Singles 1"},
+            {"key": "Round 2", "label": "{g} Singles 2"},
+            {"key": "Round 3", "label": "{g} Doubles"},
+            {"key": "Round 4", "label": "Reverse Singles"},
+            {"key": "Round 5", "label": "{g} Doubles"},
+        ],
+        "target": 15, "win_by": 1, "cap": 15, "need": 3,
+        "rule_text": "Best of 5 rounds · first to 15 wins a round · 3 rounds win the match",
+    },
+    "bo3": {
+        "key": "bo3",
+        "unit": "Game",
+        "rounds": [
+            {"key": "Game 1", "label": "Game 1"},
+            {"key": "Game 2", "label": "Game 2"},
+            {"key": "Game 3", "label": "Game 3"},
+        ],
+        "target": 21, "win_by": 2, "cap": 30, "need": 2,
+        "rule_text": "Best of 3 games · 21 points, win by 2 (30 caps)",
+    },
+}
+
+
+def badminton_format(key, gender="Men"):
+    """The format with round names filled in for the category, e.g.
+    "Men's Singles 1" or "Women's Singles 1"."""
+    base = BADMINTON_FORMATS.get(key) or BADMINTON_FORMATS["bo3"]
+    g = "Women's" if gender == "Women" else "Men's"
+    fmt = dict(base)
+    fmt["rounds"] = [
+        {"key": r["key"], "label": r["label"].format(g=g), "number": i + 1}
+        for i, r in enumerate(base["rounds"])
+    ]
+    return fmt
 
 # Player statistics, per sport. Each category adds up events by their label:
 # "points" sums what they scored, "count" counts how often they happened.

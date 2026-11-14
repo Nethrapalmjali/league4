@@ -15,8 +15,8 @@
       data-match="{{ match.id }}"
       data-match-status="{{ match.status }}"
       data-match-sport="{{ match.sport }}"
-      data-match-period="{{ match.period or (rules.periods[0] if rules.periods else 'P1') }}"
-      data-match-periods='{{ rules.periods | tojson }}'
+      data-match-period="{{ match.period or (match.periods[0] if match.periods else 'P1') }}"
+      data-match-periods='{{ match.periods | tojson }}'
       data-starts-at="{{ match.starts_at.isoformat() if match.starts_at else '' }}"
       data-event-url="{{ url_for('scorecard.add_event', match_id=match.id) }}"
       data-undo-url="{{ url_for('scorecard.undo_event', match_id=match.id) }}"
@@ -53,20 +53,24 @@
       </div>
     </div>
   {% elif match.sport == 'Badminton' %}
-    <div class="sc-badminton-console-bar" data-badminton-bar>
+    {% set bs = match.badminton_stats %}
+    <div class="sc-badminton-console-bar" data-badminton-bar data-tag-a="{{ match.team_a.tag }}" data-tag-b="{{ match.team_b.tag }}" data-stats='{{ bs|tojson }}'>
       <div class="sc-badminton-games-tally">
-        <span class="sc-badminton-tally-label">🏸 Games (Best of 3):</span>
+        <span class="sc-badminton-tally-label">🏸 {{ bs.unit }}s ({{ 'Best of 5' if bs.format == 'bo5' else 'Best of 3' }}):</span>
         <span class="sc-badminton-tally-score" data-badminton-games>
-          {{ match.team_a.tag }} ({{ match.badminton_stats.games_a if match.badminton_stats else 0 }}) – ({{ match.badminton_stats.games_b if match.badminton_stats else 0 }}) {{ match.team_b.tag }}
+          {{ match.team_a.tag }} {{ bs.games_a }} – {{ bs.games_b }} {{ match.team_b.tag }}
         </span>
       </div>
-      <div class="sc-badminton-sets-summary" data-badminton-sets>
-        {% if match.badminton_stats and match.badminton_stats.sets_summary %}
-          Sets: {{ match.badminton_stats.sets_summary }}
-        {% else %}
-          Game 1 in progress (First to 21, win by 2)
-        {% endif %}
-      </div>
+      <div class="sc-badminton-sets-summary" data-badminton-sets>{{ bs.live_text or bs.rule_text }}</div>
+      <ol class="sc-rounds" data-badminton-rounds-list>
+        {% for g in bs.games_list %}
+          <li class="sc-rounds__item sc-rounds__item--{{ g.status }}">
+            <span class="sc-rounds__name">{{ g.number }}. {{ g.label }}</span>
+            <span class="sc-rounds__score">{{ g.score_text if g.status != 'not_required' else '' }}</span>
+            <span class="sc-rounds__state">{% if g.status == 'completed' %}✓ {{ match.team_a.tag if g.winner == 'a' else match.team_b.tag }}{% else %}{{ g.status|replace('_', ' ')|title }}{% endif %}</span>
+          </li>
+        {% endfor %}
+      </ol>
     </div>
   {% elif match.sport == 'Kabaddi' %}
     <div class="sc-kabaddi-console-bar" data-kabaddi-bar>
@@ -124,7 +128,7 @@
   <div class="sc-console__score">
     <div class="sc-console__side" data-side-score-card="a">
       <span class="sc-console__tag">{{ match.team_a.tag }}</span>
-      <span class="sc-console__num" data-score-a>{{ match.score_a or 0 }}</span>
+      <span class="sc-console__num" data-score-a>{% if match.sport == 'Badminton' and match.badminton_stats and not match.badminton_stats.match_winner and match.status != 'final' %}{{ match.badminton_stats.active_pts_a }}{% else %}{{ match.score_a or 0 }}{% endif %}</span>
       {% if match.sport == 'Basketball' and match.basketball_stats %}
         <span class="sc-console__subscore" data-subscore-a>
           {{ match.basketball_stats.a.total }} pts
@@ -135,13 +139,13 @@
         </span>
       {% elif match.sport == 'Badminton' and match.badminton_stats %}
         <span class="sc-console__subscore" data-subscore-a>
-          {{ match.badminton_stats.games_a }} Game{{ 's' if match.badminton_stats.games_a != 1 else '' }} won
+          {{ match.badminton_stats.games_a }} {{ match.badminton_stats.unit|lower }}{{ 's' if match.badminton_stats.games_a != 1 else '' }} won
         </span>
       {% endif %}
     </div>
     <div class="sc-console__side sc-console__side--b" data-side-score-card="b">
       <span class="sc-console__tag">{{ match.team_b.tag }}</span>
-      <span class="sc-console__num" data-score-b>{{ match.score_b or 0 }}</span>
+      <span class="sc-console__num" data-score-b>{% if match.sport == 'Badminton' and match.badminton_stats and not match.badminton_stats.match_winner and match.status != 'final' %}{{ match.badminton_stats.active_pts_b }}{% else %}{{ match.score_b or 0 }}{% endif %}</span>
       {% if match.sport == 'Basketball' and match.basketball_stats %}
         <span class="sc-console__subscore" data-subscore-b>
           {{ match.basketball_stats.b.total }} pts
@@ -152,7 +156,7 @@
         </span>
       {% elif match.sport == 'Badminton' and match.badminton_stats %}
         <span class="sc-console__subscore" data-subscore-b>
-          {{ match.badminton_stats.games_b }} Game{{ 's' if match.badminton_stats.games_b != 1 else '' }} won
+          {{ match.badminton_stats.games_b }} {{ match.badminton_stats.unit|lower }}{{ 's' if match.badminton_stats.games_b != 1 else '' }} won
         </span>
       {% endif %}
     </div>
@@ -224,7 +228,7 @@
           <span data-clock-label>
             {% if match.sport == 'Basketball' %}Quarter / Min
             {% elif match.sport == 'Cricket' %}Delivery / Over
-            {% elif match.sport == 'Badminton' %}Game Set
+            {% elif match.sport == 'Badminton' %}Round
             {% elif match.sport == 'Kabaddi' %}Match Minute
             {% else %}Event Minute{% endif %}
           </span>
@@ -232,7 +236,7 @@
         </div>
         <div class="sc-clock__input-row">
           <input type="text" data-clock inputmode="numeric" 
-                 placeholder="{% if match.sport == 'Basketball' %}Q1 4'{% elif match.sport == 'Cricket' %}0.1 ov{% elif match.sport == 'Badminton' %}Game 1{% else %}1'{% endif %}" 
+                 placeholder="{% if match.sport == 'Basketball' %}Q1 4'{% elif match.sport == 'Cricket' %}0.1 ov{% elif match.sport == 'Badminton' %}{{ match.periods[0] }}{% else %}1'{% endif %}" 
                  maxlength="10">
           <button type="button" class="btn btn--sm sc-btn-snap" data-snap-live title="Re-sync with live match clock" hidden>
             ↺ Snap
@@ -242,7 +246,7 @@
       <span class="sc-clock__hint" data-clock-hint>
         {% if match.sport == 'Basketball' %}Auto-tags quarter. Tap clock to sync.
         {% elif match.sport == 'Cricket' %}Auto-calculates over delivery on each ball.
-        {% elif match.sport == 'Badminton' %}Auto-tracks game points and sets.
+        {% elif match.sport == 'Badminton' %}Rounds move on by themselves at {{ match.badminton_stats.target }} points.
         {% elif match.sport == 'Kabaddi' %}Auto-fetches raid/tackle timestamp.
         {% else %}Auto-fetches minute. Click to edit anytime!{% endif %}
       </span>

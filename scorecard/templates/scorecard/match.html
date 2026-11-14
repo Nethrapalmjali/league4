@@ -48,8 +48,8 @@
             <span class="sc-cricket-card-equation">{{ match.basketball_stats.lead_text }}</span>
           {% elif match.sport == 'Cricket' and match.cricket_stats and match.cricket_stats.equation %}
             <span class="sc-cricket-card-equation">{{ match.cricket_stats.equation }}</span>
-          {% elif match.sport == 'Badminton' and match.badminton_stats and match.badminton_stats.sets_summary %}
-            <span class="sc-cricket-card-equation">Sets: {{ match.badminton_stats.sets_summary }}</span>
+          {% elif match.sport == 'Badminton' and match.badminton_stats %}
+            <span class="sc-cricket-card-equation sc-board__line" data-badminton-line>{{ match.badminton_stats.live_text }}</span>
           {% elif match.sport == 'Kabaddi' and match.kabaddi_stats and match.kabaddi_stats.lead_text %}
             <span class="sc-cricket-card-equation">{{ match.kabaddi_stats.lead_text }}</span>
           {% endif %}
@@ -359,51 +359,64 @@
 
     {% if match.sport == 'Badminton' and match.badminton_stats %}
       {% set bs = match.badminton_stats %}
-      <section class="sc-block sc-sport-breakdown-card">
+      <section class="sc-block sc-sport-breakdown-card" data-badminton-rounds>
         <div class="sc-sport-breakdown-head">
-          <span class="sc-sport-breakdown-title">🏸 Badminton Games &amp; Sets</span>
-          <span class="sc-cricket-inn-badge">
+          <span class="sc-sport-breakdown-title">🏸 {{ 'Rounds' if bs.unit == 'Round' else 'Games' }} · {{ match.team_a.tag }} <span data-round-tally>{{ bs.tally }}</span> {{ match.team_b.tag }}</span>
+          <span data-round-badge class="sc-cricket-inn-badge{% if not bs.match_winner and match.status == 'live' %} sc-cricket-inn-badge--live{% endif %}">
             {% if bs.match_winner %}
-              Match won by {{ match.team_a.name if bs.match_winner == 'a' else match.team_b.name }}
+              🏆 {{ bs.result_text }}
+            {% elif match.status == 'live' %}
+              {{ bs.active_label }} underway
+            {% elif match.status == 'final' %}
+              Finished
             {% else %}
-              {{ bs.active_game }} underway
+              Not started
             {% endif %}
           </span>
         </div>
+        <p class="sc-hint" style="margin:0 0 .5rem;">{{ bs.rule_text }}</p>
+        <div class="sc-table-scroll" style="overflow-x:auto;">
         <table class="sc-stat-comparison-table">
           <thead>
             <tr>
-              <th class="sc-stat-label-col">Game / Set</th>
-              <th class="sc-stat-num-col">{{ match.team_a.name }}</th>
-              <th class="sc-stat-num-col">{{ match.team_b.name }}</th>
+              <th class="sc-stat-label-col">{{ bs.unit }}</th>
+              <th class="sc-stat-num-col" title="{{ match.team_a.name }}">{{ match.team_a.tag }}</th>
+              <th class="sc-stat-num-col" title="{{ match.team_b.name }}">{{ match.team_b.tag }}</th>
               <th class="sc-stat-label-col">Status</th>
             </tr>
           </thead>
           <tbody>
             {% for g in bs.games_list %}
-              <tr>
-                <td class="sc-stat-label-col"><strong>{{ g.game }}</strong></td>
-                <td class="sc-stat-num-col">{{ g.a }}</td>
-                <td class="sc-stat-num-col">{{ g.b }}</td>
+              <tr data-round="{{ g.number }}"{% if g.status in ('not_required', 'not_played') %} style="opacity:.55;"{% endif %}>
                 <td class="sc-stat-label-col">
-                  {% if g.is_done %}
-                    <span style="color:#1b8751; font-weight:800;">Won by {{ match.team_a.tag if g.winner == 'a' else match.team_b.tag }}</span>
-                  {% elif g.game == bs.active_game and (g.a > 0 or g.b > 0) %}
+                  <strong>{% if bs.unit == 'Round' %}{{ g.number }}. {% endif %}{{ g.label }}</strong>
+                </td>
+                <td data-ra class="sc-stat-num-col"{% if g.winner == 'a' %} style="font-weight:900; color:#1b8751;"{% endif %}>{{ g.a if g.status not in ('upcoming', 'not_required') or g.a or g.b else '–' }}</td>
+                <td data-rb class="sc-stat-num-col"{% if g.winner == 'b' %} style="font-weight:900; color:#1b8751;"{% endif %}>{{ g.b if g.status not in ('upcoming', 'not_required') or g.a or g.b else '–' }}</td>
+                <td data-rstatus class="sc-stat-label-col">
+                  {% if g.status == 'completed' %}
+                    <span style="color:#1b8751; font-weight:800;">✓ Won by {{ match.team_a.tag if g.winner == 'a' else match.team_b.tag }}</span>
+                  {% elif g.status == 'ongoing' %}
                     <span class="sc-cricket-inn-badge sc-cricket-inn-badge--live">Playing</span>
+                  {% elif g.status == 'not_required' %}
+                    <span style="color:var(--muted); font-weight:700;">Not required</span>
+                  {% elif g.status == 'not_played' %}
+                    <span style="color:var(--muted);">Not played</span>
                   {% else %}
-                    <span style="color:var(--muted);">—</span>
+                    <span style="color:var(--muted);">Upcoming</span>
                   {% endif %}
                 </td>
               </tr>
             {% endfor %}
             <tr style="background: rgba(0,0,0,0.03); font-weight:800;">
-              <td class="sc-stat-label-col"><strong>Games Won</strong></td>
-              <td class="sc-stat-num-col" style="font-size:1.25rem; color:var(--maroon);">{{ bs.games_a }}</td>
-              <td class="sc-stat-num-col" style="font-size:1.25rem; color:var(--maroon);">{{ bs.games_b }}</td>
-              <td class="sc-stat-label-col">Best of 3</td>
+              <td class="sc-stat-label-col"><strong>{{ bs.unit }}s won</strong></td>
+              <td data-rwon-a class="sc-stat-num-col" style="font-size:1.25rem; color:var(--maroon);">{{ bs.games_a }}</td>
+              <td data-rwon-b class="sc-stat-num-col" style="font-size:1.25rem; color:var(--maroon);">{{ bs.games_b }}</td>
+              <td class="sc-stat-label-col">{{ 'Best of 5' if bs.format == 'bo5' else 'Best of 3' }}</td>
             </tr>
           </tbody>
         </table>
+        </div>
       </section>
     {% endif %}
 

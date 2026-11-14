@@ -99,6 +99,55 @@
     });
   }
 
+  // Badminton round table: scores, winners and statuses as rounds go on.
+  var STATUS_TEXT = { ongoing: "Playing", not_required: "Not required", not_played: "Not played", upcoming: "Upcoming" };
+  function renderRounds(data) {
+    var box = page.querySelector("[data-badminton-rounds]");
+    if (!box) return;
+    var bd = data.badminton;
+    var tags = { a: data.team_a ? data.team_a.tag : "A", b: data.team_b ? data.team_b.tag : "B" };
+    var line = page.querySelector("[data-badminton-line]");
+    if (line) line.textContent = bd.live_text || "";
+    var tally = box.querySelector("[data-round-tally]");
+    if (tally) tally.textContent = bd.tally;
+    var badge = box.querySelector("[data-round-badge]");
+    if (badge) {
+      var playing = !bd.result_text && data.status === "live";
+      badge.textContent = bd.result_text ? "🏆 " + bd.result_text
+        : (playing ? bd.active_label + " underway" : (data.status === "final" ? "Finished" : "Not started"));
+      badge.classList.toggle("sc-cricket-inn-badge--live", playing);
+    }
+    var won = { a: 0, b: 0 };
+    bd.rounds.forEach(function (r) {
+      if (r.status === "completed") won[r.winner] += 1;
+      var row = box.querySelector('[data-round="' + r.number + '"]');
+      if (!row) return;
+      var blank = (r.status === "upcoming" || r.status === "not_required") && !r.a && !r.b;
+      var ca = row.querySelector("[data-ra]"), cb = row.querySelector("[data-rb]"), cs = row.querySelector("[data-rstatus]");
+      ca.textContent = blank ? "–" : r.a;
+      cb.textContent = blank ? "–" : r.b;
+      ca.style.fontWeight = r.winner === "a" ? "900" : ""; ca.style.color = r.winner === "a" ? "#1b8751" : "";
+      cb.style.fontWeight = r.winner === "b" ? "900" : ""; cb.style.color = r.winner === "b" ? "#1b8751" : "";
+      row.style.opacity = (r.status === "not_required" || r.status === "not_played") ? ".55" : "";
+      cs.textContent = "";
+      var label = document.createElement("span");
+      if (r.status === "completed") {
+        label.style.color = "#1b8751"; label.style.fontWeight = "800";
+        label.textContent = "✓ Won by " + tags[r.winner];
+      } else if (r.status === "ongoing") {
+        label.className = "sc-cricket-inn-badge sc-cricket-inn-badge--live";
+        label.textContent = STATUS_TEXT.ongoing;
+      } else {
+        label.style.color = "var(--muted)";
+        label.textContent = STATUS_TEXT[r.status] || "";
+      }
+      cs.appendChild(label);
+    });
+    var wa = box.querySelector("[data-rwon-a]"), wb = box.querySelector("[data-rwon-b]");
+    if (wa) wa.textContent = won.a;
+    if (wb) wb.textContent = won.b;
+  }
+
   function render(data) {
     var newA = data.team_a ? data.team_a.score : 0;
     var newB = data.team_b ? data.team_b.score : 0;
@@ -144,6 +193,8 @@
         stateEl.appendChild(fin);
       }
     }
+
+    if (data.badminton) renderRounds(data);
 
     // Update scorers pills under teams
     if (data.scorers_a) updateScorersList(scorersAEl, data.scorers_a);

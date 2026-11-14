@@ -41,7 +41,8 @@ from werkzeug.security import check_password_hash
 
 from . import scorecard_bp
 from .config import (
-    GENDERS, STAGES, STATUS_FINAL, STATUS_LIVE, STATUS_SCHEDULED, action_for, rules_for,
+    BADMINTON_DEFAULT_FORMAT, GENDERS, STAGES, STATUS_FINAL, STATUS_LIVE, STATUS_SCHEDULED,
+    action_for, badminton_format, rules_for,
 )
 from .ems import (
     SPORTS, admin_credentials_ok, admin_required, admin_secret_material,
@@ -53,7 +54,7 @@ TOKEN_SALT = "gml-scorer-app-v1"
 # Long enough to cover a whole tournament day plus a night without signal.
 TOKEN_MAX_AGE = 4 * 24 * 3600
 MAX_OPS_PER_SYNC = 200
-APP_VERSION = "1.3.0"
+APP_VERSION = "1.4.0"
 
 # Failed sign-ins per (IP, name), kept in memory: enough to stop someone
 # guessing passcodes from the stands without adding a table for it.
@@ -397,7 +398,8 @@ def _match_state(match, identity, squads=None):
         "starts_at": match.starts_at.isoformat() if match.starts_at else None,
         "status": match.status,
         "period": match.period,
-        "periods": rules["periods"],
+        "periods": match.periods,
+        "format": match.format_info,
         "actions": rules["actions"],
         "team_a": _team_dict(match.team_a),
         "team_b": _team_dict(match.team_b),
@@ -434,6 +436,8 @@ def _setup_for_new_matches():
         "teams": [{"id": t.id, "name": t.name, "tag": t.tag, "sport": t.sport, "gender": t.gender} for t in teams],
         "squads": squads,
         "rules": {sport: rules_for(sport) for sport in SPORTS},
+        # The format a badminton match created on the phone will have.
+        "badminton_formats": {g: badminton_format(BADMINTON_DEFAULT_FORMAT, g) for g in GENDERS},
         "stages": STAGES,
         "genders": GENDERS,
     }
@@ -506,8 +510,10 @@ def _apply_event(identity, match, op_id, payload, at, squad_ids):
 
     clock = (str(payload.get("clock") or "")).strip()[:8] or None
     if not clock:
-        if match.sport in ("Basketball", "Badminton"):
-            clock = match.period or rules_for(match.sport)["periods"][0]
+        if match.sport == "Badminton":
+            clock = match.badminton_stats["active_game"]
+        elif match.sport == "Basketball":
+            clock = match.period or match.periods[0]
         elif match.sport == "Kabaddi":
             clock = match.period or "H1"
 
@@ -522,7 +528,7 @@ def _apply_event(identity, match, op_id, payload, at, squad_ids):
 
     if match.status == STATUS_SCHEDULED:
         match.status = STATUS_LIVE
-        match.period = match.period or rules_for(match.sport)["periods"][0]
+        match.period = match.period or match.periods[0]
 
     match.recalculate()
     if match.sport == "Badminton":
@@ -561,7 +567,7 @@ def _apply_undo(identity, match, payload):
 def _apply_period(identity, match, payload):
     _check_writable(identity, match)
     wanted = payload.get("period")
-    if wanted not in rules_for(match.sport)["periods"]:
+    if wanted not in match.periods:
         raise _Reject("Unknown period for this sport.")
     match.period = wanted
     match.updated_at = datetime.utcnow()
@@ -577,8 +583,10 @@ def _apply_status(identity, match, payload):
         raise _Reject("This match is already finished.")
     match.status = wanted
     if wanted == STATUS_LIVE and not match.period:
-        match.period = rules_for(match.sport)["periods"][0]
+        match.period = match.periods[0]
     if wanted == STATUS_FINAL:
+        if match.sport == "Badminton":
+            match.recalculate()  # the score becomes the round tally
         a, b = match.score_a or 0, match.score_b or 0
         match.winner_team_id = match.team_a_id if a > b else (match.team_b_id if b > a else None)
     match.updated_at = datetime.utcnow()

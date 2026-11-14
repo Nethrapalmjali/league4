@@ -36,8 +36,8 @@
           <span class="sc-cricket-card-equation">{{ match.basketball_stats.lead_text }}</span>
         {% elif match.sport == 'Cricket' and match.cricket_stats and match.cricket_stats.equation %}
           <span class="sc-cricket-card-equation">{{ match.cricket_stats.equation }}</span>
-        {% elif match.sport == 'Badminton' and match.badminton_stats and match.badminton_stats.sets_summary %}
-          <span class="sc-cricket-card-equation">Sets: {{ match.badminton_stats.sets_summary }}</span>
+        {% elif match.sport == 'Badminton' and match.badminton_stats and match.badminton_stats.live_text %}
+          <span class="sc-cricket-card-equation">{{ match.badminton_stats.live_text }}</span>
         {% elif match.sport == 'Kabaddi' and match.kabaddi_stats and match.kabaddi_stats.lead_text %}
           <span class="sc-cricket-card-equation">{{ match.kabaddi_stats.lead_text }}</span>
         {% endif %}
@@ -139,6 +139,8 @@
             data.matches.forEach(function (m) {
               var el = document.querySelector('[href$="/match/' + m.id + '"] .sc-row__score');
               if (el) el.innerHTML = Number(m.team_a.score) + '<i>–</i>' + Number(m.team_b.score);
+              var line = m.line && document.querySelector('[href$="/match/' + m.id + '"] .sc-cricket-card-equation');
+              if (line) line.textContent = m.line;  // badminton: the round in play
             });
           })
           .catch(function () { /* a dropped poll is not worth surfacing */ });

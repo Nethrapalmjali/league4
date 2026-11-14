@@ -109,53 +109,81 @@
   /* ------------------------------------------------------ scoring rules -- */
   // A faithful copy of ScMatch.badminton_stats on the server, so the screen
   // shows exactly what the server will compute once the changes arrive.
-  function badmintonStats(m) {
-    var games = { "Game 1": { a: 0, b: 0 }, "Game 2": { a: 0, b: 0 }, "Game 3": { a: 0, b: 0 } };
-    var current = "Game 1";
-    var keys = ["Game 1", "Game 2", "Game 3", "G1", "G2", "G3"];
-    function won(x, y) { return (x >= 21 && x - y >= 2) || x === 30; }
+  // Formats as sent by the server (config.BADMINTON_FORMATS); kept here too
+  // for matches saved on the phone before the server sent one.
+  var OLD_BEST_OF_3 = {
+    key: "bo3", unit: "Game", target: 21, win_by: 2, cap: 30, need: 2,
+    rule_text: "Best of 3 games · 21 points, win by 2 (30 caps)",
+    rounds: [{ key: "Game 1", label: "Game 1", number: 1 }, { key: "Game 2", label: "Game 2", number: 2 }, { key: "Game 3", label: "Game 3", number: 3 }]
+  };
+  function bestOf5(gender) {
+    var g = gender === "Women" ? "Women's" : "Men's";
+    return {
+      key: "bo5", unit: "Round", target: 15, win_by: 1, cap: 15, need: 3,
+      rule_text: "Best of 5 rounds · first to 15 wins a round · 3 rounds win the match",
+      rounds: [g + " Singles 1", g + " Singles 2", g + " Doubles", "Reverse Singles", g + " Doubles"].map(function (label, i) {
+        return { key: "Round " + (i + 1), label: label, number: i + 1 };
+      })
+    };
+  }
+  function formatOf(m) {
+    if (m.format && m.format.rounds) return m.format;
+    return (m.periods && m.periods[0] === "Game 1") ? OLD_BEST_OF_3 : bestOf5(m.gender);
+  }
 
+  function badmintonStats(m) {
+    var fmt = formatOf(m);
+    var rounds = fmt.rounds, keys = rounds.map(function (r) { return r.key; });
+    function won(x, y) { return (x >= fmt.target && x - y >= fmt.win_by) || x >= fmt.cap; }
+    var pts = {};
+    keys.forEach(function (k) { pts[k] = { a: 0, b: 0 }; });
+    var current = 0;
     m.events.forEach(function (e) {
       if ((e.points || 0) <= 0 || (e.side !== "a" && e.side !== "b")) return;
-      var g = null;
+      var idx = null;
       if (e.clock) {
-        var lc = e.clock.toLowerCase();
-        for (var i = 0; i < keys.length; i++) {
-          if (lc.indexOf(keys[i].toLowerCase()) !== -1) {
-            g = keys[i].indexOf("1") !== -1 ? "Game 1" : (keys[i].indexOf("2") !== -1 ? "Game 2" : "Game 3");
-            break;
-          }
-        }
+        var found = /\b(?:round|game|r|g)\s*(\d+)/i.exec(e.clock);
+        if (found && +found[1] >= 1 && +found[1] <= keys.length) idx = +found[1] - 1;
       }
-      if (!g) g = current;
-      games[g][e.side] += e.points || 1;
-      if (won(games[g].a, games[g].b) || won(games[g].b, games[g].a)) {
-        if (g === "Game 1" && current === "Game 1") current = "Game 2";
-        else if (g === "Game 2" && current === "Game 2") current = "Game 3";
-      }
+      if (idx === null) idx = current;
+      pts[keys[idx]][e.side] += e.points || 1;
+      while (current < keys.length - 1 && (won(pts[keys[current]].a, pts[keys[current]].b) || won(pts[keys[current]].b, pts[keys[current]].a))) current++;
     });
 
-    var list = [], wonA = 0, wonB = 0, active = "Game 1", activeA = 0, activeB = 0;
-    ["Game 1", "Game 2", "Game 3"].forEach(function (name) {
-      var a = games[name].a, b = games[name].b;
-      var wa = won(a, b), wb = won(b, a), done = wa || wb;
-      if (done) {
-        if (wa) wonA++; else wonB++;
-      } else if (!list.length || list.every(function (x) { return x.done; })) {
-        active = name; activeA = a; activeB = b;
-      }
-      list.push({ game: name, a: a, b: b, done: done });
+    var list = [], wonA = 0, wonB = 0, winner = null, active = null;
+    rounds.forEach(function (r) {
+      var a = pts[r.key].a, b = pts[r.key].b;
+      var wa = won(a, b), wb = won(b, a), done = (wa || wb) && !winner;
+      var status, w = null;
+      if (winner) status = "not_required";
+      else if (done) {
+        status = "completed"; w = wa ? "a" : "b";
+        if (w === "a") wonA++; else wonB++;
+        if (wonA >= fmt.need) winner = "a"; else if (wonB >= fmt.need) winner = "b";
+      } else if (!active) {
+        active = r;
+        status = m.status === "final" ? "not_played" : (m.status === "scheduled" && !a && !b ? "upcoming" : "ongoing");
+      } else status = m.status === "final" ? "not_played" : "upcoming";
+      list.push({ key: r.key, label: r.label, number: r.number, a: a, b: b, done: done, winner: w, status: status });
     });
-    var winner = wonA >= 2 ? "a" : (wonB >= 2 ? "b" : null);
-    var sets = list.filter(function (g) { return g.done || g.a > 0 || g.b > 0; })
+    var activeRow = active ? list[keys.indexOf(active.key)] : (list.filter(function (g) { return g.status === "completed"; }).pop() || list[0]);
+    var activeA = active ? activeRow.a : 0, activeB = active ? activeRow.b : 0;
+    var gpA = !!active && won(activeA + 1, activeB), gpB = !!active && won(activeB + 1, activeA);
+    var sets = list.filter(function (g) { return (g.status === "completed" || g.status === "ongoing") && (g.a || g.b || g.done); })
       .map(function (g) { return g.a + "–" + g.b; }).join(", ");
-    return { games_a: wonA, games_b: wonB, active_game: active, active_a: activeA, active_b: activeB, winner: winner, sets: sets };
+    return {
+      format: fmt, unit: fmt.unit, list: list, games_a: wonA, games_b: wonB, tally: wonA + "–" + wonB,
+      active_game: activeRow.key, active_label: activeRow.label, active_a: activeA, active_b: activeB,
+      winner: winner, sets: sets,
+      game_point_a: gpA && !winner, game_point_b: gpB && !winner,
+      match_point_a: gpA && wonA === fmt.need - 1, match_point_b: gpB && wonB === fmt.need - 1
+    };
   }
 
   function recompute(m) {
     if (m.sport === "Badminton") {
       var bs = badmintonStats(m);
-      if (bs.games_a > 0 || bs.games_b > 0 || m.status === "final") {
+      if (bs.format.key === "bo5" || bs.games_a > 0 || bs.games_b > 0 || m.status === "final") {
         m.score_a = bs.games_a; m.score_b = bs.games_b;
       } else {
         m.score_a = bs.active_a; m.score_b = bs.active_b;
@@ -462,6 +490,7 @@
       id: key, sport: d.sport, gender: d.gender, stage: d.stage || "League", venue: d.venue || null,
       starts_at: null, status: "scheduled", period: null,
       periods: rules.periods, actions: rules.actions,
+      format: d.sport === "Badminton" ? ((S.setup.badminton_formats || {})[d.gender] || bestOf5(d.gender)) : null,
       team_a: { id: ta.id, name: ta.name, tag: ta.tag }, team_b: { id: tb.id, name: tb.name, tag: tb.tag },
       score_a: 0, score_b: 0, can_edit_final: true,
       players: { a: S.setup.squads[String(ta.id)] || [], b: S.setup.squads[String(tb.id)] || [] },
@@ -664,6 +693,11 @@
   }
   // Badminton: the same player plays every rally, so ask once per side.
   // undefined = not chosen yet, null = "no player", number = that player.
+  // Best of 5: a different player plays each round, so it is remembered per round.
+  function stickyKey(m) {
+    var bs = badmintonStats(m);
+    return bs.format.key === "bo5" ? m.id + "|" + bs.active_game : m.id;
+  }
   function stickyFor(matchId, side) {
     var forMatch = S.sticky[matchId];
     return forMatch && Object.prototype.hasOwnProperty.call(forMatch, side) ? forMatch[side] : undefined;
@@ -739,18 +773,37 @@
     }
   }
 
+  // Badminton: every round with its score and state, the one in play lit up.
+  var ROUND_STATE = { ongoing: "Playing", upcoming: "Upcoming", not_required: "Not required", not_played: "Not played" };
+  function renderRounds(m, bs) {
+    return '<ol class="rounds" aria-label="' + esc(bs.unit) + 's">' + bs.list.map(function (g) {
+      var state = g.status === "completed" ? "✓ " + esc(g.winner === "a" ? m.team_a.tag : m.team_b.tag) : ROUND_STATE[g.status];
+      var score = g.status === "not_required" || (g.status === "upcoming" && !g.a && !g.b) ? "" : g.a + "–" + g.b;
+      return '<li class="rounds__item rounds__item--' + g.status + '">' +
+        '<span class="rounds__name">' + (bs.format.key === "bo5" ? g.number + ". " : "") + esc(g.label) + '</span>' +
+        '<span class="rounds__score">' + score + '</span>' +
+        '<span class="rounds__state">' + state + '</span></li>';
+    }).join("") + '</ol>';
+  }
+
   function renderMatch(m) {
     var writable = m.status !== "final" || m.can_edit_final;
     var bs = m.sport === "Badminton" ? badmintonStats(m) : null;
     var showGames = bs && (bs.winner || m.status === "final");
     var bigA = bs && !showGames ? bs.active_a : m.score_a, bigB = bs && !showGames ? bs.active_b : m.score_b;
-    var subA = bs ? bs.games_a + " game" + (bs.games_a === 1 ? "" : "s") : "";
-    var subB = bs ? bs.games_b + " game" + (bs.games_b === 1 ? "" : "s") : "";
-    var mid = bs ? esc(bs.winner ? "Match won" : bs.active_game) : esc(m.period || "Not started");
+    var unit = bs ? bs.unit.toLowerCase() : "";
+    var subA = bs ? bs.games_a + " " + unit + (bs.games_a === 1 ? "" : "s") : "";
+    var subB = bs ? bs.games_b + " " + unit + (bs.games_b === 1 ? "" : "s") : "";
+    var mid = bs ? esc(bs.winner ? "Match won" : (m.status === "final" ? "Finished" : bs.active_game)) : esc(m.period || "Not started");
     var info = "";
     if (bs) {
-      info = bs.winner ? "🏆 " + esc(bs.winner === "a" ? m.team_a.name : m.team_b.name) + " win " + bs.games_a + "–" + bs.games_b + " — tap End match"
-        : (bs.sets ? "Games: " + esc(bs.sets) : "First to 21, win by 2");
+      var alert = bs.match_point_a ? "Match point " + m.team_a.tag : bs.match_point_b ? "Match point " + m.team_b.tag
+        : bs.game_point_a ? bs.unit + " point " + m.team_a.tag : bs.game_point_b ? bs.unit + " point " + m.team_b.tag : "";
+      info = bs.winner ? "🏆 " + esc(bs.winner === "a" ? m.team_a.name : m.team_b.name) + " win " + Math.max(bs.games_a, bs.games_b) + "–" + Math.min(bs.games_a, bs.games_b) + " — tap End match"
+        : bs.format.key === "bo5"
+          ? (m.status === "final" ? "Finished · rounds " + bs.tally
+            : "<strong>" + esc(bs.active_label) + "</strong> · first to " + bs.format.target + " · rounds " + bs.tally + (alert ? ' · <span class="alert">⚠️ ' + esc(alert) + "</span>" : ""))
+          : (bs.sets ? "Games: " + esc(bs.sets) : "First to 21, win by 2") + (alert ? " · ⚠️ " + esc(alert) : "");
     } else if (m.status === "final") {
       info = m.score_a === m.score_b ? "Full time · Draw" : "Full time · " + esc(m.score_a > m.score_b ? m.team_a.name : m.team_b.name) + " won";
     } else {
@@ -765,6 +818,7 @@
       '<div class="board__mid">' + mid + '</div>' +
       '<div><div class="board__team">' + esc(m.team_b.name) + '</div><div class="board__num">' + bigB + '</div><div class="board__sub">' + subB + '</div></div>' +
       '</div><div class="board__info">' + info + '</div></div>';
+    if (bs) html += renderRounds(m, bs);
 
     if (!writable) {
       html += '<div class="notice notice--warn">This match is finished. Ask the committee to allow edits if something needs correcting.</div>';
@@ -795,7 +849,8 @@
       }
 
       if (bs && bs.winner) {
-        html += '<div class="notice notice--ok">🏆 Match won ' + bs.games_a + '–' + bs.games_b + '. Tap <strong>End match</strong>. ' +
+        html += '<div class="notice notice--ok">🏆 Match won ' + Math.max(bs.games_a, bs.games_b) + '–' + Math.min(bs.games_a, bs.games_b) +
+          (bs.format.key === "bo5" ? " in rounds — the rest are not required" : "") + '. Tap <strong>End match</strong>. ' +
           'If the last point was a mistake, tap <strong>Undo last</strong> first.</div>';
       }
       var anyPlayers = ((m.players && m.players.a) || []).length + ((m.players && m.players.b) || []).length > 0;
@@ -810,10 +865,11 @@
         var players = (m.players && m.players[side]) || [];
         html += '<section class="pad pad--' + side + '"><h2 class="pad__name">' + esc(team.name) + '</h2>';
         if (m.sport === "Badminton" && players.length) {
-          var stuck = stickyFor(m.id, side);
+          var stuck = stickyFor(stickyKey(m), side);
           var who = stuck === undefined ? null : (stuck === null ? "No player" : playerLabel(m, side, stuck));
+          var forRound = bs && bs.format.key === "bo5" ? " · " + esc(bs.active_label) : "";
           html += '<button class="player-chip" data-act="change-player" data-side="' + side + '">🏸 ' +
-            (who ? esc(who) + ' <u>change</u>' : '<u>Choose player</u>') + '</button>';
+            (who ? esc(who) + forRound + ' <u>change</u>' : '<u>Choose player' + forRound + '</u>') + '</button>';
         }
         html += '<div class="pad__actions">' + m.actions.map(function (a) {
           return '<button class="act' + (a.points ? " act--scores" : "") + '" data-act="score" data-side="' + side + '" data-action="' + esc(a.key) + '">' +
@@ -910,7 +966,8 @@
     if (act === "start") return enqueue(m.id, "status", { status: "live" });
     if (act === "finish") {
       var fs = m.sport === "Badminton" ? badmintonStats(m) : null;
-      var scoreLine = fs ? m.team_a.name + " " + fs.games_a + "–" + fs.games_b + " " + m.team_b.name + " (games)"
+      var scoreLine = fs ? m.team_a.name + " " + fs.games_a + "–" + fs.games_b + " " + m.team_b.name + " (" + fs.unit.toLowerCase() + "s)" +
+          (fs.winner ? "" : "\n\nNo side has " + fs.format.need + " " + fs.unit.toLowerCase() + "s yet — end only for a walkover or retirement.")
         : m.team_a.name + " " + m.score_a + "–" + m.score_b + " " + m.team_b.name;
       if (!window.confirm("End this match?\n\nFinal score: " + scoreLine + "\n\nIt shows as finished on the public scoreboard once uploaded.")) return;
       var t = timerOf(m.id);
@@ -945,8 +1002,8 @@
         toast(pid ? "⭐ Player of the Match saved." : "The top performer will be shown as Player of the Match.");
         return;
       }
-      if (sheet.kind === "sticky") { setSticky(m.id, sheet.side, pid); return render(); }
-      if (m.sport === "Badminton") setSticky(m.id, sheet.side, pid);
+      if (sheet.kind === "sticky") { setSticky(stickyKey(m), sheet.side, pid); return render(); }
+      if (m.sport === "Badminton") setSticky(stickyKey(m), sheet.side, pid);
       render();
       return recordScore(m, sheet.side, sheet.action, pid, sheet.clock);
     }
@@ -969,7 +1026,7 @@
       delete S.ui.clock[m.id];
       var squad = (m.players && m.players[side]) || [];
       if (m.sport === "Badminton" && squad.length) {
-        var stuck = stickyFor(m.id, side);
+        var stuck = stickyFor(stickyKey(m), side);
         if (stuck !== undefined) return recordScore(m, side, actionKey, stuck, clock);
         S.ui.sheet = { kind: "player", matchId: m.id, side: side, action: actionKey, clock: clock };
         return render();

@@ -67,7 +67,11 @@ def _ensure_tables():
                 text("ALTER TABLE sc_sync_op ADD COLUMN actor VARCHAR(100)")))
             steps.append(lambda c: "potm_player_id" in _columns(c, "sc_match") or c.execute(
                 text("ALTER TABLE sc_match ADD COLUMN potm_player_id INTEGER")))
+            steps.append(lambda c: "match_format" in _columns(c, "sc_match") or c.execute(
+                text("ALTER TABLE sc_match ADD COLUMN match_format VARCHAR(12)")))
         else:
+            steps.append(lambda c: c.execute(text(
+                "ALTER TABLE sc_match ADD COLUMN IF NOT EXISTS match_format VARCHAR(12)")))
             steps.append(lambda c: c.execute(text(
                 "ALTER TABLE sc_match ADD COLUMN IF NOT EXISTS potm_player_id INTEGER")))
             steps.append(lambda c: c.execute(text(
@@ -79,6 +83,12 @@ def _ensure_tables():
         # Unique index: NULLs never collide, so web-console events are unaffected.
         steps.append(lambda c: c.execute(text(
             "CREATE UNIQUE INDEX IF NOT EXISTS ix_sc_event_client_id ON sc_event (client_id)")))
+        # Badminton fixtures that have not started yet use the new best-of-5
+        # format; anything already scored keeps the format it was scored in.
+        steps.append(lambda c: c.execute(text(
+            "UPDATE sc_match SET match_format = 'bo5' WHERE sport = 'Badminton' "
+            "AND match_format IS NULL AND status = 'scheduled' "
+            "AND NOT EXISTS (SELECT 1 FROM sc_event e WHERE e.match_id = sc_match.id)")))
 
         for step in steps:
             try:

@@ -27,7 +27,7 @@ def _console_payload(match):
         .limit(40)
         .all()
     )
-    periods = rules_for(match.sport)["periods"]
+    periods = match.periods
     curr_idx = periods.index(match.period) if match.period in periods else 0
     prev_period = periods[curr_idx - 1] if curr_idx > 0 else None
     next_period = periods[curr_idx + 1] if curr_idx < len(periods) - 1 else None
@@ -195,7 +195,7 @@ def add_event(match_id):
             curr_inn = cs["inn1"] if side_batting == "a" else cs["inn2"]
             clock_raw = curr_inn.get("next_ball", "0.1 ov")
         elif match.sport == "Badminton":
-            clock_raw = match.period or "Game 1"
+            clock_raw = match.badminton_stats["active_game"]
         elif match.sport == "Kabaddi":
             clock_raw = match.period or "H1"
 
@@ -207,12 +207,14 @@ def add_event(match_id):
         kind=action["label"],
         points=action["points"],
     )
-    db.session.add(event)
+    # Into the match's own list (not just the session): the list may already
+    # be loaded by the checks above, and the recalculation below reads it.
+    match.events.append(event)
 
     # A first event means the match is under way.
     if match.status == STATUS_SCHEDULED:
         match.status = STATUS_LIVE
-        match.period = match.period or rules_for(match.sport)["periods"][0]
+        match.period = match.period or match.periods[0]
 
     db.session.flush()
     match.recalculate()
@@ -259,7 +261,7 @@ def set_period(match_id):
     if error:
         return error
 
-    periods = rules_for(match.sport)["periods"]
+    periods = match.periods
     action = request.form.get("action")
     wanted = request.form.get("period")
 
@@ -299,8 +301,10 @@ def set_status(match_id):
 
     match.status = wanted
     if wanted == STATUS_LIVE and not match.period:
-        match.period = rules_for(match.sport)["periods"][0]
+        match.period = match.periods[0]
     if wanted == STATUS_FINAL:
+        if match.sport == "Badminton":
+            match.recalculate()  # the score becomes the round tally
         if (match.score_a or 0) > (match.score_b or 0):
             match.winner_team_id = match.team_a_id
         elif (match.score_b or 0) > (match.score_a or 0):

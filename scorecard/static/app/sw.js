@@ -10,7 +10,7 @@
  */
 "use strict";
 
-var CACHE = "gml-scorer-v4";
+var CACHE = "gml-scorer-v5";
 var SHELL = [
   "/scores/app",
   "/scores/static/app/app.js",
