@@ -406,11 +406,30 @@ def admin_enter_result(match_id):
     squad_ids = {p.id for p in players["a"]} | {p.id for p in players["b"]}
 
     def chosen_potm():
+        # An extra player typed in (someone who played but is not in the
+        # squad list) wins over the list: they are added to that team's squad
+        # once, so their award counts on every page like anyone else's.
+        extra = " ".join((request.form.get("potm_extra_name") or "").split())[:100]
+        if extra:
+            team_id = match.team_b_id if request.form.get("potm_extra_side") == "b" else match.team_a_id
+            side = "b" if team_id == match.team_b_id else "a"
+            same = next((p for p in players[side] if p.name.strip().lower() == extra.lower()), None)
+            if same:
+                return same.id
+            player = ScPlayer(team_id=team_id, name=extra, active=True)
+            db.session.add(player)
+            db.session.flush()
+            players[side].append(player)
+            squad_ids.add(player.id)
+            return player.id
         try:
             pid = int(request.form.get("potm_player_id") or 0) or None
         except ValueError:
             pid = None
         return pid if pid in squad_ids else None
+
+    def potm_given():
+        return bool(request.form.get("potm_player_id") or (request.form.get("potm_extra_name") or "").strip())
 
     if request.method == "POST" and request.form.get("action") == "potm":
         # Player of the Match only — the score is left exactly as it is.
@@ -514,7 +533,7 @@ def admin_enter_result(match_id):
 
         match.status = "final"
         match.period = final_period
-        if request.form.get("potm_player_id"):
+        if potm_given():
             match.potm_player_id = chosen_potm()
         match.recalculate()
         a, b = match.score_a or 0, match.score_b or 0
@@ -650,7 +669,7 @@ def _save_badminton_rounds(match, players, live_events, back, chosen_potm):
     elif match.status == STATUS_FINAL:
         match.status = STATUS_LIVE  # a correction re-opened the result
         match.recalculate()
-    if request.form.get("potm_player_id"):
+    if request.form.get("potm_player_id") or (request.form.get("potm_extra_name") or "").strip():
         match.potm_player_id = chosen_potm()
     if match.status == STATUS_FINAL and not match.note:
         match.note = "Round scores entered by the committee."

@@ -80,10 +80,12 @@
               <a href="{{ url_for('scorecard.player_page', player_id=potm.player.id) }}" class="sc-potm__name sc-player-link">{{ potm.player.name }}</a>
               <span class="sc-potm__team">{{ potm.team.name if potm.team else '' }}{% if potm.player.jersey_no %} · #{{ potm.player.jersey_no }}{% endif %}</span>
             </div>
+            {% if potm.points %}
             <div class="sc-potm__stat">
               <span class="sc-potm__stat-num">{{ potm.points }}</span>
               <span class="sc-potm__stat-label">{{ potm.metric_label }}</span>
             </div>
+            {% endif %}
           </div>
         </div>
       {% endif %}

@@ -2,6 +2,37 @@
 {% block title %}Enter result{% endblock %}
 
 {% block content %}
+{% macro potm_extra(form, match) %}
+  {# A player who played but is not in the squad list: typed in, added to that team's squad on save. #}
+  <details class="potm-extra" {% if form.get('potm_extra_name') %}open{% endif %}>
+    <summary>Player not in the list? Type an extra player</summary>
+    <div class="potm-extra__row">
+      <label>
+        <span>Team</span>
+        <select name="potm_extra_side">
+          <option value="a" {% if form.get('potm_extra_side') != 'b' %}selected{% endif %}>{{ match.team_a.name }}</option>
+          <option value="b" {% if form.get('potm_extra_side') == 'b' %}selected{% endif %}>{{ match.team_b.name }}</option>
+        </select>
+      </label>
+      <label>
+        <span>Player name</span>
+        <input type="text" name="potm_extra_name" maxlength="100" autocomplete="off"
+               placeholder="Full name" value="{{ form.get('potm_extra_name', '') }}">
+      </label>
+    </div>
+    <p class="sc-hint" style="margin:.35rem 0 0;">
+      If a name is typed here it is used instead of the list above, and the player
+      is added to that team's squad so the award counts everywhere.
+    </p>
+  </details>
+{% endmacro %}
+  <style>
+    .potm-extra { margin:.4rem 0 .2rem; }
+    .potm-extra summary { cursor:pointer; font-weight:600; color:#2563eb; font-size:.92rem; }
+    .potm-extra__row { display:flex; flex-wrap:wrap; gap:.6rem; margin-top:.5rem; }
+    .potm-extra__row label { flex:1 1 200px; min-width:0; }
+    .potm-extra__row input, .potm-extra__row select { width:100%; box-sizing:border-box; }
+  </style>
   {% set rounds_mode = match.sport == 'Badminton' and match.match_format %}
   {% set bs = match.badminton_stats if rounds_mode else None %}
   <div class="sc-page sc-page--narrow">
@@ -149,6 +180,7 @@
             {% endfor %}
           </select>
         </label>
+        {{ potm_extra(form, match) }}
 
         {% if rounds_mode %}
           {# Corrections change only the rounds that differ; nothing to replace. #}
@@ -196,10 +228,11 @@
       </section>
     {% endif %}
 
-    {% if match.status == 'final' %}
+    {# Shown for every match, so the award can be set or changed at any time. #}
+    {% if match %}
       <section class="sc-card">
         <h2>⭐ Player of the Match only</h2>
-        <p class="sc-hint" style="margin-top:0;">Change just the award — the score stays exactly as it is.</p>
+        <p class="sc-hint" style="margin-top:0;">Change just the award — the score{% if match.status != 'final' %} and match status{% endif %} stay exactly as they are.</p>
         <form method="post" class="sc-form sc-form--row">
           <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
           <input type="hidden" name="action" value="potm">
@@ -218,6 +251,7 @@
               {% endfor %}
             </select>
           </label>
+          <div style="flex:1 1 100%; min-width:0;">{{ potm_extra({}, match) }}</div>
           <button class="btn btn--primary" type="submit">Save award</button>
         </form>
       </section>
