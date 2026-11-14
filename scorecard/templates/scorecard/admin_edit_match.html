@@ -4,44 +4,202 @@
 {% block content %}
   {% macro val(name, default) %}{{ form.get(name, default) if form else default }}{% endmacro %}
   <style>
-    .em-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(210px, 1fr)); gap:.7rem; }
-    .em-grid label, .em-full { min-width:0; }
-    .em-grid input, .em-grid select, .em-full input, .em-full select { width:100%; box-sizing:border-box; }
+    .sc-page.em { max-width:72rem; width:100%; min-width:0; margin:0 auto; padding:1.2rem 0 0; display:flex; flex-direction:column; gap:.9rem; }
+    .em .sc-card, .em-form, .em-side, .em-grid > label { min-width:0; }
+    .em-head { display:flex; flex-wrap:wrap; align-items:baseline; justify-content:space-between; gap:.3rem 1rem; }
+    .em-head h1 { margin:0; font-size:clamp(1.3rem, 2.4vw, 1.7rem); }
+    .em-head .sc-eyebrow { display:block; }
+    .em-form { display:flex; flex-direction:column; gap:.9rem; }
+    .em .sc-card { padding:.9rem 1rem; gap:.55rem; }
+    .em .sc-card h2 { margin:0; font-size:1.05rem; }
+    .em label > span { display:block; font-size:.78rem; font-weight:700; color:#64748b; margin-bottom:.2rem; }
+    .em input[type=text], .em input[type=datetime-local], .em select {
+      width:100%; box-sizing:border-box; padding:.45rem .6rem; font-size:.92rem; min-height:0; height:2.3rem; }
+    .em-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(min(150px, 100%), 1fr)); gap:.6rem .8rem; }
+    .em-trio { display:grid; grid-template-columns:repeat(auto-fit, minmax(min(260px, 100%), 1fr)); gap:.9rem; }
+    .em-hint { margin:0; font-size:.8rem; color:#64748b; }
+
+    /* Score editor */
     .em-score { display:flex; justify-content:space-between; align-items:center; gap:.6rem; background:#0f172a; color:#fff;
-                border-radius:10px; padding:.7rem .9rem; position:sticky; top:.5rem; z-index:5; }
-    .em-score__team { font-weight:700; overflow-wrap:anywhere; flex:1; }
+                border-radius:10px; padding:.5rem .9rem; position:sticky; top:.4rem; z-index:5; }
+    .em-score__team { font-weight:700; overflow-wrap:anywhere; flex:1; font-size:.95rem; }
     .em-score__team--b { text-align:right; }
-    .em-score__num { font-size:1.7rem; font-weight:900; letter-spacing:.04em; white-space:nowrap; }
-    .em-sides { display:grid; grid-template-columns:repeat(auto-fit, minmax(290px, 1fr)); gap:1rem; margin-top:.8rem; }
-    .em-side h3 { margin:.2rem 0 .5rem; font-size:1rem; }
-    .em-row { display:flex; align-items:center; gap:.35rem; padding:.35rem 0; border-bottom:1px solid #e5e7eb; }
-    .em-row__name { flex:1; min-width:0; overflow-wrap:anywhere; font-size:.93rem; }
+    .em-score__num { font-size:1.6rem; font-weight:900; letter-spacing:.04em; white-space:nowrap; }
+    .em-sides { display:grid; grid-template-columns:repeat(auto-fit, minmax(min(300px, 100%), 1fr)); gap:.4rem 1.6rem; }
+    .em-side h3 { margin:.3rem 0 .1rem; font-size:.95rem; color:var(--maroon, #5b1f22); }
+    .em-row { display:flex; align-items:center; gap:.3rem; padding:.22rem 0; border-bottom:1px solid #eef0f3; }
+    .em-row__name { flex:1; min-width:0; overflow-wrap:anywhere; font-size:.9rem; line-height:1.2; }
     .em-row__name small { color:#64748b; }
-    .em-row input[type=number] { width:3.6rem; text-align:center; font-weight:800; font-size:1rem; padding:.35rem .2rem; }
-    .em-btn { min-width:2.4rem; height:2.3rem; border-radius:8px; border:1px solid #cbd5e1; background:#f8fafc;
-              font-weight:800; font-size:.95rem; cursor:pointer; touch-action:manipulation; }
+    .em .em-row input[type=number] { width:3rem; height:2rem; padding:0 .1rem; text-align:center; font-weight:800;
+                                     font-size:.95rem; border-radius:6px; box-sizing:border-box; -moz-appearance:textfield; }
+    .em .em-row input[type=number]::-webkit-inner-spin-button { -webkit-appearance:none; margin:0; }
+    .em .em-row input[type=text] { flex:1; min-width:0; height:2rem; font-size:.88rem; padding:0 .5rem; }
+    .em-btn { min-width:2.1rem; height:2rem; padding:0 .3rem; border-radius:6px; border:1px solid #cbd5e1; background:#f8fafc;
+              font-weight:800; font-size:.85rem; cursor:pointer; touch-action:manipulation; line-height:1; }
     .em-btn--plus { background:#1b8751; border-color:#1b8751; color:#fff; }
-    .em-btn:active { transform:scale(.95); }
+    .em-btn:active { transform:scale(.94); }
+    .em-row--changed { background:#fffbeb; }
     .em-row--changed input[type=number] { outline:2px solid #f59e0b; }
-    .em-extra input[type=text] { flex:1; min-width:0; }
-    .em-actions { display:flex; flex-wrap:wrap; gap:.6rem; align-items:center; }
-    .em-save { position:sticky; bottom:0; background:var(--bg, #fff); padding:.7rem 0; border-top:1px solid #e5e7eb; z-index:5; }
-    .potm-extra { margin:.4rem 0 .2rem; }
-    .potm-extra summary { cursor:pointer; font-weight:600; color:#2563eb; font-size:.92rem; }
-    .potm-extra__row { display:flex; flex-wrap:wrap; gap:.6rem; margin-top:.5rem; }
-    .potm-extra__row label { flex:1 1 200px; min-width:0; }
-    .potm-extra__row input, .potm-extra__row select { width:100%; box-sizing:border-box; }
+
+    /* Save bar pinned to the bottom of the screen */
+    .em-save { position:sticky; bottom:0; z-index:6; display:flex; flex-wrap:wrap; gap:.5rem; align-items:center;
+               background:rgba(255,255,255,.96); border-top:1px solid #e5e7eb; padding:.55rem .2rem; margin-top:.2rem;
+               backdrop-filter:blur(4px); }
+    .em-save .btn { padding:.5rem 1rem; font-size:.8rem; }
+    .em-save__status { margin-left:auto; font-size:.8rem; color:#64748b; }
+    .em-save__status.is-dirty { color:#b45309; font-weight:700; }
+
+    .potm-extra summary { cursor:pointer; font-weight:600; color:#2563eb; font-size:.85rem; }
+    .potm-extra__row { display:grid; grid-template-columns:repeat(auto-fit, minmax(140px, 1fr)); gap:.5rem; margin-top:.45rem; }
+    @media (max-width: 480px) {
+      .em .sc-card { padding:.75rem .7rem; }
+      .em-score { padding:.45rem .6rem; }
+      .em-score__team { font-size:.8rem; }
+      .em-score__num { font-size:1.3rem; }
+      .em-btn { min-width:1.95rem; padding:0 .2rem; }
+      .em .em-row input[type=number] { width:2.6rem; }
+      .em-save .btn { padding:.45rem .7rem; }
+      .em-save__status, .em-save__public { display:none; }
+    }
   </style>
 
-  <div class="sc-page sc-page--narrow">
-    <header class="sc-page__head">
-      <span class="sc-eyebrow">{{ match.sport }} · {{ match.gender }} · {{ match.match_label }}</span>
-      <h1>Edit match</h1>
-      <p><a href="{{ back }}">← Back to fixtures</a></p>
+  <div class="sc-page em">
+    <header class="em-head">
+      <div>
+        <span class="sc-eyebrow">{{ match.sport }} · {{ match.gender }} · {{ match.match_label }} · {{ match.stage }}</span>
+        <h1>Edit match</h1>
+      </div>
+      <a href="{{ back }}">← Back to fixtures</a>
     </header>
 
-    <form method="post" class="sc-form" id="edit-form">
+    <form method="post" class="em-form" id="edit-form">
       <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+
+      {% if badminton %}
+      <section class="sc-card">
+        <h2>Scores</h2>
+        <p style="margin:0;">
+          Rounds now: <strong>{{ match.badminton_stats.tally if match.badminton_stats else '0–0' }}</strong>
+          {% if match.badminton_stats and match.badminton_stats.live_text %} · {{ match.badminton_stats.live_text }}{% endif %}
+          &nbsp;<a class="btn btn--primary btn--sm" href="{{ url_for('scorecard.admin_enter_result', match_id=match.id) }}">Edit round scores →</a>
+        </p>
+        <p class="em-hint">Badminton scores are edited round by round on the Round scores page; winners and the tally are worked out there.</p>
+      </section>
+      {% else %}
+      <section class="sc-card">
+        <div class="em-score" aria-live="polite">
+          <span class="em-score__team">{{ match.team_a.name }}</span>
+          <span class="em-score__num"><span data-total="a">{{ match.score_a or 0 }}</span> – <span data-total="b">{{ match.score_b or 0 }}</span></span>
+          <span class="em-score__team em-score__team--b">{{ match.team_b.name }}</span>
+        </div>
+        <p class="em-hint">
+          Tap <strong>+</strong> to add points in one click, <strong>−1</strong> to take one away, or type a number.
+          A scorer's live points are kept — only your changes are applied.
+        </p>
+        <div class="em-sides">
+          {% for side, team in [('a', match.team_a), ('b', match.team_b)] %}
+          <div class="em-side" data-side="{{ side }}">
+            <h3>{{ team.name }}</h3>
+            {% for p in players[side] %}
+              {% set name = 'p' ~ side ~ '_' ~ p.id %}
+              {% set was = current.get((side, p.id), 0) %}
+              <div class="em-row">
+                <span class="em-row__name">{% if p.jersey_no %}<small>#{{ p.jersey_no }}</small> {% endif %}{{ p.name }}</span>
+                <button type="button" class="em-btn" data-step="-1" aria-label="Take 1 from {{ p.name }}">−1</button>
+                <input type="number" min="0" max="999" inputmode="numeric" name="{{ name }}" value="{{ form.get(name, was) if form else was }}" aria-label="{{ p.name }} points">
+                <input type="hidden" name="{{ name }}_was" value="{{ form.get(name ~ '_was', was) if form else was }}">
+                {% for s in steps %}<button type="button" class="em-btn em-btn--plus" data-step="{{ s }}" aria-label="Add {{ s }} to {{ p.name }}">+{{ s }}</button>{% endfor %}
+              </div>
+            {% endfor %}
+            {% set name = 'p' ~ side ~ '_team' %}
+            <div class="em-row">
+              <span class="em-row__name"><em>Team points (no player)</em></span>
+              <button type="button" class="em-btn" data-step="-1" aria-label="Take 1 team point">−1</button>
+              <input type="number" min="0" max="999" inputmode="numeric" name="{{ name }}" value="{{ form.get(name, team_pts[side]) if form else team_pts[side] }}" aria-label="Team points">
+              <input type="hidden" name="{{ name }}_was" value="{{ form.get(name ~ '_was', team_pts[side]) if form else team_pts[side] }}">
+              {% for s in steps %}<button type="button" class="em-btn em-btn--plus" data-step="{{ s }}" aria-label="Add {{ s }} team points">+{{ s }}</button>{% endfor %}
+            </div>
+            <div class="em-row em-extra">
+              <input type="text" name="extra_{{ side }}_name" maxlength="100" placeholder="+ Extra player" title="A player who is not in the list" autocomplete="off" aria-label="Extra player name">
+              <button type="button" class="em-btn" data-step="-1" aria-label="Take 1">−1</button>
+              <input type="number" min="0" max="999" inputmode="numeric" name="extra_{{ side }}_pts" value="0" data-was="0" aria-label="Extra player points">
+              {% for s in steps %}<button type="button" class="em-btn em-btn--plus" data-step="{{ s }}" aria-label="Add {{ s }}">+{{ s }}</button>{% endfor %}
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      </section>
+      {% endif %}
+
+      <div class="em-trio">
+        <section class="sc-card">
+          <h2>Status</h2>
+          <div class="em-grid">
+            <label><span>Status</span>
+              <select name="status">
+                {% for s, label in [('scheduled', 'Upcoming'), ('live', 'Live'), ('final', 'Finished')] %}
+                  <option value="{{ s }}" {% if val('status', match.status) == s %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+              </select>
+            </label>
+            {% if not badminton %}
+            <label><span>Period</span>
+              <select name="period">
+                <option value="">—</option>
+                {% for p in match.periods %}<option {% if val('period', match.period) == p %}selected{% endif %}>{{ p }}</option>{% endfor %}
+              </select>
+            </label>
+            {% endif %}
+          </div>
+        </section>
+
+        {% if not badminton %}
+        <section class="sc-card">
+          <h2>Winner</h2>
+          {% set level = match.score_a == match.score_b and match.winner_team_id %}
+          {% set wsel = val('winner', ('a' if match.winner_team_id == match.team_a_id else 'b') if level else 'auto') %}
+          <label><span>Used when the match is Finished</span>
+            <select name="winner">
+              <option value="auto" {% if wsel == 'auto' %}selected{% endif %}>From the score (level = draw)</option>
+              <option value="a" {% if wsel == 'a' %}selected{% endif %}>{{ match.team_a.name }} won on a level score</option>
+              <option value="b" {% if wsel == 'b' %}selected{% endif %}>{{ match.team_b.name }} won on a level score</option>
+              <option value="draw" {% if wsel == 'draw' %}selected{% endif %}>Draw</option>
+            </select>
+          </label>
+          <p class="em-hint">Pick a team only when the score is level (penalties / toss / tie-break).</p>
+        </section>
+        {% endif %}
+
+        <section class="sc-card">
+          <h2>⭐ Player of the Match</h2>
+          <label><span>Player</span>
+            <select name="potm_player_id">
+              <option value="">— Top performer automatically —</option>
+              {% for side, team in [('a', match.team_a), ('b', match.team_b)] %}
+                <optgroup label="{{ team.name }}">
+                  {% for p in players[side] %}
+                    <option value="{{ p.id }}" {% if val('potm_player_id', match.potm_player_id)|string == p.id|string %}selected{% endif %}>{% if p.jersey_no %}#{{ p.jersey_no }} {% endif %}{{ p.name }}</option>
+                  {% endfor %}
+                </optgroup>
+              {% endfor %}
+            </select>
+          </label>
+          <details class="potm-extra" {% if form and form.get('potm_extra_name') %}open{% endif %}>
+            <summary>Player not in the list? Type an extra player</summary>
+            <div class="potm-extra__row">
+              <label><span>Team</span>
+                <select name="potm_extra_side">
+                  <option value="a">{{ match.team_a.name }}</option>
+                  <option value="b" {% if form and form.get('potm_extra_side') == 'b' %}selected{% endif %}>{{ match.team_b.name }}</option>
+                </select>
+              </label>
+              <label><span>Player name</span>
+                <input type="text" name="potm_extra_name" maxlength="100" autocomplete="off" placeholder="Full name" value="{{ form.get('potm_extra_name', '') if form else '' }}">
+              </label>
+            </div>
+          </details>
+        </section>
+      </div>
 
       <section class="sc-card">
         <h2>Match details</h2>
@@ -74,138 +232,17 @@
             </select>
           </label>
         </div>
-        <p class="sc-hint" style="margin:.5rem 0 0;">Changing a team keeps the points on that side, but clears which player scored them.</p>
-      </section>
-
-      <section class="sc-card">
-        <h2>Status</h2>
-        <div class="em-grid">
-          <label><span>Status</span>
-            <select name="status">
-              {% for s, label in [('scheduled', 'Upcoming'), ('live', 'Live'), ('final', 'Finished')] %}
-                <option value="{{ s }}" {% if val('status', match.status) == s %}selected{% endif %}>{{ label }}</option>
-              {% endfor %}
-            </select>
-          </label>
-          {% if not badminton %}
-          <label><span>Period</span>
-            <select name="period">
-              <option value="">—</option>
-              {% for p in match.periods %}<option {% if val('period', match.period) == p %}selected{% endif %}>{{ p }}</option>{% endfor %}
-            </select>
-          </label>
-          {% endif %}
-        </div>
-        <label class="em-full" style="margin-top:.7rem; display:block;"><span>Note on the match page (optional)</span>
+        <label><span>Note on the match page (optional)</span>
           <input type="text" name="note" maxlength="200" placeholder="e.g. GM United won on penalties" value="{{ val('note', match.note or '') }}">
         </label>
+        <p class="em-hint">Changing a team keeps the points on that side, but clears which player scored them.</p>
       </section>
 
-      {% if badminton %}
-      <section class="sc-card">
-        <h2>Scores</h2>
-        <p style="margin:0 0 .6rem;">
-          Rounds now: <strong>{{ match.badminton_stats.tally if match.badminton_stats else '0–0' }}</strong>
-          {% if match.badminton_stats and match.badminton_stats.live_text %} · {{ match.badminton_stats.live_text }}{% endif %}
-        </p>
-        <a class="btn btn--primary" href="{{ url_for('scorecard.admin_enter_result', match_id=match.id) }}">Edit round scores →</a>
-        <p class="sc-hint" style="margin:.5rem 0 0;">Badminton scores are edited round by round on the Round scores page; winners and the tally are worked out there.</p>
-      </section>
-      {% else %}
-      <section class="sc-card">
-        <h2>Scores &amp; player points</h2>
-        <div class="em-score" aria-live="polite">
-          <span class="em-score__team">{{ match.team_a.name }}</span>
-          <span class="em-score__num"><span data-total="a">{{ match.score_a or 0 }}</span> – <span data-total="b">{{ match.score_b or 0 }}</span></span>
-          <span class="em-score__team em-score__team--b">{{ match.team_b.name }}</span>
-        </div>
-        <p class="sc-hint" style="margin:.5rem 0 0;">
-          Tap <strong>+</strong> to add points in one click, <strong>−1</strong> to take one away, or type a number.
-          If a scorer is scoring live at the same time, their points are kept — only your changes are applied.
-        </p>
-        <div class="em-sides">
-          {% for side, team in [('a', match.team_a), ('b', match.team_b)] %}
-          <div class="em-side" data-side="{{ side }}">
-            <h3>{{ team.name }}</h3>
-            {% for p in players[side] %}
-              {% set name = 'p' ~ side ~ '_' ~ p.id %}
-              {% set was = current.get((side, p.id), 0) %}
-              <div class="em-row">
-                <span class="em-row__name">{% if p.jersey_no %}<small>#{{ p.jersey_no }}</small> {% endif %}{{ p.name }}</span>
-                <button type="button" class="em-btn" data-step="-1" aria-label="Take 1 from {{ p.name }}">−1</button>
-                <input type="number" min="0" max="999" inputmode="numeric" name="{{ name }}" value="{{ form.get(name, was) if form else was }}" aria-label="{{ p.name }} points">
-                <input type="hidden" name="{{ name }}_was" value="{{ form.get(name ~ '_was', was) if form else was }}">
-                {% for s in steps %}<button type="button" class="em-btn em-btn--plus" data-step="{{ s }}" aria-label="Add {{ s }} to {{ p.name }}">+{{ s }}</button>{% endfor %}
-              </div>
-            {% endfor %}
-            {% set name = 'p' ~ side ~ '_team' %}
-            <div class="em-row">
-              <span class="em-row__name"><em>Team points (no player)</em></span>
-              <button type="button" class="em-btn" data-step="-1" aria-label="Take 1 team point">−1</button>
-              <input type="number" min="0" max="999" inputmode="numeric" name="{{ name }}" value="{{ form.get(name, team_pts[side]) if form else team_pts[side] }}" aria-label="Team points">
-              <input type="hidden" name="{{ name }}_was" value="{{ form.get(name ~ '_was', team_pts[side]) if form else team_pts[side] }}">
-              {% for s in steps %}<button type="button" class="em-btn em-btn--plus" data-step="{{ s }}" aria-label="Add {{ s }} team points">+{{ s }}</button>{% endfor %}
-            </div>
-            <div class="em-row em-extra">
-              <input type="text" name="extra_{{ side }}_name" maxlength="100" placeholder="Extra player (not in list)" autocomplete="off" aria-label="Extra player name">
-              <button type="button" class="em-btn" data-step="-1" aria-label="Take 1">−1</button>
-              <input type="number" min="0" max="999" inputmode="numeric" name="extra_{{ side }}_pts" value="0" data-was="0" aria-label="Extra player points">
-              {% for s in steps %}<button type="button" class="em-btn em-btn--plus" data-step="{{ s }}" aria-label="Add {{ s }}">+{{ s }}</button>{% endfor %}
-            </div>
-          </div>
-          {% endfor %}
-        </div>
-      </section>
-
-      <section class="sc-card">
-        <h2>Winner</h2>
-        {% set wsel = val('winner', 'a' if match.winner_team_id == match.team_a_id and match.score_a == match.score_b and match.winner_team_id else ('b' if match.winner_team_id == match.team_b_id and match.score_a == match.score_b and match.winner_team_id else 'auto')) %}
-        <label class="em-full" style="display:block;"><span>Who won (used when the match is Finished)</span>
-          <select name="winner">
-            <option value="auto" {% if wsel == 'auto' %}selected{% endif %}>From the score (level score = draw)</option>
-            <option value="a" {% if wsel == 'a' %}selected{% endif %}>{{ match.team_a.name }} won — level score (penalties / toss / tie-break)</option>
-            <option value="b" {% if wsel == 'b' %}selected{% endif %}>{{ match.team_b.name }} won — level score (penalties / toss / tie-break)</option>
-            <option value="draw" {% if wsel == 'draw' %}selected{% endif %}>Draw</option>
-          </select>
-        </label>
-        <p class="sc-hint" style="margin:.5rem 0 0;">If one team has more points, they are the winner. Pick a team by hand only when the score is level; it counts as a win in the standings.</p>
-      </section>
-      {% endif %}
-
-      <section class="sc-card">
-        <h2>⭐ Player of the Match</h2>
-        <label class="em-full" style="display:block;"><span>Player</span>
-          <select name="potm_player_id">
-            <option value="">— Top performer automatically —</option>
-            {% for side, team in [('a', match.team_a), ('b', match.team_b)] %}
-              <optgroup label="{{ team.name }}">
-                {% for p in players[side] %}
-                  <option value="{{ p.id }}" {% if val('potm_player_id', match.potm_player_id)|string == p.id|string %}selected{% endif %}>{% if p.jersey_no %}#{{ p.jersey_no }} {% endif %}{{ p.name }}</option>
-                {% endfor %}
-              </optgroup>
-            {% endfor %}
-          </select>
-        </label>
-        <details class="potm-extra" {% if form and form.get('potm_extra_name') %}open{% endif %}>
-          <summary>Player not in the list? Type an extra player</summary>
-          <div class="potm-extra__row">
-            <label><span>Team</span>
-              <select name="potm_extra_side">
-                <option value="a">{{ match.team_a.name }}</option>
-                <option value="b" {% if form and form.get('potm_extra_side') == 'b' %}selected{% endif %}>{{ match.team_b.name }}</option>
-              </select>
-            </label>
-            <label><span>Player name</span>
-              <input type="text" name="potm_extra_name" maxlength="100" autocomplete="off" placeholder="Full name" value="{{ form.get('potm_extra_name', '') if form else '' }}">
-            </label>
-          </div>
-        </details>
-      </section>
-
-      <div class="em-save em-actions">
+      <div class="em-save">
         <button class="btn btn--primary" type="submit">Save all changes</button>
-        <a class="btn btn--ghost" href="{{ url_for('scorecard.admin_edit_match', match_id=match.id) }}">Discard changes</a>
-        <a class="btn btn--ghost" href="{{ url_for('scorecard.match', match_id=match.id) }}" target="_blank" rel="noopener">View public page ↗</a>
+        <a class="btn btn--ghost" href="{{ url_for('scorecard.admin_edit_match', match_id=match.id) }}">Discard</a>
+        <a class="btn btn--ghost em-save__public" href="{{ url_for('scorecard.match', match_id=match.id) }}" target="_blank" rel="noopener">Public page ↗</a>
+        <span class="em-save__status" data-save-status>No changes yet</span>
       </div>
     </form>
   </div>
@@ -213,6 +250,12 @@
   <script>
     (function () {
       var form = document.getElementById("edit-form");
+      var status = form.querySelector("[data-save-status]");
+      var dirty = false;
+      function setDirty() {
+        dirty = true;
+        if (status) { status.textContent = "Unsaved changes"; status.classList.add("is-dirty"); }
+      }
       function total(side) {
         var sum = 0;
         form.querySelectorAll('.em-side[data-side="' + side + '"] input[type=number]').forEach(function (i) {
@@ -236,17 +279,17 @@
         input.value = Math.min(999, Math.max(0, (parseInt(input.value, 10) || 0) + parseInt(btn.dataset.step, 10)));
         mark(input);
         total(btn.closest(".em-side").dataset.side);
+        setDirty();
       });
       form.addEventListener("input", function (ev) {
-        if (ev.target.type !== "number") return;
+        setDirty();
+        if (ev.target.type !== "number" || !ev.target.closest(".em-side")) return;
         mark(ev.target);
         total(ev.target.closest(".em-side").dataset.side);
       });
+      form.addEventListener("change", setDirty);
       form.querySelectorAll(".em-side input[type=number]").forEach(mark);
       ["a", "b"].forEach(total);
-      var dirty = false;
-      form.addEventListener("change", function () { dirty = true; });
-      form.addEventListener("click", function (ev) { if (ev.target.closest("[data-step]")) dirty = true; });
       form.addEventListener("submit", function () { dirty = false; });
       window.addEventListener("beforeunload", function (ev) { if (dirty) { ev.preventDefault(); ev.returnValue = ""; } });
     })();
