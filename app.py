@@ -20,6 +20,7 @@ import threading
 import time
 import urllib.request
 import uuid
+import warnings
 from datetime import datetime, timedelta
 from functools import wraps
 from io import BytesIO
@@ -320,6 +321,25 @@ BRAND["whatsapp_url"] = (
 ADMIN_USERNAME = env_str("ADMIN_USERNAME", "nandu")
 ADMIN_PASSWORD = env_str("ADMIN_PASSWORD", "Mkan@6767")
 ADMIN_PASSWORD_HASH = env_str("ADMIN_PASSWORD_HASH")
+
+# The fallback secret key and admin password above are public in the repository.
+# They are kept so local development works out of the box, but warn loudly when
+# a deployment is still relying on them.
+_DEFAULT_SECRET_KEY = "gml_s4_master_secret_2026_super_safe_token_9827341289"
+if _secret_key == _DEFAULT_SECRET_KEY:
+    warnings.warn(
+        "SECRET_KEY is not set - using the built-in default. Set a long random "
+        "SECRET_KEY in production.",
+        RuntimeWarning,
+        stacklevel=1,
+    )
+if not ADMIN_PASSWORD_HASH and not os.environ.get("ADMIN_PASSWORD"):
+    warnings.warn(
+        "ADMIN_PASSWORD / ADMIN_PASSWORD_HASH is not set - using the built-in "
+        "default admin password. Set one in production.",
+        RuntimeWarning,
+        stacklevel=1,
+    )
 
 ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg", "gif", "webp"}
 IMAGE_MAGIC = (b"\x89PNG", b"\xff\xd8\xff", b"GIF87a", b"GIF89a", b"RIFF")
